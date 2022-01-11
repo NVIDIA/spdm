@@ -1,0 +1,13 @@
+
+#TODO getting errors with meson build and don't have time to figure out details
+#so ignore for now
+/fmt
+/fmt.wrap
+/function2
+/function2.wrap
+/sdbusplus
+/sdeventplus
+/stdplus
+/stdplus.wrap
+/span-lite
+/span-lite.wrap
