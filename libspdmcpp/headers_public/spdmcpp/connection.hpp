@@ -122,7 +122,7 @@ namespace spdmcpp
 		template<typename T> RetStat send_request(const T& packet, BufEnum bufidx = BufEnum::NUM);
 		template<typename T> RetStat receive_response(T& packet);
 // 		template<typename T> RetStat interpret_response(T& packet);
-	template <typename T, typename... Targs> RetStat interpret_response(T& packet, Targs... fargs);
+		template <typename T, typename... Targs> RetStat interpret_response(T& packet, Targs... fargs);
 		
 		template<typename T> RetStat async_response();
 		template<typename T, typename R> RetStat send_request_setup_response(const T& request, const R& response, BufEnum bufidx = BufEnum::NUM);

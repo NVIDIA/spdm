@@ -1,12 +1,14 @@
 spdmcppd_headers = [
   '.',
+  '../libspdmcpp/headers_public'
 ]
 
 sources = [
 	'spdmd.cpp',
 ]
 
-executable('spdmd',
+executable(
+	'spdmd',
 	sources,
     implicit_include_directories: false,
     include_directories: include_directories(spdmcppd_headers),	
@@ -15,7 +17,7 @@ executable('spdmd',
 		phosphor_dbus_interfaces,
 		sdbusplus, 
 		sdeventplus],
-	install : true
+	install: true
 )
 
 if get_option('tests').enabled()
