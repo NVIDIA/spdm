@@ -40,6 +40,10 @@ add_global_arguments('-Wno-error=stringop-overflow', language: 'cpp')	#fmt throw
 # libspdmcpp_proj = subproject('libspdmcpp')
 # libsimple_dep = libsimple_proj.get_variable('libsimple_dep')
 
+phosphor_dbus_interfaces = dependency(
+  'phosphor-dbus-interfaces',
+  fallback: ['phosphor-dbus-interfaces', 'phosphor_dbus_interfaces_dep'],
+)
 sdbusplus = dependency(
   'sdbusplus',
   fallback: ['sdbusplus', 'sdbusplus_dep'],
@@ -50,6 +54,7 @@ sdeventplus = dependency(
 )
 
 comp = meson.get_compiler('cpp')
+
 # mbedtls = dependency(
 #   'mbedtls',
 #   fallback: ['mbedtls', 'mbedtls_dep'],
@@ -70,8 +75,16 @@ crypto_deps = declare_dependency(
 
 # systemd = dependency('systemd')
 
+if comp.has_header('CLI/CLI.hpp')
+  CLI11_dep = declare_dependency()
+else
+  CLI11_dep = dependency(
+    'CLI11',
+    fallback: [ 'CLI11', 'CLI11_dep' ],
+  )
+endif
 
 subdir('libspdmcpp')
-subdir('spdmcppd')
+subdir('spdmd')
 
 subdir('spdmcpp_emu')	#TODO separate repo

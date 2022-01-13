@@ -1,0 +1,3 @@
+[wrap-git]
+url = https://gitlab-collab-01.nvidia.com/viking-team/phosphor-dbus-interfaces.git
+revision = topis/spdmDbusResponderInterface

@@ -10,7 +10,7 @@ tests = [
 
 foreach t : tests
 	test(t,
-		executable('spdmcppd_' + t.underscorify(),
+		executable('spdmd_' + t.underscorify(),
 			t + '.cpp',
 			implicit_include_directories: false,
 	#		link_args: dynamic_linker,

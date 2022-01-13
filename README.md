@@ -4,6 +4,10 @@ Initial version
 
 ## Prerequisites
 
+Main mandatoy dependencies for compilation:
+
+     sudo apt-get install libmbedtls-dev
+
 For testing purposes, the implementation uses Google Test (GTest). It is possible to install it using the below command (for ubuntu):
 
      sudo apt-get install libgtest-dev

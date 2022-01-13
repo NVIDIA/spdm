@@ -10,6 +10,8 @@
 #include <spdmcpp/helpers.hpp>
 #include <spdmcpp/mbedtls_support.hpp>
 
+char err_msg[64];
+
 namespace spdmcpp
 {
 	RetStat ConnectionClass::init_connection()
@@ -331,13 +333,15 @@ namespace spdmcpp
 				#define SPDMCPP_MBEDTLS_VAR_CREATE(type,var) type* var = reinterpret_cast<type*>(malloc(sizeof(type))); type##_init(var)
 				SPDMCPP_MBEDTLS_VAR_CREATE(mbedtls_x509_crt, c);
 				
-			//	int ret = mbedtls_x509_crt_parse_der(c, &cert[off], cert.size() - off);
-				int ret = mbedtls_x509_crt_parse_der_nocopy(c, &cert[off], cert.size() - off);
+				int ret = mbedtls_x509_crt_parse_der(c, &cert[off], cert.size() - off);
+			//	int ret = mbedtls_x509_crt_parse_der_nocopy(c, &cert[off], cert.size() - off);
 				if (ret) {
 					Log.iprint("mbedtls_x509_crt_parse_der ret = ");
 					Log.print(ret);
 					Log.print(" = '");
-					Log.print(mbedtls_high_level_strerr(ret));
+					//Log.print(mbedtls_high_level_strerr(ret));
+					mbedtls_strerror(ret, err_msg, sizeof(err_msg));
+					Log.print((const char*)err_msg);
 					Log.println('\'');
 				}
 				assert(ret == 0);
@@ -527,7 +531,7 @@ namespace spdmcpp
 				ret = mbedtls_ecdh_get_params(ctx, mbedtls_pk_ec(cert->pk), MBEDTLS_ECDH_OURS);
 				if (ret != 0) {
 					mbedtls_ecdh_free(ctx);
-					free(ctx);
+					delete ctx;
 					assert(false);
 				}
 
@@ -578,11 +582,12 @@ namespace spdmcpp
 					Log.iprint("mbedtls_ecdsa_verify ret = ");
 					Log.print(ret);
 					Log.print(" = '");
-					Log.print(mbedtls_high_level_strerr(ret));
+					mbedtls_strerror(ret, err_msg, sizeof(err_msg));
+					Log.print((const char*)err_msg);
 					Log.print("'	'");
-					if (const char* msg = mbedtls_low_level_strerr(ret)) {
-						Log.print(msg);
-					}
+					//if (const char* msg = mbedtls_low_level_strerr(ret)) {
+					//	Log.print(msg);
+					//}
 					Log.println('\'');
 				}
 #endif
