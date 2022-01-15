@@ -75,6 +75,18 @@ crypto_deps = declare_dependency(
 
 # systemd = dependency('systemd')
 
+if comp.has_header('nlohmann/json.hpp')
+  nlohmann_json = declare_dependency()
+else
+  subproject('nlohmann-json')
+  nlohmann_json = declare_dependency(
+    include_directories: [
+      'subprojects/nlohmann-json/single_include',
+      'subprojects/nlohmann-json/single_include/nlohmann',
+    ]
+  )
+endif
+
 if comp.has_header('CLI/CLI.hpp')
   CLI11_dep = declare_dependency()
 else
