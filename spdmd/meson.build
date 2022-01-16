@@ -1,4 +1,4 @@
-spdmcppd_headers = [
+spdmd_headers = [
   '.',
   '..',
   '../libspdmcpp/headers_public'
@@ -15,17 +15,17 @@ executable(
 	'spdmd',
 	sources,
     implicit_include_directories: false,
-    include_directories: include_directories(spdmcppd_headers),	
+    include_directories: include_directories(spdmd_headers),	
 	dependencies: [
 		CLI11_dep,
-		nlohmann_json,
+		nlohmann_dep,
 		phosphor_dbus_interfaces,
 		sdbusplus, 
 		sdeventplus],
 	install: true
 )
 
-if get_option('spdmd').enabled()
+if get_option('systemd').enabled()
   systemd_system_unit_dir = dependency('systemd').get_variable(
           pkgconfig: 'systemdsystemunitdir')
 

@@ -11,7 +11,7 @@
 #include "dbus_impl_responder.hpp"
 
 using namespace std;
-using namespace spdm;
+using namespace spdmd;
 using namespace sdeventplus;
 using namespace sdeventplus::source;
 //using namespace spdm::responder;
@@ -41,7 +41,7 @@ int main(int argc, char** argv)
 	spdmcpp::LogClass Log(cout);
 	int verbose = SPDMD_SetupCli(argc, argv);
 
-    auto& bus = spdm::utils::DBusHandler::getBus();
+    auto& bus = spdmd::utils::DBusHandler::getBus();
     sdbusplus::server::manager::manager objManager(
         bus, "/xyz/openbmc_project/software");
     //dbus_api::Responder dbusImplReq(bus, "/xyz/openbmc_project/spdm");

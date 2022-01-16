@@ -17,7 +17,7 @@
 #include <variant>
 #include <vector>
 
-namespace spdm
+namespace spdmd
 {
 
 namespace dbus
@@ -67,9 +67,9 @@ using PropertyValue =
 using DbusProp = std::string;
 using DbusChangedProps = std::map<DbusProp, PropertyValue>;
 using DBusInterfaceAdded = std::vector<
-    std::pair<spdm::dbus::Interface,
-              std::vector<std::pair<spdm::dbus::Property,
-                                    std::variant<spdm::dbus::Property>>>>>;
+    std::pair<spdmd::dbus::Interface,
+              std::vector<std::pair<spdmd::dbus::Property,
+                                    std::variant<spdmd::dbus::Property>>>>>;
 using ObjectPath = std::string;
 using ServiceName = std::string;
 using Interfaces = std::vector<std::string>;
@@ -230,4 +230,4 @@ PropertyValue jsonEntryToDbusVal(std::string_view type,
 std::string toString(const struct variable_field& var);
 
 } // namespace utils
-} // namespace spdm
+} // namespace spdmd

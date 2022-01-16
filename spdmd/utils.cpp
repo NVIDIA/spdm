@@ -13,7 +13,7 @@
 #include <string>
 #include <vector>
 
-namespace spdm
+namespace spdmd
 {
 namespace utils
 {
@@ -43,7 +43,7 @@ GetSubTreeResponse
                             const std::vector<std::string>& ifaceList) const
 {
 
-    auto& bus = spdm::utils::DBusHandler::getBus();
+    auto& bus = spdmd::utils::DBusHandler::getBus();
     auto method = bus.new_method_call(mapperBusName, mapperPath,
                                       mapperInterface, "GetSubTree");
     method.append(searchPath, depth, ifaceList);
@@ -58,7 +58,7 @@ void reportError(const char* errorMsg)
     static constexpr auto logObjPath = "/xyz/openbmc_project/logging";
     static constexpr auto logInterface = "xyz.openbmc_project.Logging.Create";
 
-    auto& bus = spdm::utils::DBusHandler::getBus();
+    auto& bus = spdmd::utils::DBusHandler::getBus();
 
     try
     {
@@ -218,4 +218,4 @@ PropertyValue jsonEntryToDbusVal(std::string_view type,
 }
 
 } // namespace utils
-} // namespace spdm
+} // namespace spdmd
