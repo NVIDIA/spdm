@@ -1,5 +1,6 @@
 spdmcppd_headers = [
   '.',
+  '..',
   '../libspdmcpp/headers_public'
 ]
 
@@ -23,6 +24,19 @@ executable(
 		sdeventplus],
 	install: true
 )
+
+if get_option('spdmd').enabled()
+  systemd_system_unit_dir = dependency('systemd').get_variable(
+          pkgconfig: 'systemdsystemunitdir')
+
+  configure_file(
+    copy: true,
+    input: 'service_files/spdmd.service',
+    install: true,
+    install_dir: systemd_system_unit_dir,
+    output: 'spdmd.service',
+  )
+endif
 
 if get_option('tests').enabled()
 	subdir('tests')

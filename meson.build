@@ -12,6 +12,11 @@ if get_option('tests').enabled()
 	assert(gmock.found(), 'Couldn\'t find gmock, either provide or disable tests with: -Dtests=disabled')
 endif
 
+# Wno-psabi reduces the number of "Note:" messages when cross-compiling some STL
+# stuff for ARM. See https://stackoverflow.com/questions/48149323/strange-gcc-warning-when-compiling-qt-project
+# Basically, gcc 6 and gcc 7 are not ABI compatible, but since the whole OpenBMC
+# project uses the same compiler, we can safely ignore these info notes.
+add_project_arguments('-Wno-psabi', language: 'cpp')
 
 add_global_arguments('-Wno-error=stringop-overflow', language: 'cpp')	#fmt throws these:
 # [nix-shell:~/Projects/conclusive/nvidia-openbmc/spdmcpp/build]$ meson compile
@@ -35,7 +40,12 @@ add_global_arguments('-Wno-error=stringop-overflow', language: 'cpp')	#fmt throw
 #  1182 |   char buffer[num_bits<UInt>() / BASE_BITS + 1];
 #       |        ^~~~~~
 
-
+conf_data = configuration_data()
+conf_data.set_quoted('SPDMD_VERSION', meson.project_version())
+configure_file(
+  output: 'config.h',
+  configuration: conf_data
+)
 
 # libspdmcpp_proj = subproject('libspdmcpp')
 # libsimple_dep = libsimple_proj.get_variable('libsimple_dep')
