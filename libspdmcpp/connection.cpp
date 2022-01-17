@@ -480,7 +480,6 @@ namespace spdmcpp
 		AppendToBuf(BufEnum::C, &ResponseBuffer[ResponseBufferSPDMOffset], ResponseBuffer.size() - ResponseBufferSPDMOffset - PacketDecodeInfo.SignatureSize);
 		
 		assert(rs == RetStat::OK);
-		int ret = 0;
 		{
 			std::vector<uint8_t> hash;
 			{
@@ -505,75 +504,8 @@ namespace spdmcpp
 // 			resp.SignatureVector[10] = 'X';	//TODO TEST
 			
 			{
-				mbedtls_x509_crt* cert = Slots[0].GetLeafCert();//TODO SlotIdx
-#if 0
-				mbedtls_pk_context argh;
-				mbedtls_pk_init(&argh);
-				mbedtls_pk_setup(&argh, cert->pk.pk_info);
-				ret = mbedtls_pk_verify(&cert->pk, to_mbedtls(Algorithms.Min.BaseHashAlgo), hash.data(), hash.size(), resp.SignatureVector.data(), resp.SignatureVector.size());
-			//	ret = mbedtls_pk_verify(&argh, to_mbedtls(Algorithms.Min.BaseHashAlgo), hash.data(), hash.size(), resp.SignatureVector.data(), resp.SignatureVector.size());
-				SPDMCPP_LOG_TRACE_RS(Log, ret);
-				if (ret) {
-					Log.iprint("mbedtls_pk_verify ret = ");
-					Log.print(ret);
-					Log.print(" = '");
-					Log.print(mbedtls_high_level_strerr(ret));
-					Log.println('\'');
-				}
-#else
-				if (mbedtls_pk_get_type(&cert->pk) != MBEDTLS_PK_ECKEY) {
-					assert(false);
-				}
-				mbedtls_ecdh_context *ctx = new mbedtls_ecdh_context;
-				memset (ctx, 0, sizeof(*ctx));
-				mbedtls_ecdh_init(ctx);
-
-				ret = mbedtls_ecdh_get_params(ctx, mbedtls_pk_ec(cert->pk), MBEDTLS_ECDH_OURS);
-				if (ret != 0) {
-					mbedtls_ecdh_free(ctx);
-					delete ctx;
-					assert(false);
-				}
-
-				size_t half_size = 0;
-				
-				switch (ctx->grp.id) {
-				case MBEDTLS_ECP_DP_SECP256R1:
-					half_size = 32;
-					break;
-				case MBEDTLS_ECP_DP_SECP384R1:
-					half_size = 48;
-					break;
-				case MBEDTLS_ECP_DP_SECP521R1:
-					half_size = 66;
-					break;
-				default:
-					assert(false);
-				}
-				if (resp.SignatureVector.size() != half_size * 2) {
-					assert(false);
-				}
-				
-				mbedtls_mpi bn_r, bn_s;
-				mbedtls_mpi_init(&bn_r);
-				mbedtls_mpi_init(&bn_s);
-
-				ret = mbedtls_mpi_read_binary(&bn_r, resp.SignatureVector.data(), half_size);
-				if (ret != 0) {
-					mbedtls_mpi_free(&bn_r);
-					mbedtls_mpi_free(&bn_s);
-					assert(false);
-				}
-				ret = mbedtls_mpi_read_binary(&bn_s, resp.SignatureVector.data() + half_size, half_size);
-				if (ret != 0) {
-					mbedtls_mpi_free(&bn_r);
-					mbedtls_mpi_free(&bn_s);
-					assert(false);
-				}
-				ret = mbedtls_ecdsa_verify(&ctx->grp, hash.data(), hash.size(), &ctx->Q, &bn_r, &bn_s);
-				mbedtls_mpi_free(&bn_r);
-				mbedtls_mpi_free(&bn_s);
-				
+				//TODO SlotIdx
+				int ret = verify_signature(Slots[0].GetLeafCert(), resp.SignatureVector, hash);
 				SPDMCPP_LOG_TRACE_RS(Log, ret);
 				if (!ret) {
 					Log.iprintln("challenge_auth_response SIGNATURE verify PASSED!");
@@ -590,7 +522,6 @@ namespace spdmcpp
 					//}
 					Log.println('\'');
 				}
-#endif
 			}
 		}
 		Context->IO->setup_timeout(0);
