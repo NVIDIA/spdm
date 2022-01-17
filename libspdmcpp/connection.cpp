@@ -10,7 +10,7 @@
 #include <spdmcpp/helpers.hpp>
 #include <spdmcpp/mbedtls_support.hpp>
 
-char err_msg[64];
+char err_msg[64];//TODO remove! not thread safe
 
 namespace spdmcpp
 {
@@ -593,11 +593,12 @@ namespace spdmcpp
 				Log.iprint("mbedtls_ecdsa_verify ret = ");
 				Log.print(ret);
 				Log.print(" = '");
-				Log.print(mbedtls_high_level_strerr(ret));
+				mbedtls_strerror(ret, err_msg, sizeof(err_msg));
+				Log.print((const char*)err_msg);
 				Log.print("'	'");
-				if (const char* msg = mbedtls_low_level_strerr(ret)) {
-					Log.print(msg);
-				}
+				//if (const char* msg = mbedtls_low_level_strerr(ret)) {
+				//	Log.print(msg);
+				//}
 				Log.println('\'');
 			}
 			
