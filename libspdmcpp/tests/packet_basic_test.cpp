@@ -170,6 +170,8 @@ TEST(packet_pseudorandom_decode_encode, static_size)
 // 	EXPECT_TRUE(packet_pseudorandom_decode_encode_basic<packet_error_response_var>());
 	EXPECT_TRUE(packet_pseudorandom_decode_encode_basic<packet_version_number>());
 	EXPECT_TRUE(packet_pseudorandom_decode_encode_basic<packet_certificate_chain>());
+	EXPECT_TRUE(packet_pseudorandom_decode_encode_basic<packet_measurement_block_min>());
+	
 	EXPECT_TRUE(packet_pseudorandom_decode_encode<packet_get_version_response_min>());
 // 	EXPECT_TRUE(packet_pseudorandom_decode_encode<packet_get_version_response_var>());
 	EXPECT_TRUE(packet_pseudorandom_decode_encode<packet_get_capabilities_request>());
@@ -187,6 +189,10 @@ TEST(packet_pseudorandom_decode_encode, static_size)
 	EXPECT_TRUE(packet_pseudorandom_decode_encode<packet_challenge_request>());
 	EXPECT_TRUE(packet_pseudorandom_decode_encode<packet_challenge_auth_response_min>());
 // 	EXPECT_TRUE(packet_pseudorandom_decode_encode<packet_challenge_auth_response_var>());
+	
+	EXPECT_TRUE(packet_pseudorandom_decode_encode<packet_get_measurements_request_min>());
+	EXPECT_TRUE(packet_pseudorandom_decode_encode<packet_measurements_response_min>());
+	
 }
 TEST(packet_pseudorandom_decode_encode, variable_size)
 {
@@ -207,4 +213,8 @@ TEST(packet_pseudorandom_decode_encode, variable_size)
 // 	EXPECT_TRUE(packet_pseudorandom_decode_encode<packet_digests_response_var>());
 // 	EXPECT_TRUE(packet_pseudorandom_decode_encode<packet_certificate_response_var>());
 // 	EXPECT_TRUE(packet_pseudorandom_decode_encode<packet_challenge_auth_response_var>());
+	
+// 	EXPECT_TRUE(packet_pseudorandom_decode_encode<packet_get_measurements_request_var>());
+// 	EXPECT_TRUE(packet_pseudorandom_decode_encode<packet_measurement_block_var>());
+// 	EXPECT_TRUE(packet_pseudorandom_decode_encode<packet_measurements_response_var>());
 }

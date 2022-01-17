@@ -86,6 +86,7 @@ namespace spdmcpp
 		RetStat try_get_digest();
 		RetStat try_get_certificate(SlotIdx idx);
 		RetStat try_get_certificate_chunk(SlotIdx idx);
+		RetStat try_get_measurements(uint8_t blockidx);
 		
 		RetStat try_challenge();
 		
@@ -119,6 +120,7 @@ namespace spdmcpp
 			mbedtls_x509_crt* GetLeafCert() const { assert(MCertificates.size() >= 2); return MCertificates[MCertificates.size() - 1]; }
 		};
 		
+		
 		template<typename T> RetStat send_request(const T& packet, BufEnum bufidx = BufEnum::NUM);
 		template<typename T> RetStat receive_response(T& packet);
 // 		template<typename T> RetStat interpret_response(T& packet);
@@ -139,9 +141,12 @@ namespace spdmcpp
 		packet_algorithms_response_var Algorithms;
 		SlotClass Slots[SLOT_NUM];
 		
+		uint8_t MeasurementBlockNum = 0;
+		
 		//TODO the requirement of hashing messages before the hash function is decided by the responder is quite troublesome, probably easiest to calculate all supported hashes in parallel?
 		//TODO test perf/memory and decide if we'll use Buffers or running hashes, or a mixture
 		HashClass HashM1M2;
+		HashClass HashL1L2;
 		std::vector<uint8_t> Bufs[static_cast<size_t>(BufEnum::NUM)];
 		std::vector<uint8_t>& RefBuf(BufEnum bufidx) { return Bufs[static_cast<std::underlying_type_t<BufEnum>>(bufidx)]; }
 		
@@ -156,6 +161,10 @@ namespace spdmcpp
 		void AppendRecvToBuf(BufEnum bufidx)
 		{
 			AppendToBuf(bufidx, &ResponseBuffer[ResponseBufferSPDMOffset], ResponseBuffer.size() - ResponseBufferSPDMOffset);
+		}
+		void HashRecv(HashClass& hash)
+		{
+			hash.update(&ResponseBuffer[ResponseBufferSPDMOffset], ResponseBuffer.size() - ResponseBufferSPDMOffset);
 		}
 		
 		packet_decode_info PacketDecodeInfo;

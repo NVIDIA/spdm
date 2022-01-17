@@ -20,6 +20,11 @@ namespace spdmcpp
 		}
 		
 		packet_encode(packet, buf, lay.get_end_offset());
+		if (T::RequestResponseCode == RequestResponseEnum::REQUEST_GET_MEASUREMENTS || T::RequestResponseCode == RequestResponseEnum::RESPONSE_MEASUREMENTS) {
+			assert(bufidx == BufEnum::NUM);
+			size_t off = lay.get_end_offset();
+			HashL1L2.update(&buf[off], buf.size() - off);
+		}
 		if (bufidx != BufEnum::NUM) {
 			size_t off = lay.get_end_offset();
 			AppendToBuf(bufidx, &buf[off], buf.size() - off);

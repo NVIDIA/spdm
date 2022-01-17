@@ -41,6 +41,8 @@ namespace spdmcpp
 		uint16_t MeasurementHashSize = 0;
 		uint16_t SignatureSize = 0;
 		uint8_t ChallengeParam2 = 0;
+		uint8_t GetMeasurementsParam1 = 0;
+		uint8_t GetMeasurementsParam2 = 0;
 	};
 	
 	
@@ -215,7 +217,7 @@ namespace spdmcpp
 	//helpers for simple byte chunks
 	inline RetStat packet_decode_basic(uint8_t* dst, size_t size, const std::vector<uint8_t>& buf, size_t& start)
 	{
-		assert(start < buf.size());//TODO need macros for various categories of asserts!!!
+	//	assert(start < buf.size());//TODO need macros for various categories of asserts!!!
 		if (start + size > buf.size()) {
 			return RetStat::ERROR_BUFFER_TOO_SMALL;
 		}
@@ -681,6 +683,7 @@ namespace spdmcpp
 		
 		std::vector<PacketReqAlgStruct> PacketReqAlgVector;
 		
+		static constexpr RequestResponseEnum RequestResponseCode = RequestResponseEnum::REQUEST_NEGOTIATE_ALGORITHMS;
 		static constexpr bool size_is_constant = false;
 		
 		uint16_t get_size() const
@@ -863,6 +866,7 @@ namespace spdmcpp
 	struct packet_get_digests_request
 	{
 		packet_message_header Header = packet_message_header(RequestResponseCode);
+		
 		static constexpr RequestResponseEnum RequestResponseCode = RequestResponseEnum::REQUEST_GET_DIGESTS;
 		static constexpr bool size_is_constant = true;
 
@@ -885,6 +889,7 @@ namespace spdmcpp
 	struct packet_digests_response_min
 	{
 		packet_message_header Header = packet_message_header(RequestResponseCode);
+		
 		static constexpr RequestResponseEnum RequestResponseCode = RequestResponseEnum::RESPONSE_DIGESTS;
 		static constexpr bool size_is_constant = true;
 
@@ -957,6 +962,7 @@ namespace spdmcpp
 		packet_message_header Header = packet_message_header(RequestResponseCode);
 		uint16_t Offset = 0;
 		uint16_t Length = 0;
+		
 		static constexpr RequestResponseEnum RequestResponseCode = RequestResponseEnum::REQUEST_GET_CERTIFICATE;
 		static constexpr bool size_is_constant = true;
 
@@ -985,6 +991,7 @@ namespace spdmcpp
 		packet_message_header Header = packet_message_header(RequestResponseCode);
 		uint16_t PortionLength = 0;
 		uint16_t RemainderLength = 0;
+		
 		static constexpr RequestResponseEnum RequestResponseCode = RequestResponseEnum::RESPONSE_CERTIFICATE;
 		static constexpr bool size_is_constant = true;
 
@@ -1040,7 +1047,6 @@ namespace spdmcpp
 
 
 
-
 	///
 	/// SPDM CHALLENGE request
 	///
@@ -1048,6 +1054,7 @@ namespace spdmcpp
 	{
 		packet_message_header Header = packet_message_header(RequestResponseCode);
 		uint8_t Nonce[32] = { 0 };
+		
 		static constexpr RequestResponseEnum RequestResponseCode = RequestResponseEnum::REQUEST_CHALLENGE;
 		static constexpr bool size_is_constant = true;
 
@@ -1073,6 +1080,7 @@ namespace spdmcpp
 	struct packet_challenge_auth_response_min
 	{
 		packet_message_header Header = packet_message_header(RequestResponseCode);
+		
 		static constexpr RequestResponseEnum RequestResponseCode = RequestResponseEnum::RESPONSE_CHALLENGE_AUTH;
 		static constexpr bool size_is_constant = true;
 
@@ -1141,6 +1149,254 @@ namespace spdmcpp
 	}
 
 
+
+
+	///
+	/// SPDM GET_MEASUREMENTS request
+	///
+	struct packet_get_measurements_request_min
+	{
+		packet_message_header Header = packet_message_header(RequestResponseCode);
+		
+		static constexpr RequestResponseEnum RequestResponseCode = RequestResponseEnum::REQUEST_GET_MEASUREMENTS;
+		static constexpr bool size_is_constant = true;
+		
+		bool has_nonce() const { return Header.Param1 & 0x01; }
+		void set_nonce() { Header.Param1 |= 0x01; }
+		
+		void print_ml(LogClass& log) const
+		{
+			SPDMCPP_LOG_INDENT(log);
+			SPDMCPP_LOG_print_ml(log, Header);
+		}
+	};
+
+	inline void endian_host_spdm_copy(const packet_get_measurements_request_min& src, packet_get_measurements_request_min& dst)
+	{
+		endian_host_spdm_copy(src.Header, dst.Header);
+	}
+
+
+	struct packet_get_measurements_request_var
+	{
+		packet_get_measurements_request_min Min;
+		uint8_t Nonce[32] = { 0 };
+		uint8_t SlotIDParam = 0;
+		
+		static constexpr RequestResponseEnum RequestResponseCode = RequestResponseEnum::REQUEST_GET_MEASUREMENTS;
+		static constexpr bool size_is_constant = false;
+		
+		bool has_nonce() const { return Min.has_nonce(); }
+		void set_nonce() { Min.set_nonce(); }
+		
+		uint16_t get_size() const
+		{
+			size_t size = 0;
+			size += sizeof(Min);
+			if (Min.has_nonce()) {
+				size += sizeof(Nonce);
+				size += sizeof(SlotIDParam);
+			}
+			assert(size <= std::numeric_limits<uint16_t>::max());
+			return static_cast<uint16_t>(size);
+		}
+		
+		void print_ml(LogClass& log) const
+		{
+			SPDMCPP_LOG_INDENT(log);
+			SPDMCPP_LOG_print_ml(log, Min);
+			log.iprint("Nonce[32]: ");
+			log.println(Nonce, sizeof_array(Nonce));
+			SPDMCPP_LOG_iexprln(log, SlotIDParam);
+		}
+	};
+
+
+	inline RetStat packet_encode(const packet_get_measurements_request_var& p, std::vector<uint8_t>& buf, size_t start = 0)
+	{
+		size_t size = p.get_size();
+		buf.resize(start + size);
+		
+		size_t off = start;
+		packet_encode_internal(p.Min, buf, off);
+		
+		if (p.has_nonce()) {
+		//	packet_encode_basic(p.Nonce, buf, off);
+			memcpy(&buf[off], p.Nonce, sizeof(p.Nonce));
+			off += sizeof(p.Nonce);
+			
+			packet_encode_basic(p.SlotIDParam, buf, off);
+		}
+		assert(off == start + size);
+		return RetStat::OK;
+	}
+	
+	///
+	/// SPDM MEASUREMENT BLOCK structure
+	///
+	struct packet_measurement_block_min
+	{
+		uint8_t Index = 0;
+		uint8_t MeasurementSpecification = 0;
+		uint16_t MeasurementSize = 0;
+		
+		static constexpr bool size_is_constant = true;
+		
+		void print_ml(LogClass& log) const
+		{
+			SPDMCPP_LOG_INDENT(log);
+			SPDMCPP_LOG_iexprln(log, Index);						log.print("   ");
+			SPDMCPP_LOG_iexprln(log, MeasurementSpecification);		log.print("   ");
+			SPDMCPP_LOG_iexprln(log, MeasurementSize);				log.print("   ");
+		}
+	};
+	
+	inline void endian_host_spdm_copy(const packet_measurement_block_min& src, packet_measurement_block_min& dst)
+	{
+		endian_host_spdm_copy(src.Index, dst.Index);
+		endian_host_spdm_copy(src.MeasurementSpecification, dst.MeasurementSpecification);
+		endian_host_spdm_copy(src.MeasurementSize, dst.MeasurementSize);
+	}
+	
+	struct packet_measurement_block_var
+	{
+		packet_measurement_block_min Min;
+		std::vector<uint8_t> MeasurementVector;
+
+		static constexpr bool size_is_constant = false;
+
+		void print_ml(LogClass& log) const
+		{
+			SPDMCPP_LOG_INDENT(log);
+			SPDMCPP_LOG_print_ml(log, Min);
+			SPDMCPP_LOG_idataln(log, MeasurementVector);
+		}
+	};
+
+	inline RetStat packet_decode_internal(packet_measurement_block_var& p, const std::vector<uint8_t>& buf, size_t& start)
+	{
+		size_t off = start;
+		auto rs = packet_decode_basic(p.Min, buf, off);
+		if (is_error(rs))
+			return rs;
+
+		p.MeasurementVector.resize(p.Min.MeasurementSize);
+		rs = packet_decode_basic(p.MeasurementVector, buf, off);
+		if (!is_error(rs)) {
+			start = off;
+		}
+		return rs;
+	}
+
+	///
+	/// SPDM MEASUREMENTS response
+	///
+	struct packet_measurements_response_min
+	{
+		packet_message_header Header = packet_message_header(RequestResponseCode);
+		uint8_t NumberOfBlocks = 0;
+		uint8_t MeasurementRecordLength[3] = { 0, 0, 0 };//wtf dmtf...
+		
+		static constexpr RequestResponseEnum RequestResponseCode = RequestResponseEnum::RESPONSE_MEASUREMENTS;
+		static constexpr bool size_is_constant = true;
+		
+		uint32_t get_measurement_record_length() const { return MeasurementRecordLength[0] | MeasurementRecordLength[1] << 8 | MeasurementRecordLength[2] << 16; }
+		void print_ml(LogClass& log) const
+		{
+			SPDMCPP_LOG_INDENT(log);
+			SPDMCPP_LOG_print_ml(log, Header);
+			SPDMCPP_LOG_iexprln(log, NumberOfBlocks);
+			log.iprint("MeasurementRecordLength[3]: ");
+			log.println(MeasurementRecordLength, sizeof_array(MeasurementRecordLength));
+		}
+	};
+
+	inline void endian_host_spdm_copy(const packet_measurements_response_min& src, packet_measurements_response_min& dst)
+	{
+		endian_host_spdm_copy(src.Header, dst.Header);
+		endian_host_spdm_copy(src.NumberOfBlocks, dst.NumberOfBlocks);
+	#if SPDMCPP_ENDIAN_SWAP
+		dst.MeasurementRecordLength[0] = src.MeasurementRecordLength[2];
+		dst.MeasurementRecordLength[1] = src.MeasurementRecordLength[1];
+		dst.MeasurementRecordLength[2] = src.MeasurementRecordLength[0];
+	#else
+		dst.MeasurementRecordLength[0] = src.MeasurementRecordLength[0];
+		dst.MeasurementRecordLength[1] = src.MeasurementRecordLength[1];
+		dst.MeasurementRecordLength[2] = src.MeasurementRecordLength[2];
+	#endif
+	}
+
+
+	struct packet_measurements_response_var	//TODO all variable packets don't need to be packed
+	{
+		packet_measurements_response_min Min;
+		uint8_t Nonce[32] = { 0 };
+		std::vector<packet_measurement_block_var> MeasurementBlockVector;
+		std::vector<uint8_t> OpaqueDataVector;
+		std::vector<uint8_t> SignatureVector;
+		uint16_t OpaqueLength = 0;
+
+		static constexpr RequestResponseEnum RequestResponseCode = RequestResponseEnum::RESPONSE_MEASUREMENTS;
+		static constexpr bool size_is_constant = false;
+
+		void print_ml(LogClass& log) const
+		{
+			SPDMCPP_LOG_INDENT(log);
+			SPDMCPP_LOG_print_ml(log, Min);
+			log.iprint("Nonce[32]: ");
+			log.println(Nonce, sizeof_array(Nonce));
+			
+			SPDMCPP_LOG_iexprln(log, MeasurementBlockVector.size());
+			for (size_t i = 0; i < MeasurementBlockVector.size(); ++i) {
+				log.iprintln("MeasurementBlockVector[" + std::to_string(i) + "]:");//TODO something more optimal
+				MeasurementBlockVector[i].print_ml(log);
+			}
+			
+			SPDMCPP_LOG_iexprln(log, OpaqueLength);
+			SPDMCPP_LOG_idataln(log, OpaqueDataVector);
+			SPDMCPP_LOG_idataln(log, SignatureVector);
+		}
+	};
+
+	inline RetStat packet_decode(packet_measurements_response_var& p, const std::vector<uint8_t>& buf, size_t off, const packet_decode_info& info)
+	{
+		auto rs = packet_decode_internal(p.Min, buf, off);
+		if (is_error(rs))
+			return rs;
+		
+		{
+			size_t end = off + p.Min.get_measurement_record_length();
+			while (off < end) {
+				p.MeasurementBlockVector.resize(p.MeasurementBlockVector.size() + 1);
+				rs = packet_decode_internal(p.MeasurementBlockVector.back(), buf, off);
+				if (is_error(rs))
+					return rs;
+			}
+			if (off != end) {
+				assert(false);	//TODO remove
+				return RetStat::ERROR_UNKNOWN;
+			}
+		}
+		rs = packet_decode_basic(p.Nonce, buf, off);
+		if (is_error(rs))
+			return rs;
+		
+		rs = packet_decode_basic(p.OpaqueLength, buf, off);//TODO verify no greater than 1024
+		if (is_error(rs))
+			return rs;
+		
+		p.OpaqueDataVector.resize(p.OpaqueLength);
+		packet_decode_basic(p.OpaqueDataVector, buf, off);
+		
+		if (info.GetMeasurementsParam1 & 0x01) {
+			p.SignatureVector.resize(info.SignatureSize);
+			packet_decode_basic(p.SignatureVector, buf, off);
+		}
+		
+		return RetStat::OK;
+	}
+
+	
 	#pragma pack()
 	
 	#undef SPDMCPP_LOG_expr

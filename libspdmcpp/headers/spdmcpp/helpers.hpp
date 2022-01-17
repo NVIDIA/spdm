@@ -60,12 +60,18 @@ namespace spdmcpp
 
 	inline void fill_random(std::vector<uint8_t>& buf)
 	{
+#if 0
 		std::random_device rd;
 		std::default_random_engine gen(rd());
 		std::uniform_int_distribution<uint8_t> distrib(0);
 		for (size_t i = 0; i < buf.size(); ++i) {
 			buf[i] = distrib(gen);
 		}
+#else
+		for (size_t i = 0; i < buf.size(); ++i) {
+			buf[i] = i + 1;
+		}
+#endif
 	}
 	
 /*	template <size_t N>
