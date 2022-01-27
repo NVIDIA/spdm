@@ -6,7 +6,7 @@
 
 using namespace sdbusplus::xyz::openbmc_project::Common::Error;
 
-namespace spdm
+namespace spdmd
 {
 namespace dbus_api
 {
@@ -30,6 +30,10 @@ uint8_t Responder::getInstanceId(uint8_t eid)
     }
 
     return id;
+}
+
+void Responder::refresh() {
+    printf("Refresh received");
 }
 
 } // namespace dbus_api

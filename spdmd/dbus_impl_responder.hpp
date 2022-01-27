@@ -6,10 +6,11 @@
 
 #include <sdbusplus/bus.hpp>
 #include <sdbusplus/server/object.hpp>
+////#include <sdbusplus/server.hpp>
 
 #include <map>
 
-namespace spdm
+namespace spdmd
 {
 namespace dbus_api
 {
@@ -52,10 +53,18 @@ class Responder : public ResponderIntf
         ids[eid].markFree(instanceId);
     }
 
+    /** @brief Implementation for Refresh
+     *  Use this method to get all fresh measurements and certificates. 
+     *  The method is asynchronous, so it returns immediately. 
+     *  Current status of communication between the SPDM requester and 
+     *  responder may be verified using the Status property.
+     */
+    void refresh() override;
+
   private:
     /** @brief EID to SPDM Instance ID map */
     std::map<uint8_t, InstanceId> ids;
 };
 
 } // namespace dbus_api
-} // namespace spdm
+} // namespace spdmd

@@ -2,7 +2,7 @@
 
 #include <stdexcept>
 
-namespace spdm
+namespace spdmd
 {
 
 uint8_t InstanceId::next()
@@ -22,4 +22,4 @@ uint8_t InstanceId::next()
     return idx;
 }
 
-} // namespace spdm
+} // namespace spdmd

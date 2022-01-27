@@ -17,6 +17,8 @@
 #include <variant>
 #include <vector>
 
+using namespace std;
+
 namespace spdmd
 {
 

@@ -2,7 +2,7 @@
 
 #include <bitset>
 
-namespace spdm
+namespace spdmd
 {
 
 constexpr size_t maxInstanceIds = 32;
@@ -30,4 +30,4 @@ class InstanceId
     std::bitset<maxInstanceIds> id;
 };
 
-} // namespace spdm
+} // namespace spdmd
