@@ -460,7 +460,7 @@ namespace spdmcpp
 		
 		packet_challenge_request request;
 		request.Header.MessageVersion = MessageVersion;
-// 		request.Header.Param2 = PacketDecodeInfo.ChallengeParam2 = 0xFF;
+		request.Header.Param2 = PacketDecodeInfo.ChallengeParam2 = 0xFF;
 // 		request.Header.Param2 = PacketDecodeInfo.ChallengeParam2 = 1;
 		fill_random(request.Nonce);
 		
@@ -523,29 +523,27 @@ namespace spdmcpp
 					Log.println('\'');
 				}
 			}
-			try_get_measurements(0);
+			try_get_measurements();
 		}
 		return rs;
 	}
 	
 	
-	RetStat ConnectionClass::try_get_measurements(uint8_t blockidx)
+	RetStat ConnectionClass::try_get_measurements()
 	{
 		SPDMCPP_LOG_TRACE_FUNC(Log);
 		assert(MessageVersion != MessageVersionEnum::UNKNOWN);
 		
-		if (blockidx == 0) {//TODO move somewhere else?
-			HashL1L2.setup(to_mbedtls(Algorithms.Min.BaseHashAlgo));
-		}
+		HashL1L2.setup(to_mbedtls(Algorithms.Min.BaseHashAlgo));
+		
 		packet_get_measurements_request_var request;
 		request.Min.Header.MessageVersion = MessageVersion;
-		if (MeasurementBlockNum && blockidx == MeasurementBlockNum) {
+		{
  			request.Min.Header.Param1 = PacketDecodeInfo.GetMeasurementsParam1 = 0x1;
 			request.set_nonce();
 			fill_random(request.Nonce);
 		}
-		request.Min.Header.Param2 = PacketDecodeInfo.GetMeasurementsParam2 = blockidx;
-// 		request.Min.Header.Param2 = PacketDecodeInfo.GetMeasurementsParam2 = 0xFF;
+		request.Min.Header.Param2 = PacketDecodeInfo.GetMeasurementsParam2 = 0xFF;
 		
 		auto rs = send_request_setup_response(request, packet_measurements_response_var());
 		SPDMCPP_LOG_TRACE_RS(Log, rs);
@@ -561,50 +559,34 @@ namespace spdmcpp
 		auto rs = interpret_response(resp, PacketDecodeInfo);
 		SPDMCPP_LOG_TRACE_RS(Log, rs);
 		
-		if (PacketDecodeInfo.GetMeasurementsParam2 == 0) {
-			MeasurementBlockNum = resp.Min.Header.Param1;
-		}
-		else {
-		/*	packet_measurement_block cert_chain;//TODO create a standard _var packet and just parse from cert_chain? seems like it fits surprisingly nicely!
-			size_t off = 0;
-			rs = packet_decode_internal(cert_chain, cert, off);
-			SPDMCPP_LOG_TRACE_RS(Log, rs);
-			assert(cert_chain.Length == cert.size());*/
-		}
-		if (PacketDecodeInfo.GetMeasurementsParam2 < MeasurementBlockNum) {
-			HashRecv(HashL1L2);
-			rs = try_get_measurements(PacketDecodeInfo.GetMeasurementsParam2 + 1);
-			SPDMCPP_LOG_TRACE_RS(Log, rs);
-		}
-		else {
-			HashL1L2.update(&ResponseBuffer[ResponseBufferSPDMOffset], ResponseBuffer.size() - ResponseBufferSPDMOffset - PacketDecodeInfo.SignatureSize);
+		HashL1L2.update(&ResponseBuffer[ResponseBufferSPDMOffset], ResponseBuffer.size() - ResponseBufferSPDMOffset - PacketDecodeInfo.SignatureSize);
 		
-			std::vector<uint8_t> hash;
-			HashL1L2.hash_finish(hash);
-			Log.iprint("computed l2 hash = ");
-			Log.println(hash.data(), hash.size());
-			
-			int ret = verify_signature(Slots[0].GetLeafCert(), resp.SignatureVector, hash);
-			SPDMCPP_LOG_TRACE_RS(Log, ret);
-			if (!ret) {
-				Log.iprintln("measurements SIGNATURE verify PASSED!");
-			}
-			else {
-				Log.iprint("mbedtls_ecdsa_verify ret = ");
-				Log.print(ret);
-				Log.print(" = '");
-				mbedtls_strerror(ret, err_msg, sizeof(err_msg));
-				Log.print((const char*)err_msg);
-				Log.print("'	'");
-				//if (const char* msg = mbedtls_low_level_strerr(ret)) {
-				//	Log.print(msg);
-				//}
-				Log.println('\'');
-			}
-			
-			Context->IO->setup_timeout(0);
-	// 		Context->IO->setup_timeout(1000 * 1000);
+		std::vector<uint8_t> hash;
+		HashL1L2.hash_finish(hash);
+		Log.iprint("computed l2 hash = ");
+		Log.println(hash.data(), hash.size());
+		
+		int ret = verify_signature(Slots[0].GetLeafCert(), resp.SignatureVector, hash);
+		SPDMCPP_LOG_TRACE_RS(Log, ret);
+		if (!ret) {
+			Log.iprintln("measurements SIGNATURE verify PASSED!");
 		}
+		else {
+			Log.iprint("mbedtls_ecdsa_verify ret = ");
+			Log.print(ret);
+			Log.print(" = '");
+			mbedtls_strerror(ret, err_msg, sizeof(err_msg));
+			Log.print((const char*)err_msg);
+			Log.print("'	'");
+			//if (const char* msg = mbedtls_low_level_strerr(ret)) {
+			//	Log.print(msg);
+			//}
+			Log.println('\'');
+		}
+		
+		Context->IO->setup_timeout(0);
+// 		Context->IO->setup_timeout(1000 * 1000);
+		
 		return rs;
 	}
 	

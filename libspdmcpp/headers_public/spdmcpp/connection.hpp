@@ -86,7 +86,7 @@ namespace spdmcpp
 		RetStat try_get_digest();
 		RetStat try_get_certificate(SlotIdx idx);
 		RetStat try_get_certificate_chunk(SlotIdx idx);
-		RetStat try_get_measurements(uint8_t blockidx);
+		RetStat try_get_measurements();
 		
 		RetStat try_challenge();
 		
@@ -140,8 +140,6 @@ namespace spdmcpp
 		
 		packet_algorithms_response_var Algorithms;
 		SlotClass Slots[SLOT_NUM];
-		
-		uint8_t MeasurementBlockNum = 0;
 		
 		//TODO the requirement of hashing messages before the hash function is decided by the responder is quite troublesome, probably easiest to calculate all supported hashes in parallel?
 		//TODO test perf/memory and decide if we'll use Buffers or running hashes, or a mixture
