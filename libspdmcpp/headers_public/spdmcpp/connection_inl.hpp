@@ -19,7 +19,10 @@ namespace spdmcpp
 			Context->Transport->encode_pre(buf, lay);
 		}
 		
-		packet_encode(packet, buf, lay.get_end_offset());
+		auto rs = packet_encode(packet, buf, lay.get_end_offset());
+		if (is_error(rs)) {
+			return rs;
+		}
 		if (T::RequestResponseCode == RequestResponseEnum::REQUEST_GET_MEASUREMENTS || T::RequestResponseCode == RequestResponseEnum::RESPONSE_MEASUREMENTS) {
 			assert(bufidx == BufEnum::NUM);
 			size_t off = lay.get_end_offset();
@@ -39,7 +42,7 @@ namespace spdmcpp
 		Log.iprint("buf = ");
 		Log.println(buf.data(), buf.size());
 		
-		auto rs = Context->IO->write(buf);
+		rs = Context->IO->write(buf);
 		return rs;
 	}
 	

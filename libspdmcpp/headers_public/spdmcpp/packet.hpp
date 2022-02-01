@@ -191,7 +191,7 @@ namespace spdmcpp
 		start += sizeof(T);
 	}
 	template<typename T>
-	RetStat packet_encode_internal(const T& p, std::vector<uint8_t>& buf, size_t& start)
+	[[nodiscard]] RetStat packet_encode_internal(const T& p, std::vector<uint8_t>& buf, size_t& start)
 	{
 		static_assert(T::size_is_constant);
 		if (buf.size() < start + sizeof(p)) {
@@ -203,7 +203,7 @@ namespace spdmcpp
 	}
 	
 	template<typename T>
-	RetStat packet_encode(const T& p, std::vector<uint8_t>& buf, size_t start = 0)
+	[[nodiscard]] RetStat packet_encode(const T& p, std::vector<uint8_t>& buf, size_t start = 0)
 	{
 		auto rs = packet_encode_internal(p, buf, start);
 		if (is_error(rs)) {
@@ -271,11 +271,11 @@ namespace spdmcpp
 		}*/
 		return rs;
 	}
-	inline RetStat packet_encode_internal(const packet_error_response_var& p, std::vector<uint8_t>& buf, size_t& off)
+	[[nodiscard]] inline RetStat packet_encode_internal(const packet_error_response_var& p, std::vector<uint8_t>& buf, size_t& off)
 	{
 		//TODO handle custom data
-		packet_encode_internal(p.Header, buf, off);
-		return RetStat::OK;
+		auto rs = packet_encode_internal(p.Header, buf, off);
+		return rs;
 	}
 	
 	///
@@ -580,7 +580,7 @@ namespace spdmcpp
 		}
 	};
 	
-	inline RetStat packet_encode_internal(const PacketReqAlgStruct& p, std::vector<uint8_t>& buf, size_t& start)
+	[[nodiscard]] inline RetStat packet_encode_internal(const PacketReqAlgStruct& p, std::vector<uint8_t>& buf, size_t& start)
 	{
 		size_t off = start;
 		buf.resize(start + p.get_size());
@@ -716,18 +716,17 @@ namespace spdmcpp
 		}
 	};
 	
-	inline RetStat packet_encode_internal(const packet_negotiate_algorithms_request_var& p, std::vector<uint8_t>& buf, size_t& off)
+	[[nodiscard]] inline RetStat packet_encode_internal(const packet_negotiate_algorithms_request_var& p, std::vector<uint8_t>& buf, size_t& off)
 	{
 		buf.resize(off + p.Min.Length);
-		packet_encode_internal(p.Min, buf, off);
+		auto rs = packet_encode_internal(p.Min, buf, off);
 		
 		for (const auto& iter : p.PacketReqAlgVector) {
-			auto rs = packet_encode_internal(iter, buf, off);
-			if (is_error(rs)) {
+			rs = packet_encode_internal(iter, buf, off);
+			if (is_error(rs))
 				return rs;
-			}
 		}
-		return RetStat::OK;
+		return rs;
 	}
 #if 0
 	[[nodiscard]] inline RetStat packet_decode_internal(packet_negotiate_algorithms_request_var& p, const std::vector<uint8_t>& buf, size_t& start)
@@ -821,15 +820,15 @@ namespace spdmcpp
 		}
 	};
 	
-	inline RetStat packet_encode_internal(const packet_algorithms_response_var& p, std::vector<uint8_t>& buf, size_t& off)
+	[[nodiscard]] inline RetStat packet_encode_internal(const packet_algorithms_response_var& p, std::vector<uint8_t>& buf, size_t& off)
 	{
-		packet_encode_internal(p.Min, buf, off);
+		auto rs = packet_encode_internal(p.Min, buf, off);
 		
 	/*	p.VersionNumberEntries.resize(p.Min.VersionNumberEntryCount);
 		for (size_t i = 0; i < p.VersionNumberEntries.size(); ++i) {
 			buf = packet_decode_internal(p.VersionNumberEntries[i], buf);
 		}*/
-		return RetStat::OK;
+		return rs;
 	}
 	[[nodiscard]] inline RetStat packet_decode_internal(packet_algorithms_response_var& p, const std::vector<uint8_t>& buf, size_t& off)
 	{
@@ -849,7 +848,7 @@ namespace spdmcpp
 				return rs;
 			}
 		}*/
-		return RetStat::OK;
+		return rs;
 	}
 	
 
@@ -1213,12 +1212,14 @@ namespace spdmcpp
 	};
 
 
-	inline RetStat packet_encode_internal(const packet_get_measurements_request_var& p, std::vector<uint8_t>& buf, size_t& off)
+	[[nodiscard]] inline RetStat packet_encode_internal(const packet_get_measurements_request_var& p, std::vector<uint8_t>& buf, size_t& off)
 	{
 		size_t size = p.get_size();
 		buf.resize(off + size);
 		
-		packet_encode_internal(p.Min, buf, off);
+		auto rs = packet_encode_internal(p.Min, buf, off);
+		if (is_error(rs))
+			return rs;
 		
 		if (p.has_nonce()) {
 		//	packet_encode_basic(p.Nonce, buf, off);
@@ -1227,7 +1228,7 @@ namespace spdmcpp
 			
 			packet_encode_basic(p.SlotIDParam, buf, off);
 		}
-		return RetStat::OK;
+		return rs;
 	}
 	
 	///
