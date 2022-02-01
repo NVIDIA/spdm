@@ -87,13 +87,13 @@ namespace spdmcpp
 	//TODO there's this magic template library for iterating over members... it'd be really convenient to use it!!!
 	
 	
-	inline MessageVersionEnum packet_message_header_get_version(const uint8_t* buf)
+	[[nodiscard]] inline MessageVersionEnum packet_message_header_get_version(const uint8_t* buf)
 	{
 		auto& p = *reinterpret_cast<const packet_message_header*>(buf);
 		static_assert(sizeof(p.RequestResponseCode) == 1);
 		return p.MessageVersion;
 	}
-	inline RequestResponseEnum packet_message_header_get_requestresponsecode(const uint8_t* buf)
+	[[nodiscard]] inline RequestResponseEnum packet_message_header_get_requestresponsecode(const uint8_t* buf)
 	{
 		auto& p = *reinterpret_cast<const packet_message_header*>(buf);
 		static_assert(sizeof(p.RequestResponseCode) == 1);
@@ -130,7 +130,7 @@ namespace spdmcpp
 	
 	//helper for basic types
 	template<typename T>
-	RetStat packet_decode_basic(T& p, const std::vector<uint8_t>& buf, size_t& start)
+	[[nodiscard]] RetStat packet_decode_basic(T& p, const std::vector<uint8_t>& buf, size_t& start)
 	{
 		assert(start < buf.size());//TODO need macros for various categories of asserts!!!
 		if (start + sizeof(p) > buf.size()) {
@@ -143,7 +143,7 @@ namespace spdmcpp
 	
 	//helper for statically sized structures
 	template<typename T>
-	RetStat packet_decode_internal(T& p, const std::vector<uint8_t>& buf, size_t& start)
+	[[nodiscard]] RetStat packet_decode_internal(T& p, const std::vector<uint8_t>& buf, size_t& start)
 	{
 		static_assert(T::size_is_constant);
 		assert(start < buf.size());//TODO need macros for various categories of asserts!!!
@@ -156,7 +156,7 @@ namespace spdmcpp
 	}
 	
 	template<typename T, typename... Targs>
-	RetStat packet_decode(T& p, const std::vector<uint8_t>& buf, size_t& off, Targs... fargs)
+	[[nodiscard]] RetStat packet_decode(T& p, const std::vector<uint8_t>& buf, size_t& off, Targs... fargs)
 	{
 		if (off + sizeof(packet_message_header) > buf.size()) {
 			return RetStat::ERROR_BUFFER_TOO_SMALL;
@@ -217,7 +217,7 @@ namespace spdmcpp
 	
 	
 	//helpers for simple byte chunks
-	inline RetStat packet_decode_basic(uint8_t* dst, size_t size, const std::vector<uint8_t>& buf, size_t& start)
+	[[nodiscard]] inline RetStat packet_decode_basic(uint8_t* dst, size_t size, const std::vector<uint8_t>& buf, size_t& start)
 	{
 	//	assert(start < buf.size());//TODO need macros for various categories of asserts!!!
 		if (start + size > buf.size()) {
@@ -227,12 +227,12 @@ namespace spdmcpp
 		start += size;
 		return RetStat::OK;
 	}
-	inline RetStat packet_decode_basic(std::vector<uint8_t>& dst, const std::vector<uint8_t>& buf, size_t& start)
+	[[nodiscard]] inline RetStat packet_decode_basic(std::vector<uint8_t>& dst, const std::vector<uint8_t>& buf, size_t& start)
 	{
 		return packet_decode_basic(dst.data(), dst.size(), buf, start);
 	}
 	template <size_t N>
-	RetStat packet_decode_basic(uint8_t (&dst)[N], const std::vector<uint8_t>& buf, size_t& start)
+	[[nodiscard]] RetStat packet_decode_basic(uint8_t (&dst)[N], const std::vector<uint8_t>& buf, size_t& start)
 	{
 		return packet_decode_basic(dst, N, buf, start);
 	}
@@ -261,7 +261,7 @@ namespace spdmcpp
 		}
 	};
 	
-	inline RetStat packet_decode_internal(packet_error_response_var& p, const std::vector<uint8_t>& buf, size_t& off)
+	[[nodiscard]] inline RetStat packet_decode_internal(packet_error_response_var& p, const std::vector<uint8_t>& buf, size_t& off)
 	{
 		auto rs = packet_decode_internal(p.Header, buf, off);
 		//TODO handle custom data
@@ -420,7 +420,7 @@ namespace spdmcpp
 		}
 	};
 	
-	inline RetStat packet_decode_internal(packet_get_version_response_var& p, const std::vector<uint8_t>& buf, size_t& off)
+	[[nodiscard]] inline RetStat packet_decode_internal(packet_get_version_response_var& p, const std::vector<uint8_t>& buf, size_t& off)
 	{
 		auto rs = packet_decode_internal(p.Min, buf, off);
 		if (rs != RetStat::OK) {
@@ -595,7 +595,7 @@ namespace spdmcpp
 		start = off;
 		return RetStat::OK;
 	}
-	inline RetStat packet_decode_internal(PacketReqAlgStruct& p, const std::vector<uint8_t>& buf, size_t& off)
+	[[nodiscard]] inline RetStat packet_decode_internal(PacketReqAlgStruct& p, const std::vector<uint8_t>& buf, size_t& off)
 	{
 		auto rs = packet_decode_basic(p.AlgType, buf, off);
 		if (is_error(rs))
@@ -731,7 +731,7 @@ namespace spdmcpp
 		return RetStat::OK;
 	}
 #if 0
-	inline RetStat packet_decode_internal(packet_negotiate_algorithms_request_var& p, const std::vector<uint8_t>& buf, size_t& start)
+	[[nodiscard]] inline RetStat packet_decode_internal(packet_negotiate_algorithms_request_var& p, const std::vector<uint8_t>& buf, size_t& start)
 	{
 		auto rs = packet_decode_internal(p.Min, buf, start);
 	/*	p.VersionNumberEntries.resize(p.Min.VersionNumberEntryCount);
@@ -834,7 +834,7 @@ namespace spdmcpp
 		start = off;
 		return RetStat::OK;
 	}
-	inline RetStat packet_decode_internal(packet_algorithms_response_var& p, const std::vector<uint8_t>& buf, size_t& off)
+	[[nodiscard]] inline RetStat packet_decode_internal(packet_algorithms_response_var& p, const std::vector<uint8_t>& buf, size_t& off)
 	{
 		auto rs = packet_decode_internal(p.Min, buf, off);
 		if (is_error(rs))
@@ -842,7 +842,9 @@ namespace spdmcpp
 		
 		p.PacketReqAlgVector.resize(p.Min.Header.Param1);//TODO check size for reasonable limit!!
 		for (size_t i = 0; i < p.PacketReqAlgVector.size(); ++i) {
-			packet_decode_internal(p.PacketReqAlgVector[i], buf, off);
+			rs = packet_decode_internal(p.PacketReqAlgVector[i], buf, off);
+			if (is_error(rs))
+				return rs;
 		}
 	/*	for (const auto& iter : p.PacketReqAlgVector) {
 			auto rs = packet_encode_internal(iter, buf, off);
@@ -931,7 +933,7 @@ namespace spdmcpp
 		}
 	};
 
-	inline RetStat packet_decode_internal(packet_digests_response_var& p, const std::vector<uint8_t>& buf, size_t& off, const packet_decode_info& info)
+	[[nodiscard]] inline RetStat packet_decode_internal(packet_digests_response_var& p, const std::vector<uint8_t>& buf, size_t& off, const packet_decode_info& info)
 	{
 		auto rs = packet_decode_internal(p.Min, buf, off);
 		if (is_error(rs))
@@ -1024,7 +1026,7 @@ namespace spdmcpp
 		}
 	};
 
-	inline RetStat packet_decode_internal(packet_certificate_response_var& p, const std::vector<uint8_t>& buf, size_t& off)
+	[[nodiscard]] inline RetStat packet_decode_internal(packet_certificate_response_var& p, const std::vector<uint8_t>& buf, size_t& off)
 	{
 		auto rs = packet_decode_internal(p.Min, buf, off);
 		if (is_error(rs))
@@ -1116,27 +1118,37 @@ namespace spdmcpp
 		}
 	};
 
-	inline RetStat packet_decode_internal(packet_challenge_auth_response_var& p, const std::vector<uint8_t>& buf, size_t& off, const packet_decode_info& info)
+	[[nodiscard]] inline RetStat packet_decode_internal(packet_challenge_auth_response_var& p, const std::vector<uint8_t>& buf, size_t& off, const packet_decode_info& info)
 	{
 		auto rs = packet_decode_internal(p.Min, buf, off);
 		if (is_error(rs))
 			return rs;
 
 		p.CertChainHashVector.resize(info.BaseHashSize);
-		packet_decode_basic(p.CertChainHashVector, buf, off);
+		rs = packet_decode_basic(p.CertChainHashVector, buf, off);
+		if (is_error(rs))
+			return rs;
 		
-		packet_decode_basic(p.Nonce, buf, off);
+		rs = packet_decode_basic(p.Nonce, buf, off);
+		if (is_error(rs))
+			return rs;
 		
 		if (info.ChallengeParam2) {
 			p.MeasurementSummaryHashVector.resize(info.BaseHashSize);
-			packet_decode_basic(p.MeasurementSummaryHashVector, buf, off);
+			rs = packet_decode_basic(p.MeasurementSummaryHashVector, buf, off);
+			if (is_error(rs))
+				return rs;
 		}
-		packet_decode_basic(p.OpaqueLength, buf, off);//TODO verify no greater than 1024
+		rs = packet_decode_basic(p.OpaqueLength, buf, off);//TODO verify no greater than 1024
+		if (is_error(rs))
+			return rs;
 		p.OpaqueDataVector.resize(p.OpaqueLength);
-		packet_decode_basic(p.OpaqueDataVector, buf, off);
+		rs = packet_decode_basic(p.OpaqueDataVector, buf, off);
+		if (is_error(rs))
+			return rs;
 		
 		p.SignatureVector.resize(info.SignatureSize);
-		packet_decode_basic(p.SignatureVector, buf, off);
+		rs = packet_decode_basic(p.SignatureVector, buf, off);
 		return RetStat::OK;
 	}
 
@@ -1265,7 +1277,7 @@ namespace spdmcpp
 		}
 	};
 
-	inline RetStat packet_decode_internal(packet_measurement_block_var& p, const std::vector<uint8_t>& buf, size_t& off)
+	[[nodiscard]] inline RetStat packet_decode_internal(packet_measurement_block_var& p, const std::vector<uint8_t>& buf, size_t& off)
 	{
 		auto rs = packet_decode_basic(p.Min, buf, off);
 		if (is_error(rs))
@@ -1346,7 +1358,7 @@ namespace spdmcpp
 		}
 	};
 
-	inline RetStat packet_decode_internal(packet_measurements_response_var& p, const std::vector<uint8_t>& buf, size_t& off, const packet_decode_info& info)
+	[[nodiscard]] inline RetStat packet_decode_internal(packet_measurements_response_var& p, const std::vector<uint8_t>& buf, size_t& off, const packet_decode_info& info)
 	{
 		auto rs = packet_decode_internal(p.Min, buf, off);
 		if (is_error(rs))
@@ -1374,14 +1386,16 @@ namespace spdmcpp
 			return rs;
 		
 		p.OpaqueDataVector.resize(p.OpaqueLength);
-		packet_decode_basic(p.OpaqueDataVector, buf, off);
+		rs = packet_decode_basic(p.OpaqueDataVector, buf, off);
+		if (is_error(rs))
+			return rs;
 		
 		if (info.GetMeasurementsParam1 & 0x01) {
 			p.SignatureVector.resize(info.SignatureSize);
-			packet_decode_basic(p.SignatureVector, buf, off);
+			rs = packet_decode_basic(p.SignatureVector, buf, off);
 		}
 		
-		return RetStat::OK;
+		return rs;
 	}
 
 	
