@@ -271,10 +271,10 @@ namespace spdmcpp
 		}*/
 		return rs;
 	}
-	inline RetStat packet_encode(const packet_error_response_var& p, std::vector<uint8_t>& buf, size_t start = 0)
+	inline RetStat packet_encode_internal(const packet_error_response_var& p, std::vector<uint8_t>& buf, size_t& off)
 	{
 		//TODO handle custom data
-		packet_encode_internal(p.Header, buf, start);
+		packet_encode_internal(p.Header, buf, off);
 		return RetStat::OK;
 	}
 	
@@ -716,10 +716,9 @@ namespace spdmcpp
 		}
 	};
 	
-	inline RetStat packet_encode(const packet_negotiate_algorithms_request_var& p, std::vector<uint8_t>& buf, size_t start = 0)
+	inline RetStat packet_encode_internal(const packet_negotiate_algorithms_request_var& p, std::vector<uint8_t>& buf, size_t& off)
 	{
-		buf.resize(start + p.Min.Length);
-		size_t off = start;
+		buf.resize(off + p.Min.Length);
 		packet_encode_internal(p.Min, buf, off);
 		
 		for (const auto& iter : p.PacketReqAlgVector) {
@@ -822,16 +821,14 @@ namespace spdmcpp
 		}
 	};
 	
-	inline RetStat packet_encode(const packet_algorithms_response_var& p, std::vector<uint8_t>& buf, size_t start = 0)
+	inline RetStat packet_encode_internal(const packet_algorithms_response_var& p, std::vector<uint8_t>& buf, size_t& off)
 	{
-		size_t off = start;
 		packet_encode_internal(p.Min, buf, off);
 		
 	/*	p.VersionNumberEntries.resize(p.Min.VersionNumberEntryCount);
 		for (size_t i = 0; i < p.VersionNumberEntries.size(); ++i) {
 			buf = packet_decode_internal(p.VersionNumberEntries[i], buf);
 		}*/
-		start = off;
 		return RetStat::OK;
 	}
 	[[nodiscard]] inline RetStat packet_decode_internal(packet_algorithms_response_var& p, const std::vector<uint8_t>& buf, size_t& off)
@@ -1216,12 +1213,11 @@ namespace spdmcpp
 	};
 
 
-	inline RetStat packet_encode(const packet_get_measurements_request_var& p, std::vector<uint8_t>& buf, size_t start = 0)
+	inline RetStat packet_encode_internal(const packet_get_measurements_request_var& p, std::vector<uint8_t>& buf, size_t& off)
 	{
 		size_t size = p.get_size();
-		buf.resize(start + size);
+		buf.resize(off + size);
 		
-		size_t off = start;
 		packet_encode_internal(p.Min, buf, off);
 		
 		if (p.has_nonce()) {
@@ -1231,7 +1227,6 @@ namespace spdmcpp
 			
 			packet_encode_basic(p.SlotIDParam, buf, off);
 		}
-		assert(off == start + size);
 		return RetStat::OK;
 	}
 	
