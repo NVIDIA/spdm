@@ -62,7 +62,8 @@ namespace spdmcpp
 		if (Context->Transport) {
 			Context->Transport->decode(ResponseBuffer, lay);
 		}
-		auto rs = packet_decode(packet, ResponseBuffer, lay.get_end_offset(), fargs...);
+		size_t off = lay.get_end_offset();
+		auto rs = packet_decode(packet, ResponseBuffer, off, fargs...);
 		if (is_error(rs)) {
 			if (rs == RetStat::ERROR_WRONG_REQUEST_RESPONSE_CODE) {
 				Log.iprint("wrong code is: ");

@@ -101,8 +101,10 @@ bool packet_pseudorandom_decode_encode()
 	
 	T packet;
 	{
-		auto rs = packet_decode(packet, src);
+		size_t off = 0;
+		auto rs = packet_decode(packet, src, off);
 		SPDMCPP_TEST_ASSERT_RS(rs, RetStat::OK);
+		assert(off == src.size());
 	}
 	{
 		auto rs = packet_encode(packet, dst);
@@ -118,13 +120,15 @@ bool packet_pseudorandom_decode_encode()
 	
 	src.push_back(0xBA);
 	{
-		auto rs = packet_decode(packet, src);
+		size_t off = 0;
+		auto rs = packet_decode(packet, src, off);
 		SPDMCPP_TEST_ASSERT_RS(rs, RetStat::WARNING_BUFFER_TOO_BIG);
 	}
 	src.pop_back();
 	src.pop_back();
 	{
-		auto rs = packet_decode(packet, src);
+		size_t off = 0;
+		auto rs = packet_decode(packet, src, off);
 		SPDMCPP_TEST_ASSERT_RS(rs, RetStat::ERROR_BUFFER_TOO_SMALL);
 	}
 	return true;
@@ -150,9 +154,14 @@ bool packet_encode_decode(const T& src)
 	std::cerr << std::endl;
 	T dst;
 	{
-		auto rs = packet_decode(dst, buf);
+		size_t off = 0;
+		auto rs = packet_decode(dst, buf, off);
 		if (rs != RetStat::OK) {
 			std::cerr << "RetStat: " << get_cstr(rs) << std::endl;
+			return false;
+		}
+		if (off != buf.size()) {
+			std::cerr << "invalid final offset: " << off << " compared to buf.size(): " << buf.size() << std::endl;
 			return false;
 		}
 	}
