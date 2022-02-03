@@ -2,7 +2,7 @@ project('spdmcpp',
 	'cpp',
 	version: '0.1.0',
 	meson_version: '>=0.56.2',
-	default_options: ['cpp_std=c++20', 'warning_level=3', 'werror=true']
+	default_options: ['cpp_std=c++20', 'warning_level=3']
 )
 
 if get_option('tests').enabled()
@@ -11,6 +11,9 @@ if get_option('tests').enabled()
 	assert(gtest.found(), 'Couldn\'t find gtest, either provide or disable tests with: -Dtests=disabled')
 	assert(gmock.found(), 'Couldn\'t find gmock, either provide or disable tests with: -Dtests=disabled')
 endif
+
+#at the moment we can't use default_option werror=true because it's passed to subprojects and subproject dependencies, and atm specifically fmt fails
+add_project_arguments('-Werror', language: ['c', 'cpp'])
 
 # Wno-psabi reduces the number of "Note:" messages when cross-compiling some STL
 # stuff for ARM. See https://stackoverflow.com/questions/48149323/strange-gcc-warning-when-compiling-qt-project
