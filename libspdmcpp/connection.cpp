@@ -3,6 +3,8 @@
 #include <mbedtls/error.h>
 
 #include <spdmcpp/connection.hpp>
+#include <spdmcpp/connection_inl.hpp>
+#include <spdmcpp/context.hpp>
 #include <spdmcpp/helpers.hpp>
 #include <spdmcpp/mbedtls_support.hpp>
 

@@ -216,6 +216,3 @@ class ConnectionClass
 };
 
 } // namespace spdmcpp
-
-#include "connection_inl.hpp"
-#include "context.hpp"
