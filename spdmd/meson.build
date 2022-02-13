@@ -16,12 +16,14 @@ executable(
 	sources,
     implicit_include_directories: false,
     include_directories: include_directories(spdmd_headers),	
+    link_with: libspdmcpp_requester,
 	dependencies: [
 		CLI11_dep,
 		nlohmann_dep,
 		phosphor_dbus_interfaces,
 		sdbusplus, 
-		sdeventplus],
+		sdeventplus,
+		crypto_deps],
 	install: true
 )
 

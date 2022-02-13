@@ -5,17 +5,62 @@
 
 #include <sdbusplus/bus.hpp>
 #include <sdbusplus/server/object.hpp>
-////#include <sdbusplus/server.hpp>
+#include <sdeventplus/event.hpp>
+#include <sdeventplus/source/io.hpp>
+#include <sdeventplus/source/time.hpp>
+#include <spdmcpp/connection.hpp>
+#include <spdmcpp/mctp_support.hpp>
 
 #include <map>
 
 namespace spdmd
 {
+
+struct ResponderContext
+{
+    spdmcpp::ContextClass context;
+    sdeventplus::Event event;
+    sdbusplus::bus::bus bus;
+
+    ResponderContext(sdeventplus::Event&& e, sdbusplus::bus::bus&& b) :
+        event(std::move(e)), bus(std::move(b))
+    {}
+};
+
 namespace dbus_api
 {
 
 using ResponderIntf = sdbusplus::server::object::object<
     sdbusplus::xyz::openbmc_project::SPDM::server::Responder>;
+
+class Responder;
+
+class MCTP_TransportClass : public spdmcpp::MCTP_TransportClass
+{
+  public:
+    MCTP_TransportClass(uint8_t eid, Responder& resp) :
+        spdmcpp::MCTP_TransportClass(eid), responder(resp)
+    {}
+    virtual ~MCTP_TransportClass()
+    {
+        if (time)
+        {
+            delete time;
+            time = nullptr;
+        }
+    }
+
+    virtual spdmcpp::RetStat
+        setup_timeout(spdmcpp::timeout_ms_t timeout) override;
+
+    virtual bool clear_timeout() override;
+
+  protected:
+    static constexpr sdeventplus::ClockId clockId =
+        sdeventplus::ClockId::Monotonic;
+    Responder& responder;
+    sdeventplus::source::Time<clockId>* time = nullptr;
+};
 
 /** @class Responder
  *  @brief OpenBMC SPDM.Responder implementation.
@@ -30,15 +75,16 @@ class Responder : public ResponderIntf
     Responder& operator=(const Responder&) = delete;
     Responder(Responder&&) = delete;
     Responder& operator=(Responder&&) = delete;
-    virtual ~Responder() = default;
 
     /** @brief Constructor to put object onto bus at a dbus path.
      *  @param[in] bus - Bus to attach to.
      *  @param[in] path - Path to attach at.
      */
-    Responder(sdbusplus::bus::bus& bus, const std::string& path) :
-        ResponderIntf(bus, path.c_str()){};
+    Responder(ResponderContext& ctx, const std::string& path, uint8_t eid);
 
+    ~Responder();
+
+#if 0
     /** @brief Implementation for RequesterIntf.GetInstanceId */
     uint8_t getInstanceId(uint8_t eid);
 
@@ -51,7 +97,7 @@ class Responder : public ResponderIntf
     {
         ids[eid].markFree(instanceId);
     }
-
+#endif
     /** @brief Implementation for Refresh
      *  Use this method to get all fresh measurements and certificates.
      *  The method is asynchronous, so it returns immediately.
@@ -60,9 +106,26 @@ class Responder : public ResponderIntf
      */
     void refresh() override;
 
-  private:
-    /** @brief EID to SPDM Instance ID map */
-    std::map<uint8_t, InstanceId> ids;
+    spdmcpp::LogClass& getLog()
+    {
+        return Connection.getLog();
+    }
+
+    spdmcpp::RetStat handleRecv(std::vector<uint8_t>& buf);
+
+  protected:
+    typedef std::vector<
+        std::tuple<std::vector<uint8_t>, MeasurementsType, HashingAlgorithms>>
+        MeasurementsContainerType;
+
+    ResponderContext& context;
+
+    spdmcpp::ConnectionClass Connection;
+    MCTP_TransportClass Transport;
+
+    void updateLastUpdateTime();
+
+    friend MCTP_TransportClass;
 };
 
 } // namespace dbus_api
