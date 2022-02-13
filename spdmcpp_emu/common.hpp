@@ -65,59 +65,6 @@ class EMU_MCTP_TransportClass :
         MCTPMessageTypeEnum MessageType;
     };
 };
-
-class MCTP_TransportClass :
-    public TransportClass // for sending to mctp-demux-daemon
-{
-  public:
-    MCTP_TransportClass(uint8_t eid) : EID(eid)
-    {}
-    virtual ~MCTP_TransportClass()
-    {}
-
-    void SetEID(uint8_t eid)
-    {
-        assert(EID == 0);
-        EID = eid;
-    }
-
-    virtual RetStat encode_pre(std::vector<uint8_t>& /*buf*/, LayerState& lay)
-    {
-        set_layer_size(lay, sizeof(header_type));
-        return spdmcpp::RetStat::OK;
-    }
-    virtual RetStat encode_post(std::vector<uint8_t>& buf, LayerState& lay)
-    {
-        auto& header = get_header_ref<header_type>(buf, lay);
-        header.eid = EID;
-        header.type = MCTPMessageTypeEnum::SPDM;
-        return RetStat::OK;
-    }
-
-    virtual RetStat decode(std::vector<uint8_t>& buf,
-                           LayerState& lay) // TODO is any of this correct at
-                                            // all?! can't test and verify atm
-    {
-        set_layer_size(lay, sizeof(header_type));
-        auto& header = get_header_ref<header_type>(buf, lay);
-        if (header.type != spdmcpp::MCTPMessageTypeEnum::SPDM)
-        {
-            return spdmcpp::RetStat::ERROR_UNKNOWN;
-        }
-        return spdmcpp::RetStat::OK;
-    }
-
-  protected:
-    struct header_type
-    {
-        uint8_t eid;
-        MCTPMessageTypeEnum type;
-
-        static constexpr bool size_is_constant = true;
-    };
-
-    uint8_t EID = 0;
-};
 } // namespace spdmcpp
 
 enum class SocketCommandEnum : uint32_t
@@ -167,8 +114,7 @@ class EMUIOClass : public spdmcpp::IOClass
     spdmcpp::RetStat read(
         std::vector<uint8_t>& buf,
         spdmcpp::timeout_us_t timeout = spdmcpp::TIMEOUT_US_INFINITE) override;
-    spdmcpp::RetStat setup_timeout(
-        spdmcpp::timeout_us_t timeout = spdmcpp::TIMEOUT_US_INFINITE) override;
+    spdmcpp::RetStat setup_timeout(spdmcpp::timeout_us_t timeout) override;
 
   private:
     EmulatorBase& Emulator;
@@ -187,8 +133,7 @@ class DemuxIOClass :
     spdmcpp::RetStat read(
         std::vector<uint8_t>& buf,
         spdmcpp::timeout_us_t timeout = spdmcpp::TIMEOUT_US_INFINITE) override;
-    spdmcpp::RetStat setup_timeout(
-        spdmcpp::timeout_us_t timeout = spdmcpp::TIMEOUT_US_INFINITE) override;
+    spdmcpp::RetStat setup_timeout(spdmcpp::timeout_us_t timeout) override;
 
   private:
     EmulatorBase& Emulator;
@@ -420,21 +365,10 @@ class EmulatorBase
     {
         Context = new spdmcpp::ContextClass;
         Context->register_io(IO);
-
-        if (Transport)
-        {
-            Context->register_transport(Transport);
-        }
         return true;
     }
     void delete_spdmcpp()
     {
-        if (Transport)
-        {
-            Context->unregister_transport(Transport);
-            delete Transport;
-            Transport = nullptr;
-        }
         Context->unregister_io(IO);
         delete IO;
         delete Context;

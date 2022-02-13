@@ -43,10 +43,4 @@ inline bool is_error(RetStat value)
 // that don't make sense for a function and other such issues?! we could also
 // have helpers to change from one to another in cases where it's sensible
 
-enum class EventRetStat : int32_t
-{
-    OK = 0,
-    ERROR_EXIT = -1,
-};
-
 } // namespace spdmcpp

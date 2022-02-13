@@ -3,6 +3,7 @@
 #include "cxxopts.hpp"
 
 #include <sdeventplus/event.hpp>
+#include <spdmcpp/mctp_support.hpp>
 
 #define DEFAULT_SPDM_PLATFORM_PORT 2323
 
@@ -126,6 +127,7 @@ class EmulatorClient : public EmulatorBase
                 break;
             case SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_NONE:
                 IO = new EMUIOClass(*this);
+                // TODO FIX Transport is now required
                 break;
             case SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_MCTP_DEMUX:
                 IO = new DemuxIOClass(*this);
@@ -149,6 +151,11 @@ class EmulatorClient : public EmulatorBase
 
         spdmcpp::ConnectionClass con(Context);
 
+        if (Transport)
+        {
+            con.register_transport(Transport);
+        }
+
         auto callback = [this, &con](sdeventplus::source::IO& /*io*/,
                                      int /*fd*/, uint32_t revents) {
             // 			spdmcpp::LogClass& log = con.getLog();
@@ -164,8 +171,8 @@ class EmulatorClient : public EmulatorBase
             IO->read(buf);
             // 			log.iprint("Event recv buf: ");
             // 			log.println(buf.data(), buf.size());
-            spdmcpp::EventRetStat rs = con.handle_recv();
-            if (rs == spdmcpp::EventRetStat::ERROR_EXIT)
+            (void)con.handle_recv();
+            if (!con.is_waiting_for_response())
             {
                 Event.exit(0);
             }
@@ -179,8 +186,8 @@ class EmulatorClient : public EmulatorBase
                          sdeventplus::source::Time<cid>::TimePoint /*time*/) {
                 // 			std::cerr << "IOClass::setup_timeout callback" <<
                 // std::endl;
-                spdmcpp::EventRetStat rs = con.handle_timeout();
-                if (rs == spdmcpp::EventRetStat::ERROR_EXIT)
+                spdmcpp::RetStat rs = con.handle_timeout();
+                if (rs == spdmcpp::RetStat::ERROR_TIMEOUT)
                 {
                     Event.exit(0);
                 }
@@ -237,6 +244,12 @@ class EmulatorClient : public EmulatorBase
         std::cout << "press enter to continue...\n";
         Event.loop();
 
+        if (Transport)
+        {
+            con.unregister_transport(Transport);
+            delete Transport;
+            Transport = nullptr;
+        }
         delete_spdmcpp();
         return true;
     }

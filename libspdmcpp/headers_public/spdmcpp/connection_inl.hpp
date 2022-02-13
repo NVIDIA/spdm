@@ -11,14 +11,13 @@ RetStat ConnectionClass::send_request(const T& packet, BufEnum bufidx)
     Log.println("):");
     packet.print_ml(Log);
 
-    //	return Context->send_request(packet);
-    std::vector<uint8_t> buf; // TODO keep around and reserve reasonably to
-                              // avoid constant dynamic alloc/deallocs
+    std::vector<uint8_t>& buf = SendBuffer;
+    buf.clear();
     TransportClass::LayerState lay;
 
-    if (Context->Transport)
+    if (Transport)
     {
-        Context->Transport->encode_pre(buf, lay);
+        Transport->encode_pre(buf, lay);
     }
 
     auto rs = packet_encode(packet, buf, lay.get_end_offset());
@@ -40,9 +39,9 @@ RetStat ConnectionClass::send_request(const T& packet, BufEnum bufidx)
         AppendToBuf(bufidx, &buf[off], buf.size() - off);
     }
 
-    if (Context->Transport)
+    if (Transport)
     {
-        Context->Transport->encode_post(buf, lay);
+        Transport->encode_post(buf, lay);
     }
 
     Log.iprint("Context->IO->write() buf.size() = ");
@@ -54,26 +53,13 @@ RetStat ConnectionClass::send_request(const T& packet, BufEnum bufidx)
     return rs;
 }
 
-template <typename T>
-RetStat ConnectionClass::receive_response(T& packet)
-{
-    //	auto rs = Context->receive_response(packet);
-    ResponseBuffer.clear();
-    auto rs = Context->IO->read(ResponseBuffer);
-    if (is_error(rs))
-    {
-        return rs;
-    }
-    return interpret_response(packet);
-}
-
 template <typename T, typename... Targs>
 RetStat ConnectionClass::interpret_response(T& packet, Targs... fargs)
 {
     TransportClass::LayerState lay; // TODO double decode
-    if (Context->Transport)
+    if (Transport)
     {
-        Context->Transport->decode(ResponseBuffer, lay);
+        Transport->decode(ResponseBuffer, lay);
     }
     size_t off = lay.get_end_offset();
     auto rs = packet_decode(packet, ResponseBuffer, off, fargs...);
@@ -109,14 +95,30 @@ RetStat ConnectionClass::async_response()
 template <typename T, typename R>
 RetStat ConnectionClass::send_request_setup_response(const T& request,
                                                      const R& /*response*/,
-                                                     BufEnum bufidx)
+                                                     BufEnum bufidx,
+                                                     timeout_ms_t timeout,
+                                                     uint16_t retry)
 {
     auto rs = send_request(request, bufidx);
     if (is_error(rs))
     {
         return rs;
     }
-    async_response<R>();
+    rs = async_response<R>();
+    if (is_error(rs))
+    {
+        return rs;
+    }
+    if (timeout != TIMEOUT_MS_INFINITE)
+    {
+        rs = Transport->setup_timeout(timeout);
+        if (is_error(rs))
+        {
+            return rs;
+        }
+        SendTimeout = timeout;
+        SendRetry = retry;
+    }
     return rs;
 }
 

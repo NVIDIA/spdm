@@ -23,7 +23,15 @@ namespace spdmcpp
 typedef uint64_t timeout_us_t; /// in units of 1 micro second
 enum : timeout_us_t
 {
-    TIMEOUT_US_INFINITE = std::numeric_limits<timeout_us_t>::max()
+    TIMEOUT_US_INFINITE = std::numeric_limits<timeout_us_t>::max(),
+    TIMEOUT_US_MAXIMUM = TIMEOUT_US_INFINITE - 1
+};
+
+typedef uint64_t timeout_ms_t; /// in units of 1 milli second
+enum : timeout_ms_t
+{
+    TIMEOUT_MS_INFINITE = std::numeric_limits<timeout_ms_t>::max(),
+    TIMEOUT_MS_MAXIMUM = TIMEOUT_MS_INFINITE - 1
 };
 
 class ConnectionClass;
@@ -50,7 +58,6 @@ class TransportClass // TODO almost for sure will require custom data
       protected:
         size_t Offset = 0;
         size_t Size = 0;
-        void* Priv = nullptr;
     };
 
     virtual ~TransportClass()
@@ -61,24 +68,29 @@ class TransportClass // TODO almost for sure will require custom data
 
     virtual RetStat decode(std::vector<uint8_t>& buf, LayerState& lay) = 0;
 
+    virtual RetStat setup_timeout(timeout_ms_t /*timeout*/)
+    {
+        return RetStat::ERROR_UNKNOWN;
+    }
+    virtual bool clear_timeout()
+    {
+        return false;
+    }
+
   protected:
     template <class T>
-    T& get_header_ref(std::vector<uint8_t>& buf, LayerState& lay)
+    static T& get_header_ref(std::vector<uint8_t>& buf, LayerState& lay)
     {
         return *reinterpret_cast<T*>(&buf[lay.get_offset()]);
     }
 
-    void set_layer_offset(LayerState& lay, size_t v)
+    static void set_layer_offset(LayerState& lay, size_t v)
     {
         lay.Offset = v;
     }
-    void set_layer_size(LayerState& lay, size_t v)
+    static void set_layer_size(LayerState& lay, size_t v)
     {
         lay.Size = v;
-    }
-    void set_layer_priv(LayerState& lay, void* v)
-    {
-        lay.Priv = v;
     }
 };
 
@@ -90,8 +102,10 @@ class IOClass
                           timeout_us_t timeout = TIMEOUT_US_INFINITE) = 0;
     virtual RetStat read(std::vector<uint8_t>& buf,
                          timeout_us_t timeout = TIMEOUT_US_INFINITE) = 0;
-    virtual RetStat
-        setup_timeout(timeout_us_t timeout = TIMEOUT_US_INFINITE) = 0;
+    virtual RetStat setup_timeout(timeout_us_t /*timeout*/)
+    {
+        return RetStat::ERROR_UNKNOWN;
+    }
 };
 
 } // namespace spdmcpp

@@ -15,6 +15,7 @@
 #include <cstring>
 #include <iostream>
 #include <limits>
+#include <map>
 #include <vector>
 
 namespace spdmcpp
@@ -60,6 +61,47 @@ class QueryFlowClass : public FlowClass
     StateEnum State = STATE_START;
 };
 
+class TimingClass
+{
+  public:
+    timeout_ms_t getT1() const
+    {
+        return RTT + ST1;
+    }
+    timeout_ms_t getT2() const
+    {
+        return RTT + CT;
+    }
+
+    void setCTExponent(uint8_t ctexp)
+    {
+        if (ctexp < 10) // 2^10 is < 1024 us, so < 1 ms
+        {
+            CT = 1;
+            return;
+        }
+        ctexp -= 10;
+        if (ctexp >= sizeof(CT) * 8) // exceeds value range cap to max
+        {
+            CT = TIMEOUT_MS_MAXIMUM;
+            return;
+        }
+        CT = static_cast<timeout_ms_t>(1) << ctexp;
+        // TODO add the extra missing bit due to dividing by 1024 instead of
+        // 1000;
+    }
+
+  private:
+    timeout_ms_t RTT = 100; // round-trip transport implementation defined, TODO
+                            // likely needs to be CLI configurable?!
+    static constexpr timeout_ms_t ST1 = 100;
+
+    timeout_ms_t T1 = 0;
+
+    timeout_ms_t CT = 0;
+    timeout_ms_t T2 = 0;
+};
+
 class ConnectionClass
 {
   public:
@@ -68,7 +110,26 @@ class ConnectionClass
     ~ConnectionClass()
     {}
 
+    void register_transport(TransportClass* transport)
+    {
+        assert(!Transport);
+        Transport = transport;
+    }
+    void unregister_transport(TransportClass* transport)
+    {
+        assert(Transport == transport);
+        Transport = nullptr;
+    }
+
     RetStat init_connection();
+    void reset_connection();
+
+    bool HasInfo(ConnectionInfoEnum info) const
+    {
+        return !!(GotInfo &
+                  (1 << static_cast<std::underlying_type_t<ConnectionInfoEnum>>(
+                       info)));
+    }
 
     typedef uint8_t SlotIdx;
     enum : SlotIdx
@@ -76,26 +137,52 @@ class ConnectionClass
         SLOT_NUM = 8
     };
 
-    RetStat try_get_version();
-    RetStat try_get_capabilities();
-    RetStat try_negotiate_algorithms();
-    RetStat try_get_digest();
-    RetStat try_get_certificate(SlotIdx idx);
-    RetStat try_get_certificate_chunk(SlotIdx idx);
-    RetStat try_get_measurements();
+    [[nodiscard]] RetStat try_get_version();
+    [[nodiscard]] RetStat try_get_capabilities();
+    [[nodiscard]] RetStat try_negotiate_algorithms();
+    [[nodiscard]] RetStat try_get_digest();
+    [[nodiscard]] RetStat try_get_certificate(SlotIdx idx);
+    [[nodiscard]] RetStat try_get_certificate_chunk(SlotIdx idx);
+    [[nodiscard]] RetStat try_get_measurements();
 
-    RetStat try_challenge();
+    [[nodiscard]] RetStat try_challenge();
 
     template <class T>
-    RetStat handle_recv();
+    [[nodiscard]] RetStat handle_recv();
 
-    EventRetStat handle_recv();
-    EventRetStat handle_timeout();
+    [[nodiscard]] RetStat handle_recv();
+    [[nodiscard]] RetStat handle_timeout();
 
+    bool is_waiting_for_response() const
+    {
+        return WaitingForResponse != RequestResponseEnum::INVALID;
+    }
+
+    HashEnum getSignatureHash() const
+    {
+        assert(HasInfo(ConnectionInfoEnum::ALGORITHMS));
+        return to_hash(Algorithms.Min.BaseHashAlgo);
+    }
+    HashEnum getMeasurementHash() const
+    {
+        assert(HasInfo(ConnectionInfoEnum::ALGORITHMS));
+        return to_hash(Algorithms.Min.MeasurementHashAlgo);
+    }
     MessageVersionEnum getMessageVersion() const
     {
+        assert(HasInfo(ConnectionInfoEnum::CHOOSEN_VERSION));
         return MessageVersion;
     }
+    bool getCertificates(std::string& str) const;
+
+    typedef std::map<uint8_t, packet_measurement_field_var>
+        DMTFMeasurementsContainer;
+    const DMTFMeasurementsContainer& getDMTFMeasurements() const
+    {
+        assert(HasInfo(ConnectionInfoEnum::MEASUREMENTS));
+        return DMTFMeasurements;
+    }
+
     std::vector<uint8_t>& getResponseBufferRef()
     {
         return ResponseBuffer;
@@ -132,33 +219,53 @@ class ConnectionClass
             assert(MCertificates.size() >= 2);
             return MCertificates[MCertificates.size() - 1];
         }
+
+        void clear()
+        {
+            Valid = false;
+            Digest.clear();
+            Certificates.clear();
+
+            for (auto cert : MCertificates)
+                mbedtls_x509_crt_free(cert);
+            MCertificates.clear();
+        }
     };
 
     template <typename T>
     RetStat send_request(const T& packet, BufEnum bufidx = BufEnum::NUM);
-    template <typename T>
-    RetStat receive_response(T& packet);
-    // 		template<typename T> RetStat interpret_response(T& packet);
     template <typename T, typename... Targs>
     RetStat interpret_response(T& packet, Targs... fargs);
 
     template <typename T>
     RetStat async_response();
     template <typename T, typename R>
-    RetStat send_request_setup_response(const T& request, const R& response,
-                                        BufEnum bufidx = BufEnum::NUM);
+    RetStat send_request_setup_response(
+        const T& request, const R& response, BufEnum bufidx = BufEnum::NUM,
+        timeout_ms_t timeout = TIMEOUT_MS_INFINITE, uint16_t retry = 4);
+
+    void clear_timeout();
+
+    std::vector<uint8_t> SendBuffer;
+    timeout_ms_t SendTimeout = 0;
+    uint16_t SendRetry = 0;
 
     std::vector<uint8_t> ResponseBuffer;
     size_t ResponseBufferSPDMOffset;
 
     ContextClass* Context = nullptr;
-    LogClass Log;
+    TransportClass* Transport = nullptr;
+    mutable LogClass Log;
 
     std::vector<packet_version_number> SupportedVersions;
     MessageVersionEnum MessageVersion = MessageVersionEnum::UNKNOWN;
 
     packet_algorithms_response_var Algorithms;
     SlotClass Slots[SLOT_NUM];
+
+    DMTFMeasurementsContainer DMTFMeasurements;
+
+    TimingClass Timings;
 
     // TODO the requirement of hashing messages before the hash function is
     // decided by the responder is quite troublesome, probably easiest to
@@ -204,12 +311,6 @@ class ConnectionClass
     {
         GotInfo |=
             1 << static_cast<std::underlying_type_t<ConnectionInfoEnum>>(info);
-    }
-    bool HasInfo(ConnectionInfoEnum info)
-    {
-        return !!(GotInfo &
-                  (1 << static_cast<std::underlying_type_t<ConnectionInfoEnum>>(
-                       info)));
     }
 
     RetStat choose_version();
