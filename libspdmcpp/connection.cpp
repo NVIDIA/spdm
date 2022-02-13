@@ -18,7 +18,7 @@ namespace spdmcpp
 RetStat ConnectionClass::init_connection()
 {
     SPDMCPP_LOG_TRACE_FUNC(Log);
-    HashM1M2.setup(MBEDTLS_MD_SHA384);
+    HashM1M2.setup(HashEnum::SHA_384);
 
     auto rs = try_get_version();
     SPDMCPP_LOG_TRACE_RS(Log, rs);
@@ -336,13 +336,11 @@ RetStat ConnectionClass::handle_recv<packet_certificate_response_var>()
             }*/
         {
             std::vector<uint8_t> hash;
-            hash.resize(get_hash_size(Algorithms.Min.BaseHashAlgo));
-            int ret = mbedtls_md(mbedtls_md_info_from_type(
-                                     to_mbedtls(Algorithms.Min.BaseHashAlgo)),
-                                 cert.data(), cert.size(), hash.data());
-            assert(ret == 0);
+            HashClass::compute(hash, to_hash(Algorithms.Min.BaseHashAlgo),
+                               cert);
             Log.iprint("computed certificate digest hash = ");
             Log.println(hash.data(), hash.size());
+
             if (!std::equal(hash.begin(), hash.end(), slot.Digest.begin()))
             {
                 Log.iprintln("certificate chain DIGEST verify FAILED!");
@@ -411,7 +409,7 @@ RetStat ConnectionClass::handle_recv<packet_certificate_response_var>()
                 std::vector<uint8_t> hash;
                 hash.resize(get_hash_size(Algorithms.Min.BaseHashAlgo));
                 int ret = mbedtls_md(mbedtls_md_info_from_type(to_mbedtls(
-                                         Algorithms.Min.BaseHashAlgo)),
+                                         to_hash(Algorithms.Min.BaseHashAlgo))),
                                      cert.data() + off, asn1_len, hash.data());
                 assert(ret == 0);
                 Log.iprint("computed root certificate hash = ");
@@ -560,7 +558,7 @@ RetStat ConnectionClass::handle_recv<packet_challenge_auth_response_var>()
         std::vector<uint8_t> hash;
         {
             HashClass ha;
-            ha.setup(to_mbedtls(Algorithms.Min.BaseHashAlgo));
+            ha.setup(to_hash(Algorithms.Min.BaseHashAlgo));
             for (std::vector<uint8_t>& buf : Bufs)
             {
                 if (!buf.empty())
@@ -615,7 +613,7 @@ RetStat ConnectionClass::try_get_measurements()
     SPDMCPP_LOG_TRACE_FUNC(Log);
     assert(MessageVersion != MessageVersionEnum::UNKNOWN);
 
-    HashL1L2.setup(to_mbedtls(Algorithms.Min.BaseHashAlgo));
+    HashL1L2.setup(to_hash(Algorithms.Min.BaseHashAlgo));
 
     packet_get_measurements_request_var request;
     request.Min.Header.MessageVersion = MessageVersion;
