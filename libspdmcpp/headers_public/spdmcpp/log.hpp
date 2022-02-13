@@ -23,6 +23,10 @@ class LogClass
   public:
     // TODO definitely more helpers needed, time-stamping?!
 
+    void print(char* str)
+    {
+        get_ostream() << str;
+    }
     void print(const char* str)
     {
         get_ostream() << str;
@@ -219,9 +223,10 @@ class TraceHelper
 };
 
 #define SPDMCPP_LOG_TRACE_FUNC(log)                                            \
-    TraceHelper log_trace_helper_##__LINE__((log), __func__)
+    spdmcpp::TraceHelper log_trace_helper_##__LINE__((log), __func__)
 #define SPDMCPP_LOG_TRACE_BLOCK(log)                                           \
-    TraceHelper log_trace_helper_##__LINE__((log), __func__, __FILE__, __LINE__)
+    spdmcpp::TraceHelper log_trace_helper_##__LINE__((log), __func__,          \
+                                                     __FILE__, __LINE__)
 #define SPDMCPP_LOG_TRACE_RS(log, rs)                                          \
     do                                                                         \
     {                                                                          \
