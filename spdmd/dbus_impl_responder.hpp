@@ -1,7 +1,6 @@
 #pragma once
 
 #include "instance_id.hpp"
-
 #include "xyz/openbmc_project/SPDM/Responder/server.hpp"
 
 #include <sdbusplus/bus.hpp>
@@ -54,9 +53,9 @@ class Responder : public ResponderIntf
     }
 
     /** @brief Implementation for Refresh
-     *  Use this method to get all fresh measurements and certificates. 
-     *  The method is asynchronous, so it returns immediately. 
-     *  Current status of communication between the SPDM requester and 
+     *  Use this method to get all fresh measurements and certificates.
+     *  The method is asynchronous, so it returns immediately.
+     *  Current status of communication between the SPDM requester and
      *  responder may be verified using the Status property.
      */
     void refresh() override;

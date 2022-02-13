@@ -1,13 +1,14 @@
-#include <string>
 #include "config.h"
+
+#include <string>
 
 using namespace std;
 
 namespace spdmd
 {
-    namespace description
-    {
-        const string NAME = "SPDM deamon for Open BMC";
-        const string VERSION = "0.1.0.0";
-    }
-}
+namespace description
+{
+const string NAME = "SPDM deamon for Open BMC";
+const string VERSION = "0.1.0.0";
+} // namespace description
+} // namespace spdmd

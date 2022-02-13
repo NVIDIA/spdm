@@ -1,4 +1,2 @@
 
 #include <spdmcpp/common.hpp>
-
-

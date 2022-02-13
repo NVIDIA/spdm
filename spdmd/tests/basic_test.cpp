@@ -11,4 +11,3 @@ TEST(Fake, Pass)
     int i = 2;
     EXPECT_EQ(i, 2);
 }
-

@@ -32,9 +32,10 @@ uint8_t Responder::getInstanceId(uint8_t eid)
     return id;
 }
 
-void Responder::refresh() {
+void Responder::refresh()
+{
     printf("Refresh received");
 }
 
 } // namespace dbus_api
-} // namespace spdm
+} // namespace spdmd
