@@ -24,14 +24,69 @@ Responder::Responder(ResponderContext& ctx, const std::string& path,
     ResponderIntf(ctx.bus, (path + "/" + std::to_string(eid)).c_str()),
     context(ctx), Connection(&ctx.context), Transport(eid, *this)
 {
-    ResponderIntf::eid(eid);
-
     Connection.register_transport(&Transport);
+
+    Connection.reset_connection();
+    auto rs = Connection.init_connection();
+    SPDMCPP_LOG_TRACE_RS(getLog(), rs);
 }
 
 Responder::~Responder()
 {
     Connection.unregister_transport(&Transport);
+}
+
+void Responder::syncSlotsInfo()
+{
+    CertificatesContainerType certs;
+    MeasurementsContainerType meas;
+
+    for (ConnectionClass::SlotIdx idx = 0; idx < ConnectionClass::SLOT_NUM;
+         ++idx)
+    {
+        {
+            std::vector<uint8_t> cert;
+            if (Connection.getCertificatesDER(cert, idx))
+            {
+                certs.resize(certs.size() + 1);
+
+                std::get<0>(certs.back()) = idx;
+                std::swap(cert, std::get<1>(certs.back()));
+            }
+        }
+        const ConnectionClass::DMTFMeasurementsContainer& src =
+            Connection.getDMTFMeasurements(idx);
+        if (!src.empty())
+        {
+            meas.resize(meas.size() + 1);
+            auto& slot = meas.back();
+            std::get<0>(slot) = idx;
+            for (auto& field : src)
+            {
+                auto& dst_vec = std::get<1>(slot);
+                // auto& dst_vec = dst;
+                dst_vec.resize(dst_vec.size() + 1);
+                auto& d = dst_vec.back();
+
+                std::get<0>(d) = field.first;
+                std::get<1>(d) = field.second.Min.Type;
+                std::get<2>(d) = std::vector<uint8_t>(field.second.ValueVector);
+            }
+        }
+    }
+    {
+        auto& buf = Connection.getSignedMeasurementsBuffer();
+        signedMeasurements(buf);
+    }
+    {
+        const nonce_array_32& arr = Connection.getMeasurementNonce();
+        std::vector<uint8_t> nonc(sizeof(arr));
+        memcpy(nonc.data(), arr, nonc.size());
+        nonce(nonc);
+    }
+    certificate(certs);
+    measurements(meas);
+    updateLastUpdateTime();
 }
 
 spdmcpp::RetStat Responder::handleRecv(std::vector<uint8_t>& buf)
@@ -50,51 +105,49 @@ spdmcpp::RetStat Responder::handleRecv(std::vector<uint8_t>& buf)
 
     if (!Connection.is_waiting_for_response())
     {
+        syncSlotsInfo();
+#if 0
         // TODO verify!!! and set measurements
         assert(Connection.HasInfo(ConnectionInfoEnum::MEASUREMENTS));
         const ConnectionClass::DMTFMeasurementsContainer& src =
-            Connection.getDMTFMeasurements();
+            Connection.getDMTFMeasurements(0);
 
-        MeasurementsContainerType dst;
+        MeasurementsContainerType dst = measurements();
 
-        //	std::get<0>(dst) = src.size();
+        // uint8_t slotidx = 0;
+        dst.resize(1);
+        auto& slot = dst[0];
+
+        std::get<0>(slot) = 0;
         for (auto& field : src)
         {
-            // 			auto& dst_vec = std::get<1>(dst);
-            auto& dst_vec = dst;
+            auto& dst_vec = std::get<1>(slot);
+            // auto& dst_vec = dst;
             dst_vec.resize(dst_vec.size() + 1);
             auto& d = dst_vec.back();
 
-            //	std::get<0>(d) = std::string(reinterpret_cast<const
-            // char*>(field.second.ValueVector.data()),
-            // field.second.ValueVector.size());
-            std::get<0>(d) = std::vector<uint8_t>(field.second.ValueVector);
-
-            // TODO either encode to string or change to some raw/binary type if
-            // possible?
-            if (field.second.Min.Type & 0x80)
-            {
-                std::get<2>(d) = HashingAlgorithms::None;
-            }
-            else
-            {
-                std::get<2>(d) = hashingAlgorithm();
-            }
-            //	field.second.print_ml(Connection.getLog());
+            std::get<0>(d) = field.first;
+            std::get<1>(d) = field.second.Min.Type;
+            std::get<2>(d) = std::vector<uint8_t>(field.second.ValueVector);
         }
         measurements(dst);
+#endif
         updateLastUpdateTime();
         status(SPDMStatus::Success);
     }
     else if (Connection.HasInfo(ConnectionInfoEnum::CERTIFICATES))
     {
+#if 0
         // TODO verify certificate!?
-        std::string str;
-        if (Connection.getCertificates(str))
+        uint8_t slotidx = 0;
+        CertificatesContainerType certs = certificate();
+        certs.resize(1);
+        if (Connection.getCertificateDER(std::get<1>(certs[0]), slotidx))
         {
-            certificate(str);
+            certificate(certs);
             status(SPDMStatus::GettingMeasurements);
         }
+#endif
     }
     else if (Connection.HasInfo(ConnectionInfoEnum::ALGORITHMS))
     {
@@ -131,18 +184,33 @@ spdmcpp::RetStat Responder::handleRecv(std::vector<uint8_t>& buf)
     return rs;
 }
 
-void Responder::refresh()
+void Responder::refresh(uint8_t slot, std::vector<uint8_t> nonc,
+                        uint32_t sessionId)
 {
     status(SPDMStatus::Initializing);
-    version(0);
-    hashingAlgorithm(HashingAlgorithms::None);
-    certificate("");
-    measurements(MeasurementsContainerType());
     updateLastUpdateTime();
 
-    Connection.reset_connection();
-    auto rs = Connection.init_connection();
-    SPDMCPP_LOG_TRACE_RS(getLog(), rs);
+    if (sessionId)
+    {
+        getLog().iprintln("WARNING - sessionId unsupported!");
+    }
+
+    if (nonc.size() == 32)
+    {
+        auto rs = Connection.refresh_measurements(
+            slot, *reinterpret_cast<nonce_array_32*>(nonc.data()));
+        SPDMCPP_LOG_TRACE_RS(getLog(), rs);
+    }
+    else
+    {
+        if (!nonc.empty())
+        {
+            getLog().iprint("WARNING - nonce has invalid size = ");
+            getLog().println(nonc.size());
+        }
+        auto rs = Connection.refresh_measurements(slot);
+        SPDMCPP_LOG_TRACE_RS(getLog(), rs);
+    }
 }
 
 void Responder::updateLastUpdateTime()

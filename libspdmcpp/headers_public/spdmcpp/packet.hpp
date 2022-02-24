@@ -60,6 +60,8 @@ constexpr size_t sizeof_array(const T (&array)[N])
     return sizeof(array);
 }
 
+typedef uint8_t nonce_array_32[32];
+
 struct packet_decode_info
 {
     uint16_t BaseHashSize = 0;
@@ -451,7 +453,7 @@ struct packet_get_version_response_min
 {
     packet_message_header Header = packet_message_header(RequestResponseCode);
     uint8_t Reserved = 0;
-//    uint8_t VersionNumberEntryCount = 0;
+    //    uint8_t VersionNumberEntryCount = 0;
 
     static constexpr RequestResponseEnum RequestResponseCode =
         RequestResponseEnum::RESPONSE_VERSION;
@@ -473,7 +475,7 @@ inline void endian_host_spdm_copy(const packet_get_version_response_min& src,
     endian_host_spdm_copy(src.Header, dst.Header);
     dst.Reserved = src.Reserved;
     // endian_host_spdm_copy(src.VersionNumberEntryCount,
-                        //   dst.VersionNumberEntryCount);
+    //   dst.VersionNumberEntryCount);
 }
 
 struct packet_get_version_response_var
@@ -1190,7 +1192,7 @@ struct packet_certificate_response_var
 struct packet_challenge_request
 {
     packet_message_header Header = packet_message_header(RequestResponseCode);
-    uint8_t Nonce[32] = {0};
+    nonce_array_32 Nonce = {0};
 
     static constexpr RequestResponseEnum RequestResponseCode =
         RequestResponseEnum::REQUEST_CHALLENGE;
@@ -1239,7 +1241,7 @@ inline void endian_host_spdm_copy(const packet_challenge_auth_response_min& src,
 struct packet_challenge_auth_response_var
 {
     packet_challenge_auth_response_min Min;
-    uint8_t Nonce[32] = {0};
+    nonce_array_32 Nonce = {0};
     std::vector<uint8_t> CertChainHashVector;
     std::vector<uint8_t> MeasurementSummaryHashVector;
     std::vector<uint8_t> OpaqueDataVector;
@@ -1340,7 +1342,7 @@ inline void
 struct packet_get_measurements_request_var
 {
     packet_get_measurements_request_min Min;
-    uint8_t Nonce[32] = {0};
+    nonce_array_32 Nonce = {0};
     uint8_t SlotIDParam = 0;
 
     static constexpr RequestResponseEnum RequestResponseCode =
@@ -1563,7 +1565,7 @@ struct packet_measurements_response_var // TODO all variable packets don't need
                                         // to be packed
 {
     packet_measurements_response_min Min;
-    uint8_t Nonce[32] = {0};
+    nonce_array_32 Nonce = {0};
     std::vector<packet_measurement_block_var> MeasurementBlockVector;
     std::vector<uint8_t> OpaqueDataVector;
     std::vector<uint8_t> SignatureVector;

@@ -30,9 +30,6 @@ struct ResponderContext
 namespace dbus_api
 {
 
-using ResponderIntf = sdbusplus::server::object::object<
-    sdbusplus::xyz::openbmc_project::SPDM::server::Responder>;
-
 class Responder;
 
 class MCTP_TransportClass : public spdmcpp::MCTP_TransportClass
@@ -61,6 +58,9 @@ class MCTP_TransportClass : public spdmcpp::MCTP_TransportClass
     Responder& responder;
     sdeventplus::source::Time<clockId>* time = nullptr;
 };
+
+using ResponderIntf = sdbusplus::server::object::object<
+    sdbusplus::xyz::openbmc_project::SPDM::server::Responder>;
 
 /** @class Responder
  *  @brief OpenBMC SPDM.Responder implementation.
@@ -98,13 +98,8 @@ class Responder : public ResponderIntf
         ids[eid].markFree(instanceId);
     }
 #endif
-    /** @brief Implementation for Refresh
-     *  Use this method to get all fresh measurements and certificates.
-     *  The method is asynchronous, so it returns immediately.
-     *  Current status of communication between the SPDM requester and
-     *  responder may be verified using the Status property.
-     */
-    void refresh() override;
+    void refresh(uint8_t slot, std::vector<uint8_t> nonce,
+                 uint32_t sessionId) override;
 
     spdmcpp::LogClass& getLog()
     {
@@ -114,9 +109,12 @@ class Responder : public ResponderIntf
     spdmcpp::RetStat handleRecv(std::vector<uint8_t>& buf);
 
   protected:
-    typedef std::vector<
-        std::tuple<std::vector<uint8_t>, MeasurementsType, HashingAlgorithms>>
+    typedef std::vector<std::tuple<
+        uint8_t,
+        std::vector<std::tuple<uint8_t, uint8_t, std::vector<uint8_t>>>>>
         MeasurementsContainerType;
+    typedef std::vector<std::tuple<uint8_t, std::vector<uint8_t>>>
+        CertificatesContainerType;
 
     ResponderContext& context;
 
@@ -124,6 +122,7 @@ class Responder : public ResponderIntf
     MCTP_TransportClass Transport;
 
     void updateLastUpdateTime();
+    void syncSlotsInfo();
 
     friend MCTP_TransportClass;
 };

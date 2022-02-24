@@ -92,8 +92,8 @@ class TimingClass
     }
 
   private:
-    timeout_ms_t RTT = 100; // round-trip transport implementation defined, TODO
-                            // likely needs to be CLI configurable?!
+    timeout_ms_t RTT = 3000; // round-trip transport implementation defined, TODO
+                            // likely needs to be CLI configurable?! openbmc in qemu is extremely slow
     static constexpr timeout_ms_t ST1 = 100;
 
     timeout_ms_t T1 = 0;
@@ -105,6 +105,8 @@ class TimingClass
 class ConnectionClass
 {
   public:
+    typedef uint8_t SlotIdx;
+
     ConnectionClass(ContextClass* context) : Context(context), Log(std::cout)
     {}
     ~ConnectionClass()
@@ -122,6 +124,8 @@ class ConnectionClass
     }
 
     RetStat init_connection();
+    RetStat refresh_measurements(SlotIdx slotidx);
+    RetStat refresh_measurements(SlotIdx slotidx, nonce_array_32& nonce);
     void reset_connection();
 
     bool HasInfo(ConnectionInfoEnum info) const
@@ -131,7 +135,6 @@ class ConnectionClass
                        info)));
     }
 
-    typedef uint8_t SlotIdx;
     enum : SlotIdx
     {
         SLOT_NUM = 8
@@ -173,14 +176,24 @@ class ConnectionClass
         assert(HasInfo(ConnectionInfoEnum::CHOOSEN_VERSION));
         return MessageVersion;
     }
-    bool getCertificates(std::string& str) const;
+    bool getCertificatesDER(std::vector<uint8_t>& buf, SlotIdx slotidx) const;
+    //     bool getCertificatesPEM(std::string& str, SlotIdx slotidx) const;
 
     typedef std::map<uint8_t, packet_measurement_field_var>
         DMTFMeasurementsContainer;
-    const DMTFMeasurementsContainer& getDMTFMeasurements() const
+    const DMTFMeasurementsContainer& getDMTFMeasurements(SlotIdx slotidx) const
     {
         assert(HasInfo(ConnectionInfoEnum::MEASUREMENTS));
-        return DMTFMeasurements;
+        assert(slotidx < SLOT_NUM);
+        return Slots[slotidx].DMTFMeasurements;
+    }
+    const std::vector<uint8_t>& getSignedMeasurementsBuffer() const
+    {
+        return RefBuf(BufEnum::L);
+    }
+    const nonce_array_32& getMeasurementNonce() const
+    {
+        return MeasurementNonce;
     }
 
     std::vector<uint8_t>& getResponseBufferRef()
@@ -196,41 +209,65 @@ class ConnectionClass
   protected:
     enum class BufEnum : uint8_t
     {
-        A,
+        M_START,
+        A = M_START,
         B,
         C,
+        M_END = C,
+        L,
         NUM,
     };
 
     struct SlotClass
     {
         std::vector<uint8_t> Digest;
-        std::vector<uint8_t> Certificates;
-        std::vector<mbedtls_x509_crt*> MCertificates;
+        std::vector<uint8_t> Certificates; // TODO should unnecessary in the en
+        std::vector<mbedtls_x509_crt*>
+            MCertificates; // TODO should be abstracted in the end
+
+        DMTFMeasurementsContainer DMTFMeasurements;
+
+        size_t CertificateOffset =
+            0; // offset into Certificates[] where the DER data starts
+
         bool Valid = false;
 
         mbedtls_x509_crt* GetRootCert() const
         {
-            assert(MCertificates.size() >= 2);
+            // assert(MCertificates.size() >= 2);
+            if (MCertificates.empty())
+            {
+                return nullptr;
+            }
             return MCertificates[0];
         }
         mbedtls_x509_crt* GetLeafCert() const
         {
-            assert(MCertificates.size() >= 2);
+            // assert(MCertificates.size() >= 2);
+            if (MCertificates.empty())
+            {
+                return nullptr;
+            }
             return MCertificates[MCertificates.size() - 1];
         }
 
         void clear()
         {
             Valid = false;
+            CertificateOffset = 0;
+
             Digest.clear();
             Certificates.clear();
 
             for (auto cert : MCertificates)
                 mbedtls_x509_crt_free(cert);
             MCertificates.clear();
+
+            DMTFMeasurements.clear();
         }
     };
+
+    RetStat refresh_measurements_internal();
 
     template <typename T>
     RetStat send_request(const T& packet, BufEnum bufidx = BufEnum::NUM);
@@ -263,8 +300,6 @@ class ConnectionClass
     packet_algorithms_response_var Algorithms;
     SlotClass Slots[SLOT_NUM];
 
-    DMTFMeasurementsContainer DMTFMeasurements;
-
     TimingClass Timings;
 
     // TODO the requirement of hashing messages before the hash function is
@@ -278,6 +313,14 @@ class ConnectionClass
     std::vector<uint8_t>& RefBuf(BufEnum bufidx)
     {
         return Bufs[static_cast<std::underlying_type_t<BufEnum>>(bufidx)];
+    }
+    const std::vector<uint8_t>& RefBuf(BufEnum bufidx) const
+    {
+        return Bufs[static_cast<std::underlying_type_t<BufEnum>>(bufidx)];
+    }
+    void HashBuf(std::vector<uint8_t>& hash, HashEnum hashtype, BufEnum bufidx)
+    {
+        HashClass::compute(hash, hashtype, RefBuf(bufidx));
     }
 
     void AppendToBuf(BufEnum bufidx, uint8_t* data, size_t size)
@@ -300,6 +343,9 @@ class ConnectionClass
     }
 
     packet_decode_info PacketDecodeInfo;
+
+    nonce_array_32 MeasurementNonce;
+    SlotIdx CertificateSlotIdx = SLOT_NUM;
 
     RequestResponseEnum WaitingForResponse = RequestResponseEnum::INVALID;
     uint8_t GotInfo = 0;

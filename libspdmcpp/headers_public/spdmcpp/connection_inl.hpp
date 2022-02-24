@@ -29,7 +29,7 @@ RetStat ConnectionClass::send_request(const T& packet, BufEnum bufidx)
             RequestResponseEnum::REQUEST_GET_MEASUREMENTS ||
         T::RequestResponseCode == RequestResponseEnum::RESPONSE_MEASUREMENTS)
     {
-        assert(bufidx == BufEnum::NUM);
+        // assert(bufidx == BufEnum::NUM);
         size_t off = lay.get_end_offset();
         HashL1L2.update(&buf[off], buf.size() - off);
     }

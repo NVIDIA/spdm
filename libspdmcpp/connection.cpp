@@ -24,11 +24,34 @@ char err_msg[64]; // TODO remove! not thread safe
 
 namespace spdmcpp
 {
+
 RetStat ConnectionClass::init_connection()
 {
     SPDMCPP_LOG_TRACE_FUNC(Log);
     HashM1M2.setup(HashEnum::SHA_384);
+    CertificateSlotIdx = 0;
+    fill_random(MeasurementNonce);
 
+    auto rs = try_get_version();
+    SPDMCPP_LOG_TRACE_RS(Log, rs);
+    return rs;
+}
+
+RetStat ConnectionClass::refresh_measurements(SlotIdx slotidx)
+{
+    CertificateSlotIdx = slotidx;
+    fill_random(MeasurementNonce);
+    return refresh_measurements_internal();
+}
+RetStat ConnectionClass::refresh_measurements(SlotIdx slotidx,
+                                              nonce_array_32& nonce)
+{
+    CertificateSlotIdx = slotidx;
+    memcpy(MeasurementNonce, nonce, sizeof(MeasurementNonce));
+    return refresh_measurements_internal();
+}
+RetStat ConnectionClass::refresh_measurements_internal()
+{
     auto rs = try_get_version();
     SPDMCPP_LOG_TRACE_RS(Log, rs);
     return rs;
@@ -39,6 +62,7 @@ void ConnectionClass::reset_connection()
     clear_timeout();
 
     GotInfo = 0;
+    CertificateSlotIdx = SLOT_NUM;
     MessageVersion = MessageVersionEnum::UNKNOWN;
     WaitingForResponse = RequestResponseEnum::INVALID;
     Algorithms = packet_algorithms_response_var();
@@ -51,7 +75,48 @@ void ConnectionClass::reset_connection()
         b.clear();
 }
 
-bool ConnectionClass::getCertificates(std::string& str) const
+bool ConnectionClass::getCertificatesDER(std::vector<uint8_t>& buf,
+                                         uint8_t slotidx) const
+{
+    SPDMCPP_LOG_TRACE_FUNC(Log);
+    if (!HasInfo(ConnectionInfoEnum::CERTIFICATES))
+        return false;
+
+    buf.clear();
+
+    const SlotClass& slot = Slots[slotidx];
+    if (!slot.Valid)
+    {
+        return false;
+    }
+#if 1
+    if (slot.CertificateOffset == 0 ||
+        slot.CertificateOffset >= slot.Certificates.size())
+    {
+        return false;
+    }
+    buf.resize(slot.Certificates.size() - slot.CertificateOffset);
+    memcpy(buf.data(), slot.Certificates.data() + slot.CertificateOffset,
+           buf.size());
+    return true;
+#else
+    if (auto cert = slot.GetLeafCert())
+    {
+        buf.resize(cert->raw.len);
+        memcpy(buf.data(), cert->raw.p, cert->raw.len);
+        /*size_t size = 0x1000;
+        buf.resize(size);
+        int ret = mbedtls_x509write_crt_der(cert, buf.data(), size, nullptr,
+        nullptr);	str.resize(off + cert->raw.len);*/
+        return true;
+    }
+    return false;
+#endif
+}
+
+#if 0
+bool ConnectionClass::getCertificatesPEM(
+    std::string& str, uint8_t slotidx) const // TODO change for slotidx
 {
     SPDMCPP_LOG_TRACE_FUNC(Log);
     if (!HasInfo(ConnectionInfoEnum::CERTIFICATES))
@@ -59,60 +124,33 @@ bool ConnectionClass::getCertificates(std::string& str) const
 
     str.clear();
 
-    for (const SlotClass& slot : Slots)
+    const SlotClass& slot = Slots[slotidx];
+    if (!slot.Valid)
+        return false;
+
+    if (auto cert = slot.GetLeafCert())
     {
-        if (!slot.Valid)
-            continue;
-
-        if (auto cert = slot.GetLeafCert())
-        {
-            size_t off = str.size();
-            /*	size_t size = 0x1000;
-                str.resize(off + size);
-                int ret = mbedtls_x509write_crt_der(cert, str.data() + off,
-               size, nullptr, nullptr);*/
-            /*	str.resize(off + cert->raw.len);
-                memcpy(str.data() + off, cert->raw.p, cert->raw.len);*/
-            size_t size = 1024;
-            str.resize(off + size);
-            int ret = mbedtls_pem_write_buffer(
-                "", "", (const unsigned char*)cert->raw.p, cert->raw.len,
-                (unsigned char*)str.data() + off, size, &size);
-            assert(ret == 0); // TODO make it robust
-            str.resize(off + size);
-            //	ret = mbedtls_pem_write_buffer("", "", (const unsigned
-            // char*)cert->raw.p, cert->raw.len, (unsigned char*)str.data() +
-            // off, size, &size);
-            /*
-            Log.iprint("mbedtls_x509write_crt_der ret = ");
-            Log.print(ret);
-            Log.print(" = '");
-            //Log.print(mbedtls_high_level_strerr(ret));
-            mbedtls_strerror(ret, err_msg, sizeof(err_msg));
-            Log.print((const char*)err_msg);
-            Log.println('\'');
-
-            Log.iprint("str = \'");
-            Log.print(str);
-            Log.println("\'");*/
-            // 				abort();
-        }
-        /*	if (!slot.Certificates.empty()) {
-                size_t size = str.size();
-                str.resize(size + slot.Certificates.size() - 4);
-                memcpy(str.data() + size, slot.Certificates.data() + 4,
-           slot.Certificates.size() - 4);
-            //	std::copy(slot.Certificates.begin(), slot.Certificates.end(),
-           end);
-            }*/
+        size_t off = str.size();
+        size_t size = 1024;
+        str.resize(off + size);
+        int ret = mbedtls_pem_write_buffer(
+            "", "", (const unsigned char*)cert->raw.p, cert->raw.len,
+            (unsigned char*)str.data() + off, size, &size);
+        assert(ret == 0); // TODO make it robust
+        str.resize(off + size);
+        return true;
     }
-    return true;
+    return false;
 }
+#endif
 
 RetStat ConnectionClass::try_get_version()
 {
     SPDMCPP_LOG_TRACE_FUNC(Log);
-    assert(MessageVersion == MessageVersionEnum::UNKNOWN);
+    // assert(MessageVersion == MessageVersionEnum::UNKNOWN);
+
+    for (auto& b : Bufs)
+        b.clear();
 
     packet_get_version_request spdm_request;
     auto rs = send_request_setup_response(spdm_request,
@@ -154,7 +192,7 @@ RetStat ConnectionClass::choose_version()
 {
     SPDMCPP_LOG_TRACE_FUNC(Log);
     assert(HasInfo(ConnectionInfoEnum::SUPPORTED_VERSIONS));
-    assert(MessageVersion == MessageVersionEnum::UNKNOWN);
+    // assert(MessageVersion == MessageVersionEnum::UNKNOWN);
 
     std::vector<MessageVersionEnum> vers; // TODO is using just the enum fine or
                                           // do we need more detailed info?!
@@ -315,34 +353,39 @@ RetStat ConnectionClass::handle_recv<packet_digests_response_var>()
     {
         if (resp.Min.Header.Param2 & (1 << i))
         {
+            Slots[i].Valid = true;
             std::swap(resp.DigestVector[i], Slots[i].Digest);
+        }
+        else
+        {
+            Slots[i].Valid = false;
         }
     }
     MarkInfo(ConnectionInfoEnum::DIGESTS);
 
     AppendRecvToBuf(BufEnum::B);
 
-    rs = try_get_certificate(0);
+    rs = try_get_certificate(CertificateSlotIdx);
     SPDMCPP_LOG_TRACE_RS(Log, rs);
     return rs;
 }
 
-RetStat ConnectionClass::try_get_certificate_chunk(SlotIdx idx)
+RetStat ConnectionClass::try_get_certificate_chunk(SlotIdx slotidx)
 {
     SPDMCPP_LOG_TRACE_FUNC(Log);
     assert(HasInfo(ConnectionInfoEnum::CHOOSEN_VERSION));
     assert(HasInfo(ConnectionInfoEnum::ALGORITHMS));
 
     assert(MessageVersion != MessageVersionEnum::UNKNOWN);
-    if (idx >= SLOT_NUM)
+    if (slotidx >= SLOT_NUM)
     {
         return RetStat::ERROR_UNKNOWN;
     }
-    std::vector<uint8_t>& cert = Slots[idx].Certificates;
+    std::vector<uint8_t>& cert = Slots[slotidx].Certificates;
 
     packet_get_certificate_request request;
     request.Header.MessageVersion = MessageVersion;
-    request.Header.Param1 = idx;
+    request.Header.Param1 = slotidx;
     request.Offset = cert.size();
     request.Length = 0xFFFF;
     // 		request.Length = 0x400;
@@ -362,7 +405,7 @@ RetStat ConnectionClass::handle_recv<packet_certificate_response_var>()
 
     AppendRecvToBuf(BufEnum::B);
 
-    SlotIdx idx = 0; // TODO WARNING
+    SlotIdx idx = CertificateSlotIdx; // TODO WARNING
     SlotClass& slot = Slots[idx];
     std::vector<uint8_t>& cert = slot.Certificates;
     if (cert.empty())
@@ -386,8 +429,7 @@ RetStat ConnectionClass::handle_recv<packet_certificate_response_var>()
     {
         {
             std::vector<uint8_t> hash;
-            HashClass::compute(hash, to_hash(Algorithms.Min.BaseHashAlgo),
-                               cert);
+            HashClass::compute(hash, getSignatureHash(), cert);
             Log.iprint("computed certificate digest hash = ");
             Log.println(hash.data(), hash.size());
 
@@ -397,10 +439,7 @@ RetStat ConnectionClass::handle_recv<packet_certificate_response_var>()
                 return RetStat::ERROR_CERTIFICATE_CHAIN_DIGEST_INVALID;
             }
         }
-        packet_certificate_chain
-            cert_chain; // TODO create a standard _var packet and just parse
-                        // from cert_chain? seems like it fits surprisingly
-                        // nicely!
+        packet_certificate_chain cert_chain;
         size_t off = 0;
         rs = packet_decode_internal(cert_chain, cert, off);
         SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
@@ -414,6 +453,8 @@ RetStat ConnectionClass::handle_recv<packet_certificate_response_var>()
             Log.iprint("provided root certificate hash = ");
             Log.println(root_cert_hash.data(), root_cert_hash.size());
         }
+
+        slot.CertificateOffset = off;
 
         do
         {
@@ -455,9 +496,9 @@ RetStat ConnectionClass::handle_recv<packet_certificate_response_var>()
             {
                 std::vector<uint8_t> hash;
                 hash.resize(get_hash_size(Algorithms.Min.BaseHashAlgo));
-                int ret = mbedtls_md(mbedtls_md_info_from_type(to_mbedtls(
-                                         to_hash(Algorithms.Min.BaseHashAlgo))),
-                                     cert.data() + off, asn1_len, hash.data());
+                int ret = mbedtls_md(
+                    mbedtls_md_info_from_type(to_mbedtls(getSignatureHash())),
+                    cert.data() + off, asn1_len, hash.data());
                 assert(ret == 0);
                 Log.iprint("computed root certificate hash = ");
                 Log.println(hash.data(), hash.size());
@@ -568,7 +609,8 @@ RetStat ConnectionClass::try_get_certificate(SlotIdx idx)
         return RetStat::ERROR_UNKNOWN;
     }
     std::vector<uint8_t>& cert = Slots[idx].Certificates;
-    assert(cert.empty());
+    // assert(cert.empty());
+    cert.clear();
 
     auto rs = try_get_certificate_chunk(idx);
     SPDMCPP_LOG_TRACE_RS(Log, rs);
@@ -582,6 +624,7 @@ RetStat ConnectionClass::try_challenge()
 
     packet_challenge_request request;
     request.Header.MessageVersion = MessageVersion;
+    request.Header.Param1 = CertificateSlotIdx; // TODO !!! DECIDE
     request.Header.Param2 = PacketDecodeInfo.ChallengeParam2 = 0xFF;
     // 		request.Header.Param2 = PacketDecodeInfo.ChallengeParam2 = 1;
     fill_random(request.Nonce);
@@ -608,7 +651,8 @@ RetStat ConnectionClass::handle_recv<packet_challenge_auth_response_var>()
         std::vector<uint8_t> hash;
         {
             HashClass ha;
-            ha.setup(to_hash(Algorithms.Min.BaseHashAlgo));
+            ha.setup(getSignatureHash());
+            // for (BufEnum::NUM)
             for (std::vector<uint8_t>& buf : Bufs)
             {
                 if (!buf.empty())
@@ -631,7 +675,7 @@ RetStat ConnectionClass::handle_recv<packet_challenge_auth_response_var>()
 
         {
             // TODO SlotIdx
-            int ret = verify_signature(Slots[0].GetLeafCert(),
+            int ret = verify_signature(Slots[CertificateSlotIdx].GetLeafCert(),
                                        resp.SignatureVector, hash);
             SPDMCPP_LOG_TRACE_RS(Log, ret);
             if (!ret)
@@ -665,7 +709,7 @@ RetStat ConnectionClass::try_get_measurements()
     SPDMCPP_LOG_TRACE_FUNC(Log);
     assert(MessageVersion != MessageVersionEnum::UNKNOWN);
 
-    HashL1L2.setup(to_hash(Algorithms.Min.BaseHashAlgo));
+    HashL1L2.setup(getSignatureHash());
 
     packet_get_measurements_request_var request;
     request.Min.Header.MessageVersion = MessageVersion;
@@ -673,13 +717,13 @@ RetStat ConnectionClass::try_get_measurements()
         request.Min.Header.Param1 = PacketDecodeInfo.GetMeasurementsParam1 =
             0x1;
         request.set_nonce();
-        fill_random(request.Nonce);
+        memcpy(request.Nonce, MeasurementNonce, sizeof(request.Nonce));
     }
     request.Min.Header.Param2 = PacketDecodeInfo.GetMeasurementsParam2 = 0xFF;
 
     auto rs =
         send_request_setup_response(request, packet_measurements_response_var(),
-                                    BufEnum::NUM, Timings.getT2());
+                                    BufEnum::L, Timings.getT2());
     SPDMCPP_LOG_TRACE_RS(Log, rs);
     return rs;
 }
@@ -696,26 +740,36 @@ RetStat ConnectionClass::handle_recv<packet_measurements_response_var>()
                     ResponseBuffer.size() - ResponseBufferSPDMOffset -
                         PacketDecodeInfo.SignatureSize);
 
+    AppendToBuf(BufEnum::L, &ResponseBuffer[ResponseBufferSPDMOffset],
+                ResponseBuffer.size() - ResponseBufferSPDMOffset -
+                    PacketDecodeInfo.SignatureSize);
+
     std::vector<uint8_t> hash;
+#if 1
     HashL1L2.hash_finish(hash);
+#else
+    HashBuf(hash, getSignatureHash(), BufEnum::L);
+#endif
     Log.iprint("computed l2 hash = ");
     Log.println(hash.data(), hash.size());
 
-    int ret =
-        verify_signature(Slots[0].GetLeafCert(), resp.SignatureVector, hash);
+    int ret = verify_signature(Slots[CertificateSlotIdx].GetLeafCert(),
+                               resp.SignatureVector, hash);
     SPDMCPP_LOG_TRACE_RS(Log, ret);
     if (!ret)
     {
         Log.iprintln("measurements SIGNATURE verify PASSED!");
 
-        DMTFMeasurements.clear();
+        SlotIdx idx = CertificateSlotIdx; // TODO WARNING
+        SlotClass& slot = Slots[idx];
+        slot.DMTFMeasurements.clear();
         // parse DMTF Measurements
         for (const auto& block : resp.MeasurementBlockVector)
         {
             if (block.Min.MeasurementSpecification == 1)
             {
-                if (DMTFMeasurements.find(block.Min.Index) !=
-                    DMTFMeasurements.end())
+                if (slot.DMTFMeasurements.find(block.Min.Index) !=
+                    slot.DMTFMeasurements.end())
                 {
                     Log.iprintln(
                         "DUPLICATE MeasurementBlock Index!"); // TODO Warning!!!
@@ -724,7 +778,7 @@ RetStat ConnectionClass::handle_recv<packet_measurements_response_var>()
                 {
                     size_t off = 0;
                     auto rs = packet_decode_internal(
-                        DMTFMeasurements[block.Min.Index],
+                        slot.DMTFMeasurements[block.Min.Index],
                         block.MeasurementVector, off);
                     SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
                     if (off != block.MeasurementVector.size())
@@ -838,6 +892,7 @@ RetStat ConnectionClass::handle_timeout()
         SPDMCPP_LOG_TRACE_RS(Log, rs);
         return rs;
     }
+    WaitingForResponse = RequestResponseEnum::INVALID;
     return RetStat::ERROR_TIMEOUT;
 }
 
