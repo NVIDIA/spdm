@@ -451,7 +451,7 @@ struct packet_get_version_response_min
 {
     packet_message_header Header = packet_message_header(RequestResponseCode);
     uint8_t Reserved = 0;
-    uint8_t VersionNumberEntryCount = 0;
+//    uint8_t VersionNumberEntryCount = 0;
 
     static constexpr RequestResponseEnum RequestResponseCode =
         RequestResponseEnum::RESPONSE_VERSION;
@@ -463,7 +463,7 @@ struct packet_get_version_response_min
         SPDMCPP_LOG_INDENT(log);
         SPDMCPP_LOG_print_ml(log, Header);
         SPDMCPP_LOG_iexprln(log, Reserved);
-        SPDMCPP_LOG_iexprln(log, VersionNumberEntryCount);
+        // SPDMCPP_LOG_iexprln(log, VersionNumberEntryCount);
     }
 };
 
@@ -472,8 +472,8 @@ inline void endian_host_spdm_copy(const packet_get_version_response_min& src,
 {
     endian_host_spdm_copy(src.Header, dst.Header);
     dst.Reserved = src.Reserved;
-    endian_host_spdm_copy(src.VersionNumberEntryCount,
-                          dst.VersionNumberEntryCount);
+    // endian_host_spdm_copy(src.VersionNumberEntryCount,
+                        //   dst.VersionNumberEntryCount);
 }
 
 struct packet_get_version_response_var
@@ -510,7 +510,16 @@ struct packet_get_version_response_var
     {
         return rs;
     }
-    p.VersionNumberEntries.resize(p.Min.VersionNumberEntryCount);
+    {
+        uint8_t size = 0;
+        rs = packet_decode_basic(size, buf, off);
+        if (rs != RetStat::OK)
+        {
+            return rs;
+        }
+        p.VersionNumberEntries.resize(size);
+    }
+    // p.VersionNumberEntries.resize(p.Min.VersionNumberEntryCount);
     for (size_t i = 0; i < p.VersionNumberEntries.size(); ++i)
     {
         rs = packet_decode_internal(p.VersionNumberEntries[i], buf, off);
