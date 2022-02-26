@@ -99,13 +99,23 @@ class HashClass
 {
   public:
     static void compute(std::vector<uint8_t>& hash, HashEnum algo,
-                        const std::vector<uint8_t>& buf, size_t off = 0,
-                        size_t len = std::numeric_limits<size_t>::max())
+                        const uint8_t* buf, size_t size)
     {
         HashClass ha;
         ha.setup(algo);
-        ha.update(buf, off, len);
+        ha.update(buf, size);
         ha.hash_finish(hash);
+    }
+    static void compute(std::vector<uint8_t>& hash, HashEnum algo,
+                        const std::vector<uint8_t>& buf, size_t off = 0,
+                        size_t len = std::numeric_limits<size_t>::max())
+    {
+        assert(off <= buf.size());
+        if (len != std::numeric_limits<size_t>::max())
+        {
+            assert(off + len <= buf.size());
+        }
+        compute(hash, algo, buf.data() + off, std::min(buf.size() - off, len));
     }
 
     HashClass()
