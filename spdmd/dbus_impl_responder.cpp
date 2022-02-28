@@ -99,9 +99,31 @@ spdmcpp::RetStat Responder::handleRecv(std::vector<uint8_t>& buf)
 
     if (is_error(rs))
     {
-        // TODO !!!
-        //	status(SPDMStatus::Error_ConnectionTimeout);
-        status(SPDMStatus::Error_Other);
+        switch (rs)
+        {
+            case RetStat::ERROR_BUFFER_TOO_SMALL:
+            case RetStat::ERROR_WRONG_REQUEST_RESPONSE_CODE:
+            case RetStat::ERROR_UNKNOWN_REQUEST_RESPONSE_CODE:
+                status(SPDMStatus::Error_RequesterCommunication);
+                break;
+            case RetStat::ERROR_RESPONSE:
+                status(SPDMStatus::Error_Responder);
+                break;
+            case RetStat::ERROR_CERTIFICATE_CHAIN_DIGEST_INVALID:
+            case RetStat::ERROR_ROOT_CERTIFICATE_HASH_INVALID:
+            case RetStat::ERROR_CERTIFICATE_CHAIN_VERIFIY_FAILED:
+                status(SPDMStatus::Error_CertificateValidation);
+                break;
+            case RetStat::ERROR_AUTHENTICATION_FAILED:
+                status(SPDMStatus::Error_AuthenticationFailed);
+                break;
+            case RetStat::ERROR_MEASUREMENT_SIGNATURE_VERIFIY_FAILED:
+                status(
+                    SPDMStatus::Error_MeasurementsSignatureVerificationFailed);
+                break;
+            default:
+                status(SPDMStatus::Error_Other);
+        }
         return rs;
     }
 

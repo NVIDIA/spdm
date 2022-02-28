@@ -92,8 +92,9 @@ class TimingClass
     }
 
   private:
-    timeout_ms_t RTT = 3000; // round-trip transport implementation defined, TODO
-                            // likely needs to be CLI configurable?! openbmc in qemu is extremely slow
+    timeout_ms_t RTT = 3000; // round-trip transport implementation defined,
+                             // TODO likely needs to be CLI configurable?!
+                             // openbmc in qemu is extremely slow
     static constexpr timeout_ms_t ST1 = 100;
 
     timeout_ms_t T1 = 0;
