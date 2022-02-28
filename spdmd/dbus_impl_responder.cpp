@@ -14,6 +14,8 @@
 using namespace sdbusplus::xyz::openbmc_project::Common::Error;
 using namespace spdmcpp;
 
+constexpr auto MCTP_DEFAULT_PATH = "/xyz/openbmc_project/mctp";
+
 namespace spdmd
 {
 namespace dbus_api
@@ -26,6 +28,15 @@ Responder::Responder(SpdmdAppContext& appCtx, const std::string& path,
     Connection(&appCtx.context), 
     Transport(eid, *this)
 {
+    {
+        std::vector<std::tuple<std::string, std::string, std::string>> prop;
+        prop.emplace_back(
+            "transport_object", "spdm_responder_object",
+            sdbusplus::message::object_path(
+                std::string(MCTP_DEFAULT_PATH) + "/0/" +
+                std::to_string(eid))); // TODO proper value for the 0?!
+        associations(std::move(prop));
+    }
     Connection.register_transport(&Transport);
 
     Connection.reset_connection();

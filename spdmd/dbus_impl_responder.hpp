@@ -2,6 +2,7 @@
 
 #include "spdmd_app_context.hpp"
 
+#include "xyz/openbmc_project/Association/Definitions/server.hpp"
 #include "xyz/openbmc_project/SPDM/Responder/server.hpp"
 
 #include <sdbusplus/bus.hpp>
@@ -50,7 +51,8 @@ class MCTP_TransportClass : public spdmcpp::MCTP_TransportClass
 };
 
 using ResponderIntf = sdbusplus::server::object::object<
-    sdbusplus::xyz::openbmc_project::SPDM::server::Responder>;
+    sdbusplus::xyz::openbmc_project::SPDM::server::Responder,
+    sdbusplus::xyz::openbmc_project::Association::server::Definitions>;
 
 /** @class Responder
  *  @brief OpenBMC SPDM.Responder implementation.
