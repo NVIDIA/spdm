@@ -1,4 +1,6 @@
 tests = [
+  'helpers_test',
+  'hash_test',
   'basic_test',
   'packet_basic_test',
 ]
@@ -11,6 +13,8 @@ foreach t : tests
 			include_directories : incdir,
 	#		link_args: dynamic_linker,
 			dependencies: [
+				libspdmcpp_requester_dep,
+				crypto_deps,
 				gtest,
 				gmock
 			]

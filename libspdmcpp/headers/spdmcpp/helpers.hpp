@@ -48,14 +48,9 @@ template <typename T>
 inline void fill_pseudorandom_type(
     T& dst, std::mt19937::result_type seed = mt19937_default_seed)
 {
-    uint8_t* buf = reinterpret_cast<uint8_t*>(&dst);
-    std::mt19937 gen(seed);
-    std::uniform_int_distribution<uint8_t> distrib(0);
-    for (size_t i = 0; i < sizeof(T); ++i)
-    {
-        buf[i] = distrib(gen);
-    }
+    fill_pseudorandom(reinterpret_cast<uint8_t(&)[sizeof(T)]>(dst), seed);
 }
+
 template <typename T>
 inline T return_pseudorandom_type(
     std::mt19937::result_type seed = mt19937_default_seed)
@@ -67,13 +62,14 @@ inline T return_pseudorandom_type(
 
 inline void fill_random(std::vector<uint8_t>& buf)
 {
-#if 0
-		std::random_device rd;
-		std::default_random_engine gen(rd());
-		std::uniform_int_distribution<uint8_t> distrib(0);
-		for (size_t i = 0; i < buf.size(); ++i) {
-			buf[i] = distrib(gen);
-		}
+#if 1
+    std::random_device rd;
+    std::default_random_engine gen(rd());
+    std::uniform_int_distribution<uint8_t> distrib(0);
+    for (size_t i = 0; i < buf.size(); ++i)
+    {
+        buf[i] = distrib(gen);
+    }
 #else
     for (size_t i = 0; i < buf.size(); ++i)
     {
@@ -81,17 +77,6 @@ inline void fill_random(std::vector<uint8_t>& buf)
     }
 #endif
 }
-
-/*	template <size_t N>
-    void fill_random(std::array<uint8_t, N>& buf)
-    {
-        std::random_device rd;
-        std::default_random_engine gen(rd());
-        std::uniform_int_distribution<uint8_t> distrib(0);
-        for (size_t i = 0; i < buf.size(); ++i) {
-            buf[i] = distrib(gen);
-        }
-    }*/
 
 template <size_t N>
 void fill_random(uint8_t (&buf)[N])
