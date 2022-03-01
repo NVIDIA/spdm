@@ -74,8 +74,36 @@ struct packet_decode_info
 
 #pragma pack(1)
 
+#include "internal/packet_message_header.hpp"
+
+// separator for clang-format ordering
+
 #include "internal/packet_common.hpp"
-#include "internal/packet_main.hpp"
+
+// separator for clang-format ordering
+
+#include "internal/packet_certificate_chain.hpp"
+#include "internal/packet_measurement_block.hpp"
+#include "internal/packet_measurement_field.hpp"
+#include "internal/packet_version.hpp"
+
+// separator for clang-format ordering
+
+#include "internal/request/packet_challenge_request.hpp"
+#include "internal/request/packet_get_capabilities_request.hpp"
+#include "internal/request/packet_get_certificate_request.hpp"
+#include "internal/request/packet_get_digests_request.hpp"
+#include "internal/request/packet_get_measurements_request.hpp"
+#include "internal/request/packet_get_version_request.hpp"
+#include "internal/request/packet_negotiate_algorithms_request.hpp"
+#include "internal/response/packet_algorithms_response.hpp"
+#include "internal/response/packet_capabilities_response.hpp"
+#include "internal/response/packet_certificate_response.hpp"
+#include "internal/response/packet_challenge_auth_response.hpp"
+#include "internal/response/packet_digests_response.hpp"
+#include "internal/response/packet_error_response.hpp"
+#include "internal/response/packet_measurements_response.hpp"
+#include "internal/response/packet_version_response.hpp"
 
 #pragma pack()
 
