@@ -1,7 +1,7 @@
 
 #pragma once
 
-struct packet_get_capabilities_response
+struct packet_capabilities_response
 {
     packet_message_header Header = packet_message_header(RequestResponseCode);
     uint8_t Reserved0 = 0;
@@ -13,9 +13,9 @@ struct packet_get_capabilities_response
         RequestResponseEnum::RESPONSE_CAPABILITIES;
     static constexpr bool size_is_constant = true;
 
-    packet_get_capabilities_response() = default;
-    packet_get_capabilities_response(uint8_t ct_exponent,
-                                     ResponderCapabilitiesFlags flags) :
+    packet_capabilities_response() = default;
+    packet_capabilities_response(uint8_t ct_exponent,
+                                 ResponderCapabilitiesFlags flags) :
         CTExponent(ct_exponent),
         Flags(flags)
     {}
@@ -31,8 +31,8 @@ struct packet_get_capabilities_response
     }
 };
 
-inline void endian_host_spdm_copy(const packet_get_capabilities_response& src,
-                                  packet_get_capabilities_response& dst)
+inline void endian_host_spdm_copy(const packet_capabilities_response& src,
+                                  packet_capabilities_response& dst)
 {
     endian_host_spdm_copy(src.Header, dst.Header);
     endian_host_spdm_copy(src.Reserved0, dst.Reserved0);

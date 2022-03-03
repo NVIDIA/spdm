@@ -248,16 +248,15 @@ RetStat ConnectionClass::try_get_capabilities()
         request.Flags |= RequesterCapabilitiesFlags::KEY_UPD_CAP;
         request.Flags |= RequesterCapabilitiesFlags::HANDSHAKE_IN_THE_CLEAR_CAP;
         */
-    auto rs =
-        send_request_setup_response(request, packet_get_capabilities_response(),
-                                    BufEnum::A, Timings.getT1());
+    auto rs = send_request_setup_response(
+        request, packet_capabilities_response(), BufEnum::A, Timings.getT1());
     SPDMCPP_LOG_TRACE_RS(Log, rs);
     return rs;
 }
 template <>
-RetStat ConnectionClass::handle_recv<packet_get_capabilities_response>()
+RetStat ConnectionClass::handle_recv<packet_capabilities_response>()
 {
-    packet_get_capabilities_response resp;
+    packet_capabilities_response resp;
     auto rs = interpret_response(resp);
     SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
 
@@ -864,7 +863,7 @@ RetStat ConnectionClass::handle_recv()
         rs = handle_recv<type>();                                              \
         break;
         DTYPE(packet_get_version_response_var)
-        DTYPE(packet_get_capabilities_response)
+        DTYPE(packet_capabilities_response)
         DTYPE(packet_algorithms_response_var)
         DTYPE(packet_digests_response_var)
         DTYPE(packet_certificate_response_var)

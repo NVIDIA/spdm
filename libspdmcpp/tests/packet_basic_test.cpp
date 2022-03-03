@@ -203,7 +203,7 @@ TEST(packet_pseudorandom_decode_encode, static_size)
     EXPECT_TRUE(
         packet_pseudorandom_decode_encode<packet_get_capabilities_request>());
     EXPECT_TRUE(
-        packet_pseudorandom_decode_encode<packet_get_capabilities_response>());
+        packet_pseudorandom_decode_encode<packet_capabilities_response>());
     EXPECT_TRUE(packet_pseudorandom_decode_encode<
                 packet_negotiate_algorithms_request_min>());
     // 	EXPECT_TRUE(packet_pseudorandom_decode_encode<packet_negotiate_algorithms_request_var>());
