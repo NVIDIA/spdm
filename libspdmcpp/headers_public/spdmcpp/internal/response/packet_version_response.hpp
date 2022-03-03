@@ -1,7 +1,7 @@
 
 #pragma once
 
-struct packet_get_version_response_min
+struct packet_version_response_min
 {
     packet_message_header Header = packet_message_header(RequestResponseCode);
     uint8_t Reserved = 0;
@@ -21,8 +21,8 @@ struct packet_get_version_response_min
     }
 };
 
-inline void endian_host_spdm_copy(const packet_get_version_response_min& src,
-                                  packet_get_version_response_min& dst)
+inline void endian_host_spdm_copy(const packet_version_response_min& src,
+                                  packet_version_response_min& dst)
 {
     endian_host_spdm_copy(src.Header, dst.Header);
     dst.Reserved = src.Reserved;
@@ -30,9 +30,9 @@ inline void endian_host_spdm_copy(const packet_get_version_response_min& src,
     //   dst.VersionNumberEntryCount);
 }
 
-struct packet_get_version_response_var
+struct packet_version_response_var
 {
-    packet_get_version_response_min Min;
+    packet_version_response_min Min;
     std::vector<packet_version_number> VersionNumberEntries;
 
     static constexpr RequestResponseEnum RequestResponseCode =
@@ -56,7 +56,7 @@ struct packet_get_version_response_var
 };
 
 [[nodiscard]] inline RetStat
-    packet_decode_internal(packet_get_version_response_var& p,
+    packet_decode_internal(packet_version_response_var& p,
                            const std::vector<uint8_t>& buf, size_t& off)
 {
     auto rs = packet_decode_internal(p.Min, buf, off);

@@ -153,16 +153,16 @@ RetStat ConnectionClass::try_get_version()
         b.clear();
 
     packet_get_version_request spdm_request;
-    auto rs = send_request_setup_response(spdm_request,
-                                          packet_get_version_response_var(),
-                                          BufEnum::A, Timings.getT1());
+    auto rs =
+        send_request_setup_response(spdm_request, packet_version_response_var(),
+                                    BufEnum::A, Timings.getT1());
     SPDMCPP_LOG_TRACE_RS(Log, rs);
     return rs;
 }
 template <>
-RetStat ConnectionClass::handle_recv<packet_get_version_response_var>()
+RetStat ConnectionClass::handle_recv<packet_version_response_var>()
 {
-    packet_get_version_response_var resp;
+    packet_version_response_var resp;
     auto rs = interpret_response(resp);
     SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
 
@@ -862,7 +862,7 @@ RetStat ConnectionClass::handle_recv()
     case type::RequestResponseCode:                                            \
         rs = handle_recv<type>();                                              \
         break;
-        DTYPE(packet_get_version_response_var)
+        DTYPE(packet_version_response_var)
         DTYPE(packet_capabilities_response)
         DTYPE(packet_algorithms_response_var)
         DTYPE(packet_digests_response_var)

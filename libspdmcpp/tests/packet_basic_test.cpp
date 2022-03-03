@@ -198,8 +198,8 @@ TEST(packet_pseudorandom_decode_encode, static_size)
                 packet_measurement_block_min>());
 
     EXPECT_TRUE(
-        packet_pseudorandom_decode_encode<packet_get_version_response_min>());
-    // 	EXPECT_TRUE(packet_pseudorandom_decode_encode<packet_get_version_response_var>());
+        packet_pseudorandom_decode_encode<packet_version_response_min>());
+    // 	EXPECT_TRUE(packet_pseudorandom_decode_encode<packet_version_response_var>());
     EXPECT_TRUE(
         packet_pseudorandom_decode_encode<packet_get_capabilities_request>());
     EXPECT_TRUE(
@@ -234,7 +234,7 @@ TEST(packet_pseudorandom_decode_encode, variable_size)
 {
     // TODO missing some encode/decode functions
     {
-        packet_get_version_response_var p;
+        packet_version_response_var p;
         fill_pseudorandom_packet(p.Min);
         p.VersionNumberEntries.push_back(
             return_pseudorandom_type<packet_version_number>());
