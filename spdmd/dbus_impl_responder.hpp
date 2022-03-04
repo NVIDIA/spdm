@@ -1,6 +1,7 @@
 #pragma once
 
-#include "instance_id.hpp"
+#include "spdmd_app_context.hpp"
+
 #include "xyz/openbmc_project/SPDM/Responder/server.hpp"
 
 #include <sdbusplus/bus.hpp>
@@ -15,17 +16,6 @@
 
 namespace spdmd
 {
-
-struct ResponderContext
-{
-    spdmcpp::ContextClass context;
-    sdeventplus::Event event;
-    sdbusplus::bus::bus bus;
-
-    ResponderContext(sdeventplus::Event&& e, sdbusplus::bus::bus&& b) :
-        event(std::move(e)), bus(std::move(b))
-    {}
-};
 
 namespace dbus_api
 {
@@ -80,24 +70,10 @@ class Responder : public ResponderIntf
      *  @param[in] bus - Bus to attach to.
      *  @param[in] path - Path to attach at.
      */
-    Responder(ResponderContext& ctx, const std::string& path, uint8_t eid);
+    Responder(SpdmdAppContext& appCtx, const std::string& path, uint8_t eid);
 
     ~Responder();
 
-#if 0
-    /** @brief Implementation for RequesterIntf.GetInstanceId */
-    uint8_t getInstanceId(uint8_t eid);
-
-    /** @brief Mark an instance id as unused
-     *  @param[in] eid - MCTP eid to which this instance id belongs
-     *  @param[in] instanceId - SPDM instance id to be freed
-     *  @note will throw std::out_of_range if instanceId > 31
-     */
-    void markFree(uint8_t eid, uint8_t instanceId)
-    {
-        ids[eid].markFree(instanceId);
-    }
-#endif
     void refresh(uint8_t slot, std::vector<uint8_t> nonce,
                  uint32_t sessionId) override;
 
@@ -116,7 +92,7 @@ class Responder : public ResponderIntf
     typedef std::vector<std::tuple<uint8_t, std::vector<uint8_t>>>
         CertificatesContainerType;
 
-    ResponderContext& context;
+    SpdmdAppContext& appContext;
 
     spdmcpp::ConnectionClass Connection;
     MCTP_TransportClass Transport;

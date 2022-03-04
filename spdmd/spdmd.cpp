@@ -1,7 +1,6 @@
-#include "dbus_impl_responder.hpp"
-#include "spdmcpp/log.hpp"
 #include "spdmd_version.hpp"
-#include "utils.hpp"
+#include "spdmd_app.hpp"
+#include "mctp_endpoint_discovery.hpp"
 
 #include <bits/stdc++.h>
 
@@ -11,185 +10,156 @@
 
 using namespace std;
 using namespace spdmd;
-// using namespace sdeventplus;
-// using namespace sdeventplus::source;
 using namespace sdbusplus;
-// using namespace spdm::responder;
 
 // Define the SPDM default dbus path location for objects.
 constexpr auto SPDM_DEFAULT_PATH = "/xyz/openbmc_project/SPDM";
 constexpr auto SPDM_DEFAULT_SERVICE = "xyz.openbmc_project.SPDM";
 
-class SpdmdApp : public ResponderContext
+namespace spdmd
 {
-  public:
-    int verbose{0};
-    spdmcpp::LogClass log;
 
-    SpdmdApp() :
-        ResponderContext(sdeventplus::Event::get_default(), bus::new_default()),
-        log(std::cout), MCTPIO(log)
-    {}
-    ~SpdmdApp()
+SpdmdApp::SpdmdApp() :
+    SpdmdAppContext(sdeventplus::Event::get_default(), bus::new_system()),
+    log(std::cout),
+    mctpIo(log)
+{
+}
+
+SpdmdApp::~SpdmdApp()
+{
+    delete mctpEvent;
+}
+
+int SpdmdApp::setupCli(int argc, char** argv)
+{
+    CLI::App app{spdmd::description::NAME + ", version " +
+                    spdmd::description::VERSION};
+
+    CLI::Option* opt_verbosity =
+        app.add_option("-v, --verbose", verbose, "Verbose level (0-7)");
+    opt_verbosity->check(CLI::Range(0, 7));
+
+    CLI11_PARSE(app, argc, argv);
+
+    if (verbose)
     {
-        delete MCTPEvent;
+        log.print("Verbose level set to ");
+        log.println(verbose);
     }
 
-    int SPDMD_SetupCli(int argc, char** argv)
-    {
-        CLI::App app{spdmd::description::NAME + ", version " +
-                     spdmd::description::VERSION};
+    return 0;
+}
 
-        CLI::Option* opt_verbosity =
-            app.add_option("-v, --verbose", verbose, "Verbose level (0-3)");
-        opt_verbosity->check(CLI::Range(0, 3));
+void SpdmdApp::connectDBus()
+{
+    SPDMCPP_LOG_TRACE_FUNC(log);
+    sdbusplus::server::manager_t objManager(bus, SPDM_DEFAULT_PATH);
+    bus.attach_event(event.get(), SD_EVENT_PRIORITY_NORMAL);
+    bus.request_name(SPDM_DEFAULT_SERVICE);
+}
 
-        CLI11_PARSE(app, argc, argv);
+bool SpdmdApp::connectMCTP()
+{
+    SPDMCPP_LOG_TRACE_FUNC(log);
+    if (!mctpIo.createSocket())
+        return false;
 
-        if (verbose)
+    context.register_io(&mctpIo);
+
+    auto callback = [this](sdeventplus::source::IO& /*io*/, int /*fd*/,
+                            uint32_t revents) {
+        SPDMCPP_LOG_TRACE_FUNC(log);
+        // 			spdmcpp::LogClass& log = Connection->getLog();
+        // 			log.iprintln("Event recv!");
+
+        if (!(revents & EPOLLIN))
         {
-            log.print("Verbose level set to ");
-            log.println(verbose);
+            return;
         }
 
-        return 0;
-    }
+        //	context.IO->read(packetBuffer);
+        mctpIo.read(packetBuffer);
 
-    void connectDBus()
-    {
-        sdbusplus::server::manager_t objManager(bus, SPDM_DEFAULT_PATH);
-        bus.attach_event(event.get(), SD_EVENT_PRIORITY_NORMAL);
-        bus.request_name(SPDM_DEFAULT_SERVICE);
-    }
+        uint8_t eid = 0;
+        {
+            spdmcpp::TransportClass::LayerState lay; // TODO double decode
+            auto rs = spdmcpp::MCTP_TransportClass::peek_eid(packetBuffer,
+                                                                lay, eid);
 
-    bool connectMCTP()
-    {
-        SPDMCPP_LOG_TRACE_FUNC(log);
-        if (!MCTPIO.createSocket())
-            return false;
-
-        context.register_io(&MCTPIO);
-
-        auto callback = [this](sdeventplus::source::IO& /*io*/, int /*fd*/,
-                               uint32_t revents) {
-            SPDMCPP_LOG_TRACE_FUNC(log);
-            // 			spdmcpp::LogClass& log = Connection->getLog();
-            // 			log.iprintln("Event recv!");
-
-            if (!(revents & EPOLLIN))
-            {
-                return;
-            }
-
-            //	context.IO->read(packetBuffer);
-            MCTPIO.read(packetBuffer);
-
-            uint8_t eid = 0;
-            {
-                spdmcpp::TransportClass::LayerState lay; // TODO double decode
-                auto rs = spdmcpp::MCTP_TransportClass::peek_eid(packetBuffer,
-                                                                 lay, eid);
-
-                SPDMCPP_LOG_TRACE_RS(log, rs);
-                if (rs != spdmcpp::RetStat::OK)
-                {
-                    // TODO just log warning and ignore message?!
-                    event.exit(1);
-                }
-            }
-            if (eid >= Responders.size())
+            SPDMCPP_LOG_TRACE_RS(log, rs);
+            if (rs != spdmcpp::RetStat::OK)
             {
                 // TODO just log warning and ignore message?!
                 event.exit(1);
             }
-            auto resp = Responders[eid];
-            if (!resp)
-            {
-                // TODO just log warning and ignore message?!
-                event.exit(1);
-            }
-            resp->handleRecv(packetBuffer);
-        };
-
-        MCTPEvent = new sdeventplus::source::IO(event, MCTPIO.Socket, EPOLLIN,
-                                                std::move(callback));
-
-        return true;
-    }
-
-    bool createResponder(uint8_t eid)
-    {
-        SPDMCPP_LOG_TRACE_FUNC(log);
-        if (eid >= Responders.size())
-        {
-            Responders.resize(eid + 1);
         }
-        if (Responders[eid])
+        if (eid >= responders.size())
         {
-            log.iprint("Error: responder for eid ");
-            log.print(eid);
-            log.println(" already exists!");
-            return false;
+            // TODO just log warning and ignore message?!
+            event.exit(1);
         }
-        Responders[eid] =
-            new dbus_api::Responder(*this, SPDM_DEFAULT_PATH, eid);
-        return true;
-    }
-
-    int loop()
-    {
-        return event.loop();
-    }
-
-    void dbg(const char* debug)
-    {
-        if (verbose > 0)
+        auto resp = responders[eid];
+        if (!resp)
         {
-            log.println(debug);
+            // TODO just log warning and ignore message?!
+            event.exit(1);
         }
-    }
+        resp->handleRecv(packetBuffer);
+    };
 
-    void dbg(const std::string& debug)
+    mctpEvent = new sdeventplus::source::IO(event, mctpIo.Socket, EPOLLIN,
+                                            std::move(callback));
+
+    return true;
+}
+
+bool SpdmdApp::createResponder(uint8_t eid)
+{
+    SPDMCPP_LOG_TRACE_FUNC(log);
+    if (eid >= responders.size())
     {
-        if (verbose > 0)
-        {
-            log.println(debug);
-        }
+        responders.resize(eid + 1);
     }
 
-  private:
-    spdmcpp::MCTP_IOClass MCTPIO;
-    sdeventplus::source::IO* MCTPEvent = nullptr;
-    std::vector<dbus_api::Responder*> Responders;
-    std::vector<uint8_t> packetBuffer;
-};
+    if (responders[eid])
+    {
+        log.iprint("Error: responder for eid ");
+        log.print(eid);
+        log.println(" already exists!");
+        return false;
+    }
+
+    responders[eid] =
+        new dbus_api::Responder(*this, SPDM_DEFAULT_PATH, eid);
+
+    return true;
+}
+
+int SpdmdApp::loop()
+{
+    return event.loop();
+}
+
+} /* class SpdmdApp */
 
 int main(int argc, char** argv)
 {
-    /* 1. Setup log, CLI */
+    int returnCode = 0;
+
     SpdmdApp spdmApp;
-    spdmApp.SPDMD_SetupCli(argc, argv);
+
+    spdmApp.setupCli(argc, argv);
 
     spdmApp.connectDBus();
 
-    if (!spdmApp.connectMCTP())
+    if (spdmApp.connectMCTP())
     {
-        return -1;
+        std::unique_ptr<MctpDiscovery> mctpDiscoveryHandler =
+            std::make_unique<MctpDiscovery>(spdmApp);
+
+        returnCode = spdmApp.loop();
     }
-
-    /* 2. Get list of SPDM connected devices available at MCTP */
-
-    /* 3. Create SPDM object for each SPDM responder */
-    //	dbus_api::Responder dbusImplReq{bus, SPDM_DEFAULT_PATH, 14};
-
-    spdmApp.createResponder(14);
-    spdmApp.createResponder(16);
-
-    /* 4. Enter forever loop */
-    int returnCode = spdmApp.loop();
-
-    spdmApp.dbg(spdmd::description::NAME + " finishes with ret code " +
-                to_string(returnCode));
 
     return returnCode;
 }

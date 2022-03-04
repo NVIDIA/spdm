@@ -19,10 +19,12 @@ namespace spdmd
 namespace dbus_api
 {
 
-Responder::Responder(ResponderContext& ctx, const std::string& path,
+Responder::Responder(SpdmdAppContext& appCtx, const std::string& path,
                      uint8_t eid) :
-    ResponderIntf(ctx.bus, (path + "/" + std::to_string(eid)).c_str()),
-    context(ctx), Connection(&ctx.context), Transport(eid, *this)
+    ResponderIntf(appCtx.bus, (path + "/" + std::to_string(eid)).c_str()),
+    appContext(appCtx), 
+    Connection(&appCtx.context), 
+    Transport(eid, *this)
 {
     Connection.register_transport(&Transport);
 
@@ -226,7 +228,7 @@ void Responder::updateLastUpdateTime()
 spdmcpp::RetStat
     MCTP_TransportClass::setup_timeout(spdmcpp::timeout_ms_t timeout)
 {
-    sdeventplus::Event& event = responder.context.event;
+    sdeventplus::Event& event = responder.appContext.event;
     assert(!time);
     // TODO !!! verify we're not leaking anything !!!
     auto time_cb = [this](
