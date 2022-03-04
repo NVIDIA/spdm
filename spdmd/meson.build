@@ -5,11 +5,10 @@ spdmd_headers = [
 ]
 
 sources = [
-	'spdmd.cpp',
-	'instance_id.cpp',
-	'dbus_impl_responder.cpp',
+  'spdmd.cpp',
+  'dbus_impl_responder.cpp',
   'mctp_endpoint_discovery.cpp',
-	'utils.cpp',
+  'utils.cpp',
 ]
 
 executable(
