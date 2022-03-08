@@ -40,6 +40,11 @@ struct packet_algorithms_response_min
         SPDMCPP_LOG_iexprln(log, ExtHashCount);
         SPDMCPP_LOG_iexprln(log, Reserved4);
     }
+
+    bool operator==(const packet_algorithms_response_min& other) const
+    {
+        return memcmp(this, &other, sizeof(other)) == 0;
+    }
 };
 
 inline void endian_host_spdm_copy(const packet_algorithms_response_min& src,
@@ -71,6 +76,41 @@ struct packet_algorithms_response_var
     static constexpr bool size_is_constant =
         false; // TODO decide how we need/want to handle such packets
 
+    uint16_t get_size() const
+    {
+        size_t size = 0;
+        size += sizeof(Min);
+        for (const auto& iter : PacketReqAlgVector)
+        {
+            size += iter.get_size();
+        }
+        assert(size <= std::numeric_limits<uint16_t>::max());
+        return static_cast<uint16_t>(size);
+    }
+    RetStat finalize()
+    {
+        if (PacketReqAlgVector.size() >= 256)
+        {
+            return RetStat::ERROR_UNKNOWN;
+        }
+        Min.Header.Param1 = static_cast<uint8_t>(PacketReqAlgVector.size());
+        Min.Length = get_size();
+        return RetStat::OK;
+    }
+
+    bool operator==(const packet_algorithms_response_var& other) const
+    {
+        if (Min != other.Min)
+        {
+            return false;
+        }
+        if (PacketReqAlgVector != other.PacketReqAlgVector)
+        {
+            return false;
+        }
+        return true;
+    }
+
     void print_ml(LogClass& log) const
     {
         SPDMCPP_LOG_INDENT(log);
@@ -91,13 +131,22 @@ struct packet_algorithms_response_var
                            std::vector<uint8_t>& buf, size_t& off)
 {
     auto rs = packet_encode_internal(p.Min, buf, off);
+    if (is_error(rs))
+    {
+        return rs;
+    }
 
-    /*	p.VersionNumberEntries.resize(p.Min.VersionNumberEntryCount);
-        for (size_t i = 0; i < p.VersionNumberEntries.size(); ++i) {
-            buf = packet_decode_internal(p.VersionNumberEntries[i], buf);
-        }*/
+    for (const auto& iter : p.PacketReqAlgVector)
+    {
+        rs = packet_encode_internal(iter, buf, off);
+        if (is_error(rs))
+        {
+            return rs;
+        }
+    }
     return rs;
 }
+
 [[nodiscard]] inline RetStat
     packet_decode_internal(packet_algorithms_response_var& p,
                            const std::vector<uint8_t>& buf, size_t& off)
@@ -106,19 +155,14 @@ struct packet_algorithms_response_var
     if (is_error(rs))
         return rs;
 
-    p.PacketReqAlgVector.resize(
-        p.Min.Header.Param1); // TODO check size for reasonable limit!!
+    p.PacketReqAlgVector.resize(p.Min.Header.Param1);
     for (size_t i = 0; i < p.PacketReqAlgVector.size(); ++i)
     {
         rs = packet_decode_internal(p.PacketReqAlgVector[i], buf, off);
         if (is_error(rs))
+        {
             return rs;
+        }
     }
-    /*	for (const auto& iter : p.PacketReqAlgVector) {
-            auto rs = packet_encode_internal(iter, buf, off);
-            if (is_error(rs)) {
-                return rs;
-            }
-        }*/
     return rs;
 }

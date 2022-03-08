@@ -23,6 +23,11 @@ struct packet_get_measurements_request_min
         SPDMCPP_LOG_INDENT(log);
         SPDMCPP_LOG_print_ml(log, Header);
     }
+
+    bool operator==(const packet_get_measurements_request_min& other) const
+    {
+        return memcmp(this, &other, sizeof(other)) == 0;
+    }
 };
 
 inline void
@@ -64,6 +69,23 @@ struct packet_get_measurements_request_var
         return static_cast<uint16_t>(size);
     }
 
+    bool operator==(const packet_get_measurements_request_var& other) const
+    {
+        if (Min != other.Min)
+        {
+            return false;
+        }
+        if (memcmp(Nonce, other.Nonce, sizeof(Nonce)))
+        {
+            return false;
+        }
+        if (SlotIDParam != other.SlotIDParam)
+        {
+            return false;
+        }
+        return true;
+    }
+
     void print_ml(LogClass& log) const
     {
         SPDMCPP_LOG_INDENT(log);
@@ -87,11 +109,30 @@ struct packet_get_measurements_request_var
 
     if (p.has_nonce())
     {
-        //	packet_encode_basic(p.Nonce, buf, off);
-        memcpy(&buf[off], p.Nonce, sizeof(p.Nonce));
-        off += sizeof(p.Nonce);
-
+        packet_encode_basic(p.Nonce, buf, off);
         packet_encode_basic(p.SlotIDParam, buf, off);
     }
+    return rs;
+}
+
+[[nodiscard]] inline RetStat
+    packet_decode_internal(packet_get_measurements_request_var& p,
+                           const std::vector<uint8_t>& buf, size_t& off)
+{
+    auto rs = packet_decode_internal(p.Min, buf, off);
+    if (is_error(rs))
+        return rs;
+
+    if (p.has_nonce())
+    {
+        rs = packet_decode_basic(p.Nonce, buf, off);
+        if (is_error(rs))
+            return rs;
+
+        rs = packet_decode_basic(p.SlotIDParam, buf, off);
+        if (is_error(rs))
+            return rs;
+    }
+
     return rs;
 }

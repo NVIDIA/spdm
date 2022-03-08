@@ -18,6 +18,11 @@ struct packet_certificate_response_min
         SPDMCPP_LOG_iexprln(log, PortionLength);
         SPDMCPP_LOG_iexprln(log, RemainderLength);
     }
+
+    bool operator==(const packet_certificate_response_min& other) const
+    {
+        return memcmp(this, &other, sizeof(other)) == 0;
+    }
 };
 
 inline void endian_host_spdm_copy(const packet_certificate_response_min& src,
@@ -37,6 +42,25 @@ struct packet_certificate_response_var
         RequestResponseEnum::RESPONSE_CERTIFICATE;
     static constexpr bool size_is_constant = false;
 
+    bool operator==(const packet_certificate_response_var& other) const
+    {
+        if (Min != other.Min)
+        {
+            return false;
+        }
+        if (CertificateVector != other.CertificateVector)
+        {
+            return false;
+        }
+        return true;
+    }
+
+    RetStat finalize()
+    {
+        Min.PortionLength = CertificateVector.size();
+        return RetStat::OK;
+    }
+
     void print_ml(LogClass& log) const
     {
         SPDMCPP_LOG_INDENT(log);
@@ -46,6 +70,16 @@ struct packet_certificate_response_var
             SPDMCPP_LOG_idataln(log, CertificateVector);
     }
 };
+
+[[nodiscard]] inline RetStat
+    packet_encode_internal(const packet_certificate_response_var& p,
+                           std::vector<uint8_t>& buf, size_t& off)
+{
+    auto rs = packet_encode_internal(p.Min, buf, off);
+
+    packet_encode_basic(p.CertificateVector, buf, off);
+    return rs;
+}
 
 [[nodiscard]] inline RetStat
     packet_decode_internal(packet_certificate_response_var& p,

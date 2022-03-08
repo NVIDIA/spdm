@@ -353,7 +353,7 @@ RetStat ConnectionClass::handle_recv<packet_digests_response_var>()
         if (resp.Min.Header.Param2 & (1 << i))
         {
             Slots[i].Valid = true;
-            std::swap(resp.DigestVector[i], Slots[i].Digest);
+            std::swap(resp.Digests[i], Slots[i].Digest);
         }
         else
         {

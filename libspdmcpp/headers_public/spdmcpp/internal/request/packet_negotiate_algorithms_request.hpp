@@ -62,6 +62,13 @@ struct PacketReqAlgStruct
         // TODO support printing
         log.print(">");
     }
+
+    bool operator==(const PacketReqAlgStruct& other) const
+    {
+        // TODO should only compare the valid portion of AlgSupported,
+        // AlgExternal?
+        return memcmp(this, &other, sizeof(other)) == 0;
+    }
 };
 
 [[nodiscard]] inline RetStat packet_encode_internal(const PacketReqAlgStruct& p,
@@ -144,6 +151,11 @@ struct packet_negotiate_algorithms_request_min
         SPDMCPP_LOG_iexprln(log, ExtHashCount);
         SPDMCPP_LOG_iexprln(log, Reserved4);
     }
+
+    bool operator==(const packet_negotiate_algorithms_request_min& other) const
+    {
+        return memcmp(this, &other, sizeof(other)) == 0;
+    }
 };
 
 inline void
@@ -198,6 +210,19 @@ struct packet_negotiate_algorithms_request_var
         return RetStat::OK;
     }
 
+    bool operator==(const packet_negotiate_algorithms_request_var& other) const
+    {
+        if (Min != other.Min)
+        {
+            return false;
+        }
+        if (PacketReqAlgVector != other.PacketReqAlgVector)
+        {
+            return false;
+        }
+        return true;
+    }
+
     void print_ml(LogClass& log) const
     {
         SPDMCPP_LOG_INDENT(log);
@@ -230,14 +255,21 @@ struct packet_negotiate_algorithms_request_var
     }
     return rs;
 }
-#if 0
-	[[nodiscard]] inline RetStat packet_decode_internal(packet_negotiate_algorithms_request_var& p, const std::vector<uint8_t>& buf, size_t& start)
-	{
-		auto rs = packet_decode_internal(p.Min, buf, start);
-	/*	p.VersionNumberEntries.resize(p.Min.VersionNumberEntryCount);
-		for (size_t i = 0; i < p.VersionNumberEntries.size(); ++i) {
-			buf = packet_decode_internal(p.VersionNumberEntries[i], buf);
-		}*/
-		return rs;
-	}
-#endif
+
+[[nodiscard]] inline RetStat
+    packet_decode_internal(packet_negotiate_algorithms_request_var& p,
+                           const std::vector<uint8_t>& buf, size_t& off)
+{
+    auto rs = packet_decode_internal(p.Min, buf, off);
+
+    p.PacketReqAlgVector.resize(p.Min.Header.Param1);
+    for (size_t i = 0; i < p.PacketReqAlgVector.size(); ++i)
+    {
+        rs = packet_decode_internal(p.PacketReqAlgVector[i], buf, off);
+        if (is_error(rs))
+        {
+            return rs;
+        }
+    }
+    return rs;
+}

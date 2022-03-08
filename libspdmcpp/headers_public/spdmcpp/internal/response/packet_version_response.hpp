@@ -19,6 +19,13 @@ struct packet_version_response_min
         SPDMCPP_LOG_iexprln(log, Reserved);
         // SPDMCPP_LOG_iexprln(log, VersionNumberEntryCount);
     }
+
+    bool operator==(const packet_version_response_min& other) const
+    {
+        // TODO should only compare the valid portion of AlgSupported,
+        // AlgExternal?
+        return memcmp(this, &other, sizeof(other)) == 0;
+    }
 };
 
 inline void endian_host_spdm_copy(const packet_version_response_min& src,
@@ -53,6 +60,19 @@ struct packet_version_response_var
             log.endl();
         }
     }
+
+    bool operator==(const packet_version_response_var& other) const
+    {
+        if (Min != other.Min)
+        {
+            return false;
+        }
+        if (VersionNumberEntries != other.VersionNumberEntries)
+        {
+            return false;
+        }
+        return true;
+    }
 };
 
 [[nodiscard]] inline RetStat
@@ -77,6 +97,31 @@ struct packet_version_response_var
     for (size_t i = 0; i < p.VersionNumberEntries.size(); ++i)
     {
         rs = packet_decode_internal(p.VersionNumberEntries[i], buf, off);
+        if (rs != RetStat::OK)
+        {
+            return rs;
+        }
+    }
+    return RetStat::OK;
+}
+
+[[nodiscard]] inline RetStat
+    packet_encode_internal(const packet_version_response_var& p,
+                           std::vector<uint8_t>& buf, size_t& off)
+{
+    auto rs = packet_encode_internal(p.Min, buf, off);
+    if (rs != RetStat::OK)
+    {
+        return rs;
+    }
+
+    {
+        uint8_t size = p.VersionNumberEntries.size();
+        packet_encode_basic(size, buf, off);
+    }
+    for (size_t i = 0; i < p.VersionNumberEntries.size(); ++i)
+    {
+        rs = packet_encode_internal(p.VersionNumberEntries[i], buf, off);
         if (rs != RetStat::OK)
         {
             return rs;

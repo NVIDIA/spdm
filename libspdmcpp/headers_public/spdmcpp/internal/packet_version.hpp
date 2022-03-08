@@ -45,6 +45,11 @@ struct packet_version_number // TODO bitfields are ill-defined endianness-wise
         SPDMCPP_LOG_expr(log, Alpha);
         log.print(">");
     }
+
+    bool operator==(const packet_version_number& other) const
+    {
+        return memcmp(this, &other, sizeof(other)) == 0;
+    }
 };
 
 inline void endian_host_spdm_copy(const packet_version_number& src,

@@ -93,6 +93,8 @@ template <typename T>
 [[nodiscard]] RetStat packet_encode(const T& p, std::vector<uint8_t>& buf,
                                     size_t start = 0)
 {
+    // TODO maybe we should require a finalize() function and always do
+    // p.finalize() here for safety?
     auto rs = packet_encode_internal(p, buf, start);
     if (is_error(rs))
     {
@@ -106,6 +108,28 @@ template <typename T>
 }
 
 // helpers for simple byte chunks
+inline void packet_encode_basic(const uint8_t* src, size_t size,
+                                std::vector<uint8_t>& buf, size_t& start)
+{
+    if (buf.size() < start + size)
+    {
+        buf.resize(start + size);
+    }
+    memcpy(&buf[start], src, size);
+    start += size;
+}
+inline void packet_encode_basic(const std::vector<uint8_t>& src,
+                                std::vector<uint8_t>& buf, size_t& start)
+{
+    packet_encode_basic(src.data(), src.size(), buf, start);
+}
+template <size_t N>
+inline void packet_encode_basic(const uint8_t (&src)[N],
+                                std::vector<uint8_t>& buf, size_t& start)
+{
+    packet_encode_basic(src, N, buf, start);
+}
+
 [[nodiscard]] inline RetStat
     packet_decode_basic(uint8_t* dst, size_t size,
                         const std::vector<uint8_t>& buf, size_t& start)

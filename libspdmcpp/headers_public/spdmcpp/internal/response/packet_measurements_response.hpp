@@ -16,6 +16,18 @@ struct packet_measurements_response_min
         return MeasurementRecordLength[0] | MeasurementRecordLength[1] << 8 |
                MeasurementRecordLength[2] << 16;
     }
+    bool set_measurement_record_length(uint32_t len)
+    {
+        if (len >= 1 << 24)
+        {
+            return false;
+        }
+        MeasurementRecordLength[0] = len & 0xFF;
+        MeasurementRecordLength[1] = (len >> 8) & 0xFF;
+        MeasurementRecordLength[2] = (len >> 16) & 0xFF;
+        return true;
+    }
+
     void print_ml(LogClass& log) const
     {
         SPDMCPP_LOG_INDENT(log);
@@ -24,6 +36,11 @@ struct packet_measurements_response_min
         log.iprint("MeasurementRecordLength[3]: ");
         log.println(MeasurementRecordLength,
                     sizeof_array(MeasurementRecordLength));
+    }
+
+    bool operator==(const packet_measurements_response_min& other) const
+    {
+        return memcmp(this, &other, sizeof(other)) == 0;
     }
 };
 
@@ -51,11 +68,49 @@ struct packet_measurements_response_var // TODO all variable packets don't need
     std::vector<packet_measurement_block_var> MeasurementBlockVector;
     std::vector<uint8_t> OpaqueDataVector;
     std::vector<uint8_t> SignatureVector;
-    uint16_t OpaqueLength = 0;
 
     static constexpr RequestResponseEnum RequestResponseCode =
         RequestResponseEnum::RESPONSE_MEASUREMENTS;
     static constexpr bool size_is_constant = false;
+
+    RetStat finalize()
+    {
+        uint32_t len = 0;
+        for (const auto& mb : MeasurementBlockVector)
+        {
+            len += mb.get_size();
+        }
+        if (!Min.set_measurement_record_length(len))
+        {
+            return RetStat::ERROR_UNKNOWN;
+        }
+        return RetStat::OK;
+    }
+
+    bool operator==(const packet_measurements_response_var& other) const
+    {
+        if (Min != other.Min)
+        {
+            return false;
+        }
+        if (memcmp(Nonce, other.Nonce, sizeof(Nonce)))
+        {
+            return false;
+        }
+        if (MeasurementBlockVector != other.MeasurementBlockVector)
+        {
+            return false;
+        }
+        if (OpaqueDataVector != other.OpaqueDataVector)
+        {
+            return false;
+        }
+        if (SignatureVector != other.SignatureVector)
+        {
+            return false;
+        }
+        return true;
+    }
 
     void print_ml(LogClass& log) const
     {
@@ -72,11 +127,38 @@ struct packet_measurements_response_var // TODO all variable packets don't need
             MeasurementBlockVector[i].print_ml(log);
         }
 
-        SPDMCPP_LOG_iexprln(log, OpaqueLength);
         SPDMCPP_LOG_idataln(log, OpaqueDataVector);
         SPDMCPP_LOG_idataln(log, SignatureVector);
     }
 };
+
+[[nodiscard]] inline RetStat
+    packet_encode_internal(const packet_measurements_response_var& p,
+                           std::vector<uint8_t>& buf, size_t& off)
+{
+    auto rs = packet_encode_internal(p.Min, buf, off);
+    if (is_error(rs))
+    {
+        return rs;
+    }
+
+    for (const auto& mb : p.MeasurementBlockVector)
+    {
+        rs = packet_encode_internal(mb, buf, off);
+        if (is_error(rs))
+            return rs;
+    }
+    packet_encode_basic(p.Nonce, buf, off);
+
+    packet_encode_basic(static_cast<uint16_t>(p.OpaqueDataVector.size()), buf,
+                        off); // TODO verify no greater than 1024
+
+    packet_encode_basic(p.OpaqueDataVector, buf, off);
+
+    packet_encode_basic(p.SignatureVector, buf, off);
+
+    return rs;
+}
 
 [[nodiscard]] inline RetStat
     packet_decode_internal(packet_measurements_response_var& p,
@@ -108,16 +190,18 @@ struct packet_measurements_response_var // TODO all variable packets don't need
     if (is_error(rs))
         return rs;
 
-    rs = packet_decode_basic(p.OpaqueLength, buf,
-                             off); // TODO verify no greater than 1024
-    if (is_error(rs))
-        return rs;
+    {
+        uint16_t length = 0;
+        rs = packet_decode_basic(length, buf,
+                                 off); // TODO verify no greater than 1024
+        if (is_error(rs))
+            return rs;
 
-    p.OpaqueDataVector.resize(p.OpaqueLength);
-    rs = packet_decode_basic(p.OpaqueDataVector, buf, off);
-    if (is_error(rs))
-        return rs;
-
+        p.OpaqueDataVector.resize(length);
+        rs = packet_decode_basic(p.OpaqueDataVector, buf, off);
+        if (is_error(rs))
+            return rs;
+    }
     if (info.GetMeasurementsParam1 & 0x01)
     {
         p.SignatureVector.resize(info.SignatureSize);
