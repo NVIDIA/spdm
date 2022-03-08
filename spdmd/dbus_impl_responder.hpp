@@ -1,7 +1,6 @@
 #pragma once
 
 #include "spdmd_app_context.hpp"
-
 #include "xyz/openbmc_project/Association/Definitions/server.hpp"
 #include "xyz/openbmc_project/SPDM/Responder/server.hpp"
 

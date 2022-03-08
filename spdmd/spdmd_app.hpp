@@ -1,12 +1,11 @@
 #pragma once
 
-#include "utils.hpp"
-#include "spdmd_app_context.hpp"
 #include "dbus_impl_responder.hpp"
-
 #include "spdmcpp/context.hpp"
-#include "spdmcpp/mctp_support.hpp"
 #include "spdmcpp/log.hpp"
+#include "spdmcpp/mctp_support.hpp"
+#include "spdmd_app_context.hpp"
+#include "utils.hpp"
 
 #include <sdeventplus/event.hpp>
 #include <sdeventplus/source/io.hpp>
@@ -63,7 +62,7 @@ class SpdmdApp : SpdmdAppContext
      */
     sdbusplus::bus::bus& getBus()
     {
-      return SpdmdAppContext::bus;
+        return SpdmdAppContext::bus;
     }
 
     /** @brief log object used to log debug messages */
@@ -73,10 +72,12 @@ class SpdmdApp : SpdmdAppContext
     /** @brief verbose - debug level for SPDM daemon */
     int verbose{0};
 
-    /** @brief MCTP interface auxiliary object - used for transmission purposes over MCTP */
+    /** @brief MCTP interface auxiliary object - used for transmission purposes
+     * over MCTP */
     spdmcpp::MCTP_IOClass mctpIo;
 
-    /** @brief Event handlar for MCTP events - used for transmission purposes over MCTP */
+    /** @brief Event handlar for MCTP events - used for transmission purposes
+     * over MCTP */
     sdeventplus::source::IO* mctpEvent = nullptr;
 
     /** @brief Array of all responder objects, managed by SPDM daemon */

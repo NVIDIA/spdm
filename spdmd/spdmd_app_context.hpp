@@ -3,8 +3,8 @@
 #include "spdmcpp/context.hpp"
 #include "spdmcpp/log.hpp"
 
-#include <sdeventplus/event.hpp>
 #include <sdbusplus/bus.hpp>
+#include <sdeventplus/event.hpp>
 
 namespace spdmd
 {

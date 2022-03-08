@@ -1,6 +1,6 @@
-#include "spdmd_version.hpp"
-#include "spdmd_app.hpp"
 #include "mctp_endpoint_discovery.hpp"
+#include "spdmd_app.hpp"
+#include "spdmd_version.hpp"
 
 #include <bits/stdc++.h>
 
@@ -21,10 +21,8 @@ namespace spdmd
 
 SpdmdApp::SpdmdApp() :
     SpdmdAppContext(sdeventplus::Event::get_default(), bus::new_system()),
-    log(std::cout),
-    mctpIo(log)
-{
-}
+    log(std::cout), mctpIo(log)
+{}
 
 SpdmdApp::~SpdmdApp()
 {
@@ -34,7 +32,7 @@ SpdmdApp::~SpdmdApp()
 int SpdmdApp::setupCli(int argc, char** argv)
 {
     CLI::App app{spdmd::description::NAME + ", version " +
-                    spdmd::description::VERSION};
+                 spdmd::description::VERSION};
 
     CLI::Option* opt_verbosity =
         app.add_option("-v, --verbose", verbose, "Verbose level (0-7)");
@@ -68,7 +66,7 @@ bool SpdmdApp::connectMCTP()
     context.register_io(&mctpIo);
 
     auto callback = [this](sdeventplus::source::IO& /*io*/, int /*fd*/,
-                            uint32_t revents) {
+                           uint32_t revents) {
         SPDMCPP_LOG_TRACE_FUNC(log);
         // 			spdmcpp::LogClass& log = Connection->getLog();
         // 			log.iprintln("Event recv!");
@@ -84,8 +82,8 @@ bool SpdmdApp::connectMCTP()
         uint8_t eid = 0;
         {
             spdmcpp::TransportClass::LayerState lay; // TODO double decode
-            auto rs = spdmcpp::MCTP_TransportClass::peek_eid(packetBuffer,
-                                                                lay, eid);
+            auto rs =
+                spdmcpp::MCTP_TransportClass::peek_eid(packetBuffer, lay, eid);
 
             SPDMCPP_LOG_TRACE_RS(log, rs);
             if (rs != spdmcpp::RetStat::OK)
@@ -130,8 +128,7 @@ bool SpdmdApp::createResponder(uint8_t eid)
         return false;
     }
 
-    responders[eid] =
-        new dbus_api::Responder(*this, SPDM_DEFAULT_PATH, eid);
+    responders[eid] = new dbus_api::Responder(*this, SPDM_DEFAULT_PATH, eid);
 
     return true;
 }
@@ -141,7 +138,7 @@ int SpdmdApp::loop()
     return event.loop();
 }
 
-} /* class SpdmdApp */
+} // namespace spdmd
 
 int main(int argc, char** argv)
 {

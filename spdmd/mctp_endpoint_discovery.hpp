@@ -1,6 +1,7 @@
 #pragma once
 
 #include "spdmd_app.hpp"
+
 #include <sdbusplus/bus/match.hpp>
 
 namespace spdmd
@@ -44,13 +45,14 @@ class MctpDiscovery
     static constexpr uint8_t mctpTypeSPDM = 5;
 
     /** @brief MCTP d-bus interface name  */
-    static constexpr auto mctpEndpointIntfName = "xyz.openbmc_project.MCTP.Endpoint";
+    static constexpr auto mctpEndpointIntfName =
+        "xyz.openbmc_project.MCTP.Endpoint";
 
     /** @brief MCTP d-bus interface, property name EID  */
     static constexpr auto mctpEndpointIntfPropertyEid = "EID";
 
     /** @brief MCTP d-bus interface, property name EID  */
-    static constexpr auto mctpEndpointIntfPropertySupportedMessageTypes = 
+    static constexpr auto mctpEndpointIntfPropertySupportedMessageTypes =
         "SupportedMessageTypes";
 
     /** @brief Get EID value from MCTP objects, which implement SPDM  */

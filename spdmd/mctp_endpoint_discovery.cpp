@@ -1,4 +1,5 @@
 #include "mctp_endpoint_discovery.hpp"
+
 #include "utils.hpp"
 
 #include <algorithm>
@@ -11,8 +12,7 @@ namespace spdmd
 {
 
 MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
-    bus(spdmApp.getBus()),
-    spdmApp(spdmApp),
+    bus(spdmApp.getBus()), spdmApp(spdmApp),
     mctpEndpointSignal(spdmApp.getBus(),
                        sdbusplus::bus::match::rules::interfacesAdded(
                            "/xyz/openbmc_project/mctp"),
@@ -43,10 +43,10 @@ MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
             if (intfName == mctpEndpointIntfName)
             {
                 size_t eid = (mctp_eid_t)getEid(properties);
-                if (eid<256)
+                if (eid < 256)
                 {
                     spdmApp.createResponder((mctp_eid_t)eid);
-                }            
+                }
             }
         }
     }
@@ -63,7 +63,7 @@ void MctpDiscovery::dicoverEndpoints(sdbusplus::message::message& msg)
         if (intfName == mctpEndpointIntfName)
         {
             size_t eid = (mctp_eid_t)getEid(properties);
-            if (eid<256)
+            if (eid < 256)
             {
                 spdmApp.createResponder((mctp_eid_t)eid);
             }
@@ -77,19 +77,21 @@ size_t MctpDiscovery::getEid(std::map<std::string, dbus::Value> properties)
         properties.contains(mctpEndpointIntfPropertySupportedMessageTypes))
     {
         size_t eid = 256;
-        /* Type of EID property depends on the system, 
+        /* Type of EID property depends on the system,
          *  so checking of all possible types is mandatory */
-        try 
+        try
         {
-            eid = std::get<uint32_t>(properties.at(mctpEndpointIntfPropertyEid));
+            eid =
+                std::get<uint32_t>(properties.at(mctpEndpointIntfPropertyEid));
         }
-        catch(const std::bad_variant_access& e)
+        catch (const std::bad_variant_access& e)
         {
-            try 
+            try
             {
-                eid = std::get<size_t>(properties.at(mctpEndpointIntfPropertyEid));
+                eid = std::get<size_t>(
+                    properties.at(mctpEndpointIntfPropertyEid));
             }
-            catch(const std::bad_variant_access& e)
+            catch (const std::bad_variant_access& e)
             {
                 spdmApp.log.println(e.what());
             }
@@ -98,8 +100,8 @@ size_t MctpDiscovery::getEid(std::map<std::string, dbus::Value> properties)
         {
             try
             {
-                auto types = std::get<std::vector<uint8_t>>(
-                    properties.at(mctpEndpointIntfPropertySupportedMessageTypes));
+                auto types = std::get<std::vector<uint8_t>>(properties.at(
+                    mctpEndpointIntfPropertySupportedMessageTypes));
                 if (std::find(types.begin(), types.end(), mctpTypeSPDM) !=
                     types.end())
                 {
@@ -109,7 +111,7 @@ size_t MctpDiscovery::getEid(std::map<std::string, dbus::Value> properties)
             catch (const std::exception& e)
             {
                 spdmApp.log.print(e.what());
-            }            
+            }
         }
     }
 

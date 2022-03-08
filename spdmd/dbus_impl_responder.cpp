@@ -24,9 +24,7 @@ namespace dbus_api
 Responder::Responder(SpdmdAppContext& appCtx, const std::string& path,
                      uint8_t eid) :
     ResponderIntf(appCtx.bus, (path + "/" + std::to_string(eid)).c_str()),
-    appContext(appCtx), 
-    Connection(&appCtx.context), 
-    Transport(eid, *this)
+    appContext(appCtx), Connection(&appCtx.context), Transport(eid, *this)
 {
     {
         std::vector<std::tuple<std::string, std::string, std::string>> prop;
@@ -87,9 +85,9 @@ void Responder::syncSlotsInfo()
             }
         }
     }
-    /*{TODO no longer needed?! we could remove the buffer for it then and go back to a running hash...
-        auto& buf = Connection.getSignedMeasurementsBuffer();
-        signedMeasurements(buf);
+    /*{TODO no longer needed?! we could remove the buffer for it then and go
+    back to a running hash... auto& buf =
+    Connection.getSignedMeasurementsBuffer(); signedMeasurements(buf);
     }*/
     {
         const nonce_array_32& arr = Connection.getMeasurementNonce();
