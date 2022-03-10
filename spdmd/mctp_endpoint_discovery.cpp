@@ -11,6 +11,8 @@
 namespace spdmd
 {
 
+const std::string INVENTORY_DEFAULT_PATH = "/xyz/openbmc_project/inventory";
+
 MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
     bus(spdmApp.getBus()), spdmApp(spdmApp),
     mctpEndpointSignal(spdmApp.getBus(),
@@ -45,7 +47,8 @@ MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
                 size_t eid = getEid(properties);
                 if (eid < 256)
                 {
-                    spdmApp.createResponder((mctp_eid_t)eid);
+                    spdmApp.createResponder(
+                        (mctp_eid_t)eid, getInventoryPath(getUUID(interfaces)));
                 }
             }
         }
@@ -65,13 +68,15 @@ void MctpDiscovery::dicoverEndpoints(sdbusplus::message::message& msg)
             size_t eid = getEid(properties);
             if (eid < 256)
             {
-                spdmApp.createResponder((mctp_eid_t)eid);
+                spdmApp.createResponder((mctp_eid_t)eid,
+                                        getInventoryPath(getUUID(interfaces)));
             }
         }
     }
 }
 
-size_t MctpDiscovery::getEid(std::map<std::string, dbus::Value> properties)
+size_t
+    MctpDiscovery::getEid(const std::map<std::string, dbus::Value>& properties)
 {
     if (properties.contains(mctpEndpointIntfPropertyEid) &&
         properties.contains(mctpEndpointIntfPropertySupportedMessageTypes))
@@ -116,6 +121,60 @@ size_t MctpDiscovery::getEid(std::map<std::string, dbus::Value> properties)
     }
 
     return 256;
+}
+
+std::string MctpDiscovery::getUUID(const dbus::InterfaceMap& interfaces)
+{
+    auto intf = interfaces.find(uuidIntfName);
+    if (intf != interfaces.end())
+    {
+        const auto& properties = intf->second;
+        {
+            auto uuid = properties.find(uuidIntfPropertyUUID);
+            if (uuid != properties.end())
+            {
+                return std::get<std::string>(uuid->second);
+            }
+        }
+    }
+    return "";
+}
+
+std::string MctpDiscovery::getInventoryPath(const std::string& uuid)
+{
+    dbus::ObjectValueTree objects;
+
+    SPDMCPP_LOG_TRACE_FUNC(spdmApp.log);
+
+    // TODO couldn't test/verify so this is most likely invalid/broken
+    try
+    {
+        auto method = bus.new_method_call(
+            "xyz.openbmc_project.Inventory.Manager",
+            INVENTORY_DEFAULT_PATH.c_str(),
+            "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
+        auto reply = bus.call(method);
+        reply.read(objects);
+
+        for (const auto& [objectPath, interfaces] : objects)
+        {
+            if (interfaces.contains(
+                    "xyz.openbmc_project.Inventory.Item.SPDMResponder"))
+            {
+                std::string id = getUUID(interfaces);
+                if (id == uuid)
+                {
+                    return INVENTORY_DEFAULT_PATH + "/" +
+                           std::string(objectPath);
+                }
+            }
+        }
+    }
+    catch (const std::exception& e)
+    {
+        spdmApp.log.print(e.what());
+    }
+    return INVENTORY_DEFAULT_PATH + "/INVALID";
 }
 
 } // namespace spdmd

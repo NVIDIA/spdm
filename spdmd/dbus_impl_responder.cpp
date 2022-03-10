@@ -22,17 +22,22 @@ namespace dbus_api
 {
 
 Responder::Responder(SpdmdAppContext& appCtx, const std::string& path,
-                     uint8_t eid) :
+                     uint8_t eid, const std::string& inventory_path) :
     ResponderIntf(appCtx.bus, (path + "/" + std::to_string(eid)).c_str()),
     appContext(appCtx), Connection(&appCtx.context), Transport(eid, *this)
 {
     {
         std::vector<std::tuple<std::string, std::string, std::string>> prop;
+
         prop.emplace_back(
             "transport_object", "spdm_responder_object",
             sdbusplus::message::object_path(
                 std::string(MCTP_DEFAULT_PATH) + "/0/" +
                 std::to_string(eid))); // TODO proper value for the 0?!
+
+        prop.emplace_back("inventory_object", "spdm_responder_object",
+                          sdbusplus::message::object_path(inventory_path));
+
         associations(std::move(prop));
     }
     Connection.register_transport(&Transport);

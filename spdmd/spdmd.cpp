@@ -116,7 +116,7 @@ bool SpdmdApp::connectMCTP()
     return true;
 }
 
-bool SpdmdApp::createResponder(uint8_t eid)
+bool SpdmdApp::createResponder(uint8_t eid, const std::string& inventory_path)
 {
     SPDMCPP_LOG_TRACE_FUNC(log);
     if (eid >= responders.size())
@@ -136,7 +136,8 @@ bool SpdmdApp::createResponder(uint8_t eid)
         "Creating SPDM object for a responder with EID = " + to_string(eid);
     reportNotice(msg);
 
-    responders[eid] = new dbus_api::Responder(*this, SPDM_DEFAULT_PATH, eid);
+    responders[eid] =
+        new dbus_api::Responder(*this, SPDM_DEFAULT_PATH, eid, inventory_path);
 
     return true;
 }

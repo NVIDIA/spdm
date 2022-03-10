@@ -55,8 +55,17 @@ class MctpDiscovery
     static constexpr auto mctpEndpointIntfPropertySupportedMessageTypes =
         "SupportedMessageTypes";
 
+    static constexpr auto uuidIntfName = "xyz.openbmc_project.Common.UUID";
+
+    static constexpr auto uuidIntfPropertyUUID = "UUID";
+    //     static constexpr auto mctpEndpointIntfPropertyUUID =
+    //         "SupportedMessageTypes";
+
     /** @brief Get EID value from MCTP objects, which implement SPDM  */
-    size_t getEid(std::map<std::string, dbus::Value> properties);
+    size_t getEid(const std::map<std::string, dbus::Value>& properties);
+
+    std::string getUUID(const dbus::InterfaceMap& interfaces);
+    std::string getInventoryPath(const std::string& uuid);
 };
 
 } // namespace spdmd

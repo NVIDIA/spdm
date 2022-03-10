@@ -71,7 +71,8 @@ class Responder : public ResponderIntf
      *  @param[in] bus - Bus to attach to.
      *  @param[in] path - Path to attach at.
      */
-    Responder(SpdmdAppContext& appCtx, const std::string& path, uint8_t eid);
+    Responder(SpdmdAppContext& appCtx, const std::string& path, uint8_t eid,
+              const std::string& inventory_path);
 
     ~Responder();
 

@@ -50,7 +50,7 @@ class SpdmdApp : SpdmdAppContext
     /** @brief Create new Responder object
      *
      */
-    bool createResponder(uint8_t eid);
+    bool createResponder(uint8_t eid, const std::string& inventory_path);
 
     /** @brief Enter SPDM daemon into forever loop
      *
