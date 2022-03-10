@@ -42,7 +42,7 @@ MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
         {
             if (intfName == mctpEndpointIntfName)
             {
-                size_t eid = (mctp_eid_t)getEid(properties);
+                size_t eid = getEid(properties);
                 if (eid < 256)
                 {
                     spdmApp.createResponder((mctp_eid_t)eid);
@@ -62,7 +62,7 @@ void MctpDiscovery::dicoverEndpoints(sdbusplus::message::message& msg)
     {
         if (intfName == mctpEndpointIntfName)
         {
-            size_t eid = (mctp_eid_t)getEid(properties);
+            size_t eid = getEid(properties);
             if (eid < 256)
             {
                 spdmApp.createResponder((mctp_eid_t)eid);
