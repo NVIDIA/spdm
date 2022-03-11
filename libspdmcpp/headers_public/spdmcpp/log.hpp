@@ -21,6 +21,33 @@ namespace spdmcpp
 class LogClass
 {
   public:
+
+    /** @brief Log level definition - the same as for phosphor-logging log levels */
+    enum class Level
+    {
+        Emergency       = 0,
+        Alert           = 1,
+        Critical        = 2,
+        Error           = 3,
+        Warning         = 4,
+        Notice          = 5,
+        Informational   = 6,
+        Debug           = 7,
+    };
+
+    LogClass(std::ostream& ostream) : 
+        logLevel(Level::Emergency), Stream(&ostream)
+    {}
+
+    LogClass(std::ostream& ostream, Level reportLevel) : 
+        logLevel(reportLevel), Stream(&ostream)
+    {}
+
+    void SetLogLevel(Level reportLevel)
+    {
+        logLevel = reportLevel;
+    }
+
     // TODO definitely more helpers needed, time-stamping?!
 
     void print(char* str)
@@ -160,14 +187,13 @@ class LogClass
         return *Stream;
     }
 
-    LogClass(std::ostream& ostream) : Stream(&ostream)
-    {}
+    Level logLevel;
 
   private:
     uint16_t Indentation = 0;
 
     std::ostream* Stream;
-};
+}; // class LogClass
 
 class IndentHelper
 {
@@ -184,7 +210,7 @@ class IndentHelper
 
   private:
     LogClass& Log;
-};
+}; // class IndentHelper
 
 #define SPDMCPP_LOG_INDENT(log) IndentHelper log_indent_helper_##__LINE__((log))
 
@@ -220,15 +246,23 @@ class TraceHelper
   private:
     LogClass& Log;
     std::string Function;
-};
+}; // class TraceHelper
 
 #define SPDMCPP_LOG_TRACE_FUNC(log)                                            \
-    spdmcpp::TraceHelper log_trace_helper_##__LINE__((log), __func__)
+    if ((log).logLevel >= spdmcpp::LogClass::Level::Debug)                     \
+    {                                                                          \
+        spdmcpp::TraceHelper log_trace_helper_##__LINE__((log), __func__);     \
+    }
+
 #define SPDMCPP_LOG_TRACE_BLOCK(log)                                           \
-    spdmcpp::TraceHelper log_trace_helper_##__LINE__((log), __func__,          \
-                                                     __FILE__, __LINE__)
+    if ((log).logLevel >= spdmcpp::LogClass::Level::Debug)                     \
+    {                                                                          \
+        spdmcpp::TraceHelper log_trace_helper_##__LINE__((log), __func__,      \
+                                                        __FILE__, __LINE__);   \
+    }
+
 #define SPDMCPP_LOG_TRACE_RS(log, rs)                                          \
-    do                                                                         \
+    if ((log).logLevel >= spdmcpp::LogClass::Level::Debug)                     \
     {                                                                          \
         (log).iprint(#rs " = ");                                               \
         (log).print((rs));                                                     \
@@ -238,6 +272,6 @@ class TraceHelper
         (log).print(__FILE__);                                                 \
         (log).print(" : ");                                                    \
         (log).println(__LINE__);                                               \
-    } while (false)
+    }
 
 } // namespace spdmcpp

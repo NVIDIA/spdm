@@ -20,7 +20,7 @@ MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
 {
     dbus::ObjectValueTree objects;
 
-    SPDMCPP_LOG_TRACE_FUNC(spdmApp.log);
+    SPDMCPP_LOG_TRACE_FUNC(spdmApp.getLog());
 
     try
     {
@@ -32,7 +32,7 @@ MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
     }
     catch (const std::exception& e)
     {
-        spdmApp.log.print(e.what());
+        spdmApp.getLog().print(e.what());
         return;
     }
 
@@ -93,7 +93,7 @@ size_t MctpDiscovery::getEid(std::map<std::string, dbus::Value> properties)
             }
             catch (const std::bad_variant_access& e)
             {
-                spdmApp.log.println(e.what());
+                spdmApp.getLog().println(e.what());
             }
         }
         if (eid < 256)
@@ -110,7 +110,7 @@ size_t MctpDiscovery::getEid(std::map<std::string, dbus::Value> properties)
             }
             catch (const std::exception& e)
             {
-                spdmApp.log.print(e.what());
+                spdmApp.getLog().print(e.what());
             }
         }
     }

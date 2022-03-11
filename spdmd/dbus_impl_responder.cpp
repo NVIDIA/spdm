@@ -114,24 +114,30 @@ spdmcpp::RetStat Responder::handleRecv(std::vector<uint8_t>& buf)
             case RetStat::ERROR_WRONG_REQUEST_RESPONSE_CODE:
             case RetStat::ERROR_UNKNOWN_REQUEST_RESPONSE_CODE:
                 status(SPDMStatus::Error_RequesterCommunication);
+                appContext.reportError("SPDM requester communication fail");
                 break;
             case RetStat::ERROR_RESPONSE:
                 status(SPDMStatus::Error_Responder);
+                appContext.reportError("SPDM responder response fail");
                 break;
             case RetStat::ERROR_CERTIFICATE_CHAIN_DIGEST_INVALID:
             case RetStat::ERROR_ROOT_CERTIFICATE_HASH_INVALID:
             case RetStat::ERROR_CERTIFICATE_CHAIN_VERIFIY_FAILED:
                 status(SPDMStatus::Error_CertificateValidation);
+                appContext.reportError("SPDM certificate validation fail");
                 break;
             case RetStat::ERROR_AUTHENTICATION_FAILED:
                 status(SPDMStatus::Error_AuthenticationFailed);
+                appContext.reportError("SPDM authentication fail");
                 break;
             case RetStat::ERROR_MEASUREMENT_SIGNATURE_VERIFIY_FAILED:
                 status(
                     SPDMStatus::Error_MeasurementsSignatureVerificationFailed);
+                appContext.reportError("SPDM measurements signature verification fail");
                 break;
             default:
                 status(SPDMStatus::Error_Other);
+                appContext.reportError("SPDM other error fail");
         }
         return rs;
     }

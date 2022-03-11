@@ -65,12 +65,17 @@ class SpdmdApp : SpdmdAppContext
         return SpdmdAppContext::bus;
     }
 
-    /** @brief log object used to log debug messages */
-    spdmcpp::LogClass log;
+    /** @brief Get reference to logger object
+     *
+     */
+    spdmcpp::LogClass& getLog()
+    {
+        return SpdmdAppContext::log;
+    }
 
   private:
     /** @brief verbose - debug level for SPDM daemon */
-    int verbose{0};
+    spdmcpp::LogClass::Level verbose = spdmcpp::LogClass::Level::Emergency;
 
     /** @brief MCTP interface auxiliary object - used for transmission purposes
      * over MCTP */
