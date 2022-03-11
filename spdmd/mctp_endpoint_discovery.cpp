@@ -144,7 +144,7 @@ std::string MctpDiscovery::getInventoryPath(const std::string& uuid)
 {
     dbus::ObjectValueTree objects;
 
-    SPDMCPP_LOG_TRACE_FUNC(spdmApp.log);
+    SPDMCPP_LOG_TRACE_FUNC(spdmApp.getLog());
 
     // TODO couldn't test/verify so this is most likely invalid/broken
     try
@@ -172,7 +172,7 @@ std::string MctpDiscovery::getInventoryPath(const std::string& uuid)
     }
     catch (const std::exception& e)
     {
-        spdmApp.log.print(e.what());
+        spdmApp.getLog().print(e.what());
     }
     return INVENTORY_DEFAULT_PATH + "/INVALID";
 }
