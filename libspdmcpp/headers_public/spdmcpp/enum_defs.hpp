@@ -26,9 +26,14 @@ ENUM_VALUE(ConnectionInfoEnum, CHOOSEN_VERSION, 1)
 ENUM_VALUE(ConnectionInfoEnum, CAPABILITIES, 2)
 ENUM_VALUE(ConnectionInfoEnum, ALGORITHMS, 3)
 ENUM_VALUE(ConnectionInfoEnum, DIGESTS, 4)
-ENUM_VALUE(ConnectionInfoEnum, CERTIFICATES, 5)
-ENUM_VALUE(ConnectionInfoEnum, MEASUREMENTS, 6)
-ENUM_VALUE(ConnectionInfoEnum, NUM, 7)
+ENUM_VALUE(ConnectionInfoEnum, NUM, 5)
+ENUM_END()
+
+ENUM_START(SlotInfoEnum, uint8_t)
+ENUM_VALUE(SlotInfoEnum, DIGEST, 0)
+ENUM_VALUE(SlotInfoEnum, CERTIFICATES, 1)
+ENUM_VALUE(SlotInfoEnum, MEASUREMENTS, 2)
+ENUM_VALUE(SlotInfoEnum, NUM, 3)
 ENUM_END()
 
 // MCTP

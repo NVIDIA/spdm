@@ -60,6 +60,7 @@ void Responder::syncSlotsInfo()
     for (ConnectionClass::SlotIdx idx = 0; idx < ConnectionClass::SLOT_NUM;
          ++idx)
     {
+        if (Connection.SlotHasInfo(idx, SlotInfoEnum::CERTIFICATES))
         {
             std::vector<uint8_t> cert;
             if (Connection.getCertificatesDER(cert, idx))
@@ -70,10 +71,10 @@ void Responder::syncSlotsInfo()
                 std::swap(cert, std::get<1>(certs.back()));
             }
         }
-        const ConnectionClass::DMTFMeasurementsContainer& src =
-            Connection.getDMTFMeasurements(idx);
-        if (!src.empty())
+        if (Connection.SlotHasInfo(idx, SlotInfoEnum::MEASUREMENTS))
         {
+            const ConnectionClass::DMTFMeasurementsContainer& src =
+                Connection.getDMTFMeasurements(idx);
             meas.resize(meas.size() + 1);
             auto& slot = meas.back();
             std::get<0>(slot) = idx;
@@ -145,54 +146,23 @@ spdmcpp::RetStat Responder::handleRecv(std::vector<uint8_t>& buf)
                 status(SPDMStatus::Error_Other);
                 appContext.reportError("SPDM other error fail");
         }
+        assert(!Connection.is_waiting_for_response());
         return rs;
     }
+
+    ConnectionClass::SlotIdx slotidx =
+        Connection.GetCurrentCertificateSlotIdx();
 
     if (!Connection.is_waiting_for_response())
     {
         syncSlotsInfo();
-#if 0
-        // TODO verify!!! and set measurements
-        assert(Connection.HasInfo(ConnectionInfoEnum::MEASUREMENTS));
-        const ConnectionClass::DMTFMeasurementsContainer& src =
-            Connection.getDMTFMeasurements(0);
-
-        MeasurementsContainerType dst = measurements();
-
-        // uint8_t slotidx = 0;
-        dst.resize(1);
-        auto& slot = dst[0];
-
-        std::get<0>(slot) = 0;
-        for (auto& field : src)
-        {
-            auto& dst_vec = std::get<1>(slot);
-            // auto& dst_vec = dst;
-            dst_vec.resize(dst_vec.size() + 1);
-            auto& d = dst_vec.back();
-
-            std::get<0>(d) = field.first;
-            std::get<1>(d) = field.second.Min.Type;
-            std::get<2>(d) = std::vector<uint8_t>(field.second.ValueVector);
-        }
-        measurements(dst);
-#endif
         updateLastUpdateTime();
         status(SPDMStatus::Success);
     }
-    else if (Connection.HasInfo(ConnectionInfoEnum::CERTIFICATES))
+    else if (Connection.SlotHasInfo(slotidx, SlotInfoEnum::CERTIFICATES))
     {
-#if 0
-        // TODO verify certificate!?
-        uint8_t slotidx = 0;
-        CertificatesContainerType certs = certificate();
-        certs.resize(1);
-        if (Connection.getCertificateDER(std::get<1>(certs[0]), slotidx))
-        {
-            certificate(certs);
-            status(SPDMStatus::GettingMeasurements);
-        }
-#endif
+        syncSlotsInfo();
+        status(SPDMStatus::GettingMeasurements);
     }
     else if (Connection.HasInfo(ConnectionInfoEnum::ALGORITHMS))
     {

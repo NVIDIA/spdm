@@ -79,16 +79,12 @@ bool ConnectionClass::getCertificatesDER(std::vector<uint8_t>& buf,
                                          uint8_t slotidx) const
 {
     SPDMCPP_LOG_TRACE_FUNC(Log);
-    if (!HasInfo(ConnectionInfoEnum::CERTIFICATES))
-        return false;
-
     buf.clear();
 
-    const SlotClass& slot = Slots[slotidx];
-    if (!slot.Valid)
-    {
+    if (!SlotHasInfo(slotidx, SlotInfoEnum::CERTIFICATES))
         return false;
-    }
+
+    const SlotClass& slot = Slots[slotidx];
 #if 1
     if (slot.CertificateOffset == 0 ||
         slot.CertificateOffset >= slot.Certificates.size())
@@ -348,24 +344,44 @@ RetStat ConnectionClass::handle_recv<packet_digests_response_var>()
     auto rs = interpret_response(resp, PacketDecodeInfo);
     SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
 
+    bool skip_cert = false;
     for (SlotIdx i = 0; i < SLOT_NUM; ++i)
     {
         if (resp.Min.Header.Param2 & (1 << i))
         {
-            Slots[i].Valid = true;
-            std::swap(resp.Digests[i], Slots[i].Digest);
+            if (i == CertificateSlotIdx &&
+                SlotHasInfo(i, SlotInfoEnum::DIGEST) &&
+                SlotHasInfo(i, SlotInfoEnum::CERTIFICATES) &&
+                resp.Digests[i] == Slots[i].Digest)
+            {
+                skip_cert = true;
+            }
+            else
+            {
+                std::swap(resp.Digests[i], Slots[i].Digest);
+                Slots[i].MarkInfo(SlotInfoEnum::DIGEST);
+            }
         }
         else
         {
-            Slots[i].Valid = false;
+            // clear slot data in case it is no longer valid
+            Slots[i].clear();
+            // TODO this may not necessarily be the correct behaviour?
         }
     }
     MarkInfo(ConnectionInfoEnum::DIGESTS);
 
     AppendRecvToBuf(BufEnum::B);
-
-    rs = try_get_certificate(CertificateSlotIdx);
-    SPDMCPP_LOG_TRACE_RS(Log, rs);
+    if (skip_cert)
+    {
+        rs = try_challenge();
+        SPDMCPP_LOG_TRACE_RS(Log, rs);
+    }
+    else
+    {
+        rs = try_get_certificate(CertificateSlotIdx);
+        SPDMCPP_LOG_TRACE_RS(Log, rs);
+    }
     return rs;
 }
 
@@ -588,9 +604,8 @@ RetStat ConnectionClass::handle_recv<packet_certificate_response_var>()
             }
         }
 #endif
-        slot.Valid = true;
-        MarkInfo(ConnectionInfoEnum::CERTIFICATES);
-        // TODO handle all slots!!!
+        slot.MarkInfo(SlotInfoEnum::CERTIFICATES);
+
         rs = try_challenge();
         SPDMCPP_LOG_TRACE_RS(Log, rs);
     }
@@ -789,7 +804,7 @@ RetStat ConnectionClass::handle_recv<packet_measurements_response_var>()
                 }
             }
         }
-        MarkInfo(ConnectionInfoEnum::MEASUREMENTS);
+        slot.MarkInfo(SlotInfoEnum::MEASUREMENTS);
     }
     else
     {

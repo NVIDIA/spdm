@@ -107,6 +107,7 @@ class ConnectionClass
 {
   public:
     typedef uint8_t SlotIdx;
+    static constexpr SlotIdx SLOT_NUM = 8;
 
     ConnectionClass(ContextClass* context) : Context(context), Log(std::cout)
     {}
@@ -129,6 +130,11 @@ class ConnectionClass
     RetStat refresh_measurements(SlotIdx slotidx, nonce_array_32& nonce);
     void reset_connection();
 
+    SlotIdx GetCurrentCertificateSlotIdx() const
+    {
+        return CertificateSlotIdx;
+    }
+
     bool HasInfo(ConnectionInfoEnum info) const
     {
         return !!(GotInfo &
@@ -136,10 +142,13 @@ class ConnectionClass
                        info)));
     }
 
-    enum : SlotIdx
+    bool SlotHasInfo(SlotIdx slotidx, SlotInfoEnum info) const
     {
-        SLOT_NUM = 8
-    };
+        assert(slotidx < SLOT_NUM);
+        return !!(
+            Slots[slotidx].GotInfo &
+            (1 << static_cast<std::underlying_type_t<SlotInfoEnum>>(info)));
+    }
 
     [[nodiscard]] RetStat try_get_version();
     [[nodiscard]] RetStat try_get_capabilities();
@@ -184,8 +193,8 @@ class ConnectionClass
         DMTFMeasurementsContainer;
     const DMTFMeasurementsContainer& getDMTFMeasurements(SlotIdx slotidx) const
     {
-        assert(HasInfo(ConnectionInfoEnum::MEASUREMENTS));
         assert(slotidx < SLOT_NUM);
+        assert(SlotHasInfo(slotidx, SlotInfoEnum::MEASUREMENTS));
         return Slots[slotidx].DMTFMeasurements;
     }
     const std::vector<uint8_t>& getSignedMeasurementsBuffer() const
@@ -231,7 +240,16 @@ class ConnectionClass
         size_t CertificateOffset =
             0; // offset into Certificates[] where the DER data starts
 
-        bool Valid = false;
+        uint8_t GotInfo = 0;
+        static_assert(sizeof(GotInfo) * 8 >=
+                      static_cast<std::underlying_type_t<SlotInfoEnum>>(
+                          SlotInfoEnum::NUM));
+
+        void MarkInfo(SlotInfoEnum info)
+        {
+            GotInfo |=
+                1 << static_cast<std::underlying_type_t<SlotInfoEnum>>(info);
+        }
 
         mbedtls_x509_crt* GetRootCert() const
         {
@@ -254,7 +272,7 @@ class ConnectionClass
 
         void clear()
         {
-            Valid = false;
+            GotInfo = 0;
             CertificateOffset = 0;
 
             Digest.clear();
