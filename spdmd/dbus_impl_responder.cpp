@@ -133,7 +133,8 @@ spdmcpp::RetStat Responder::handleRecv(std::vector<uint8_t>& buf)
             case RetStat::ERROR_MEASUREMENT_SIGNATURE_VERIFIY_FAILED:
                 status(
                     SPDMStatus::Error_MeasurementsSignatureVerificationFailed);
-                appContext.reportError("SPDM measurements signature verification fail");
+                appContext.reportError(
+                    "SPDM measurements signature verification fail");
                 break;
             default:
                 status(SPDMStatus::Error_Other);

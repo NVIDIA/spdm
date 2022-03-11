@@ -5,7 +5,6 @@
 
 #include <sdbusplus/bus.hpp>
 #include <sdeventplus/event.hpp>
-
 #include <xyz/openbmc_project/Logging/Entry/server.hpp>
 
 #include <chrono>
@@ -34,8 +33,10 @@ class SpdmdAppContext
     /** @brief Log object used to log debug messages */
     spdmcpp::LogClass log;
 
-    SpdmdAppContext(sdeventplus::Event&& e, sdbusplus::bus::bus&& b, std::ostream& logOutStream) :
-        event(std::move(e)), bus(std::move(b)), log(logOutStream)
+    SpdmdAppContext(sdeventplus::Event&& e, sdbusplus::bus::bus&& b,
+                    std::ostream& logOutStream) :
+        event(std::move(e)),
+        bus(std::move(b)), log(logOutStream)
     {}
 
     /** @brief Report an error severity message to phosphor logging object */
@@ -63,10 +64,7 @@ class SpdmdAppContext
     }
 
   private:
-
-    bool reportLog(
-        Logging::server::Entry::Level severity, 
-        string message)
+    bool reportLog(Logging::server::Entry::Level severity, string message)
     {
         auto method = bus.new_method_call(
             "xyz.openbmc_project.Logging", "/xyz/openbmc_project/logging",
@@ -83,9 +81,9 @@ class SpdmdAppContext
         string telemetries = std::ctime(&time);
         telemetries.resize(telemetries.size() - 1);
 
-        string resolution = (severity < Logging::server::Entry::Level::Warning) ? 
-            "Contact NVIDIA Support" :
-            "";
+        string resolution = (severity < Logging::server::Entry::Level::Warning)
+                                ? "Contact NVIDIA Support"
+                                : "";
 
         method.append(std::array<std::pair<std::string, std::string>, 3>(
             {{{"xyz.openbmc_project.Logging.Entry.Resolution", resolution},
@@ -95,8 +93,8 @@ class SpdmdAppContext
         try
         {
             auto reply = bus.call(method);
-            std::vector<
-                std::tuple<uint32_t, std::string, sdbusplus::message::object_path>>
+            std::vector<std::tuple<uint32_t, std::string,
+                                   sdbusplus::message::object_path>>
                 users;
             reply.read(users);
             for (auto& user : users)

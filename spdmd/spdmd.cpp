@@ -20,7 +20,8 @@ namespace spdmd
 {
 
 SpdmdApp::SpdmdApp() :
-    SpdmdAppContext(sdeventplus::Event::get_default(), bus::new_system(), std::cout),
+    SpdmdAppContext(sdeventplus::Event::get_default(), bus::new_system(),
+                    std::cout),
     mctpIo(getLog())
 {}
 
@@ -43,9 +44,10 @@ int SpdmdApp::setupCli(int argc, char** argv)
     if (verbose > spdmcpp::LogClass::Level::Emergency)
     {
         log.SetLogLevel(verbose);
-        log.print("Verbose log level set to " + 
-            Logging::server::convertForMessage((Logging::server::Entry::Level)verbose) +
-            "\n");
+        log.print("Verbose log level set to " +
+                  Logging::server::convertForMessage(
+                      (Logging::server::Entry::Level)verbose) +
+                  "\n");
     }
 
     return 0;
@@ -130,7 +132,8 @@ bool SpdmdApp::createResponder(uint8_t eid)
         return false;
     }
 
-    string msg = "Creating SPDM object for a responder with EID = " + to_string(eid);
+    string msg =
+        "Creating SPDM object for a responder with EID = " + to_string(eid);
     reportNotice(msg);
 
     responders[eid] = new dbus_api::Responder(*this, SPDM_DEFAULT_PATH, eid);
