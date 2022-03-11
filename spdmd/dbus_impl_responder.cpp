@@ -232,6 +232,16 @@ spdmcpp::RetStat Responder::handleRecv(std::vector<uint8_t>& buf)
 void Responder::refresh(uint8_t slot, std::vector<uint8_t> nonc,
                         uint32_t sessionId)
 {
+    if (Connection.is_waiting_for_response())
+    {
+        // if we're busy processing ignore the refresh call
+        // TODO arguably it'd be better to either cancel the current and perform
+        // the new refresh or to queue the request for processing after the
+        // current one is done
+        getLog().iprintln(
+            "WARNING - refresh ignored because previous one is still processing!");
+        return;
+    }
     status(SPDMStatus::Initializing);
     updateLastUpdateTime();
 
