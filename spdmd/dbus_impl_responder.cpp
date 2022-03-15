@@ -91,10 +91,10 @@ void Responder::syncSlotsInfo()
             }
         }
     }
-    /*{TODO no longer needed?! we could remove the buffer for it then and go
-    back to a running hash... auto& buf =
-    Connection.getSignedMeasurementsBuffer(); signedMeasurements(buf);
-    }*/
+    {
+        const auto& buf = Connection.getSignedMeasurementsBuffer();
+        signedMeasurements(buf);
+    }
     {
         const nonce_array_32& arr = Connection.getMeasurementNonce();
         std::vector<uint8_t> nonc(sizeof(arr));
