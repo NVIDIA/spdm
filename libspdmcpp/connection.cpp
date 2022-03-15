@@ -31,6 +31,8 @@ RetStat ConnectionClass::init_connection()
     HashM1M2.setup(HashEnum::SHA_384);
     CertificateSlotIdx = 0;
     fill_random(MeasurementNonce);
+    MeasurementIndices.reset();
+    MeasurementIndices.set(255);
 
     auto rs = try_get_version();
     SPDMCPP_LOG_TRACE_RS(Log, rs);
@@ -41,17 +43,47 @@ RetStat ConnectionClass::refresh_measurements(SlotIdx slotidx)
 {
     CertificateSlotIdx = slotidx;
     fill_random(MeasurementNonce);
+    MeasurementIndices.reset();
+    MeasurementIndices.set(255);
     return refresh_measurements_internal();
 }
 RetStat ConnectionClass::refresh_measurements(SlotIdx slotidx,
-                                              nonce_array_32& nonce)
+                                              const nonce_array_32& nonce)
 {
     CertificateSlotIdx = slotidx;
     memcpy(MeasurementNonce, nonce, sizeof(MeasurementNonce));
+    MeasurementIndices.reset();
+    MeasurementIndices.set(255);
+    return refresh_measurements_internal();
+}
+RetStat ConnectionClass::refresh_measurements(
+    SlotIdx slotidx, const std::bitset<256>& measurement_indices)
+{
+    CertificateSlotIdx = slotidx;
+    fill_random(MeasurementNonce);
+    MeasurementIndices = measurement_indices;
+    return refresh_measurements_internal();
+}
+RetStat ConnectionClass::refresh_measurements(
+    SlotIdx slotidx, const nonce_array_32& nonce,
+    const std::bitset<256>& measurement_indices)
+{
+    CertificateSlotIdx = slotidx;
+    memcpy(MeasurementNonce, nonce, sizeof(MeasurementNonce));
+    MeasurementIndices = measurement_indices;
     return refresh_measurements_internal();
 }
 RetStat ConnectionClass::refresh_measurements_internal()
 {
+    if (MeasurementIndices[255])
+    {
+        assert(MeasurementIndices.count() == 1);
+    }
+    else
+    {
+        assert(!MeasurementIndices[0]);
+        assert(!MeasurementIndices[255]);
+    }
     auto rs = try_get_version();
     SPDMCPP_LOG_TRACE_RS(Log, rs);
     return rs;
@@ -723,17 +755,49 @@ RetStat ConnectionClass::try_get_measurements()
     SPDMCPP_LOG_TRACE_FUNC(Log);
     assert(MessageVersion != MessageVersionEnum::UNKNOWN);
 
-    HashL1L2.setup(getSignatureHash());
+    SlotClass& slot = Slots[CertificateSlotIdx];
+
+    // HashL1L2.setup(getSignatureHash());
+    slot.DMTFMeasurements.clear();
+
+    if (MeasurementIndices[255])
+    {
+        MeasurementIndices.reset();
+        return try_get_measurements(255);
+    }
+    else if (MeasurementIndices.any())
+    {
+        uint8_t idx = GetFirstMeasurementIndex();
+        MeasurementIndices.reset(idx);
+        return try_get_measurements(idx);
+    }
+    return RetStat::OK;
+}
+
+RetStat ConnectionClass::try_get_measurements(uint8_t idx)
+{
+    SPDMCPP_LOG_TRACE_FUNC(Log);
+    assert(MessageVersion != MessageVersionEnum::UNKNOWN);
+
+    // SlotClass& slot = Slots[CertificateSlotIdx];
 
     packet_get_measurements_request_var request;
     request.Min.Header.MessageVersion = MessageVersion;
+
+    if (MeasurementIndices.none())
     {
         request.Min.Header.Param1 = PacketDecodeInfo.GetMeasurementsParam1 =
             0x1;
         request.set_nonce();
         memcpy(request.Nonce, MeasurementNonce, sizeof(request.Nonce));
     }
-    request.Min.Header.Param2 = PacketDecodeInfo.GetMeasurementsParam2 = 0xFF;
+    else
+    {
+        request.Min.Header.Param1 = PacketDecodeInfo.GetMeasurementsParam1 =
+            0x0;
+    }
+
+    request.Min.Header.Param2 = PacketDecodeInfo.GetMeasurementsParam2 = idx;
 
     auto rs =
         send_request_setup_response(request, packet_measurements_response_var(),
@@ -750,77 +814,86 @@ RetStat ConnectionClass::handle_recv<packet_measurements_response_var>()
     auto rs = interpret_response(resp, PacketDecodeInfo);
     SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
 
-    HashL1L2.update(&ResponseBuffer[ResponseBufferSPDMOffset],
+    if (PacketDecodeInfo.GetMeasurementsParam1 & 1)
+    {
+        /*HashL1L2.update(&ResponseBuffer[ResponseBufferSPDMOffset],
+                        ResponseBuffer.size() - ResponseBufferSPDMOffset -
+                            PacketDecodeInfo.SignatureSize);*/
+
+        AppendToBuf(BufEnum::L, &ResponseBuffer[ResponseBufferSPDMOffset],
                     ResponseBuffer.size() - ResponseBufferSPDMOffset -
                         PacketDecodeInfo.SignatureSize);
-
-    AppendToBuf(BufEnum::L, &ResponseBuffer[ResponseBufferSPDMOffset],
-                ResponseBuffer.size() - ResponseBufferSPDMOffset -
-                    PacketDecodeInfo.SignatureSize);
-
-    std::vector<uint8_t> hash;
-#if 1
-    HashL1L2.hash_finish(hash);
+        std::vector<uint8_t> hash;
+#if 0
+        HashL1L2.hash_finish(hash);
 #else
-    HashBuf(hash, getSignatureHash(), BufEnum::L);
+        HashBuf(hash, getSignatureHash(), BufEnum::L);
 #endif
-    Log.iprint("computed l2 hash = ");
-    Log.println(hash.data(), hash.size());
+        Log.iprint("computed l2 hash = ");
+        Log.println(hash.data(), hash.size());
 
-    int ret = verify_signature(Slots[CertificateSlotIdx].GetLeafCert(),
-                               resp.SignatureVector, hash);
-    SPDMCPP_LOG_TRACE_RS(Log, ret);
-    if (!ret)
-    {
-        Log.iprintln("measurements SIGNATURE verify PASSED!");
-
-        SlotIdx idx = CertificateSlotIdx; // TODO WARNING
-        SlotClass& slot = Slots[idx];
-        slot.DMTFMeasurements.clear();
-        // parse DMTF Measurements
-        for (const auto& block : resp.MeasurementBlockVector)
+        int ret = verify_signature(Slots[CertificateSlotIdx].GetLeafCert(),
+                                   resp.SignatureVector, hash);
+        SPDMCPP_LOG_TRACE_RS(Log, ret);
+        if (!ret)
         {
-            if (block.Min.MeasurementSpecification == 1)
+            Log.iprintln("measurements SIGNATURE verify PASSED!");
+
+            SlotClass& slot = Slots[CertificateSlotIdx];
+            // parse DMTF Measurements
+            for (const auto& block : resp.MeasurementBlockVector)
             {
-                if (slot.DMTFMeasurements.find(block.Min.Index) !=
-                    slot.DMTFMeasurements.end())
+                if (block.Min.MeasurementSpecification == 1)
                 {
-                    Log.iprintln(
-                        "DUPLICATE MeasurementBlock Index!"); // TODO Warning!!!
-                }
-                else
-                {
-                    size_t off = 0;
-                    auto rs = packet_decode_internal(
-                        slot.DMTFMeasurements[block.Min.Index],
-                        block.MeasurementVector, off);
-                    SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
-                    if (off != block.MeasurementVector.size())
+                    if (slot.DMTFMeasurements.find(block.Min.Index) !=
+                        slot.DMTFMeasurements.end())
                     {
                         Log.iprintln(
-                            "MeasurementBlock not fully parsed!"); // TODO
-                                                                   // Warning!!!
+                            "DUPLICATE MeasurementBlock Index!"); // TODO
+                                                                  // Warning!!!
+                    }
+                    else
+                    {
+                        size_t off = 0;
+                        auto rs = packet_decode_internal(
+                            slot.DMTFMeasurements[block.Min.Index],
+                            block.MeasurementVector, off);
+                        SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+                        if (off != block.MeasurementVector.size())
+                        {
+                            Log.iprintln(
+                                "MeasurementBlock not fully parsed!"); // TODO
+                                                                       // Warning!!!
+                        }
                     }
                 }
             }
+            slot.MarkInfo(SlotInfoEnum::MEASUREMENTS);
         }
-        slot.MarkInfo(SlotInfoEnum::MEASUREMENTS);
+        else
+        {
+            Log.iprint("mbedtls_ecdsa_verify ret = ");
+            Log.print(ret);
+            Log.print(" = '");
+            mbedtls_strerror(ret, err_msg, sizeof(err_msg));
+            Log.print((const char*)err_msg);
+            Log.print("'	'");
+            // if (const char* msg = mbedtls_low_level_strerr(ret)) {
+            //	Log.print(msg);
+            // }
+            Log.println('\'');
+            return RetStat::ERROR_MEASUREMENT_SIGNATURE_VERIFIY_FAILED;
+        }
     }
     else
     {
-        Log.iprint("mbedtls_ecdsa_verify ret = ");
-        Log.print(ret);
-        Log.print(" = '");
-        mbedtls_strerror(ret, err_msg, sizeof(err_msg));
-        Log.print((const char*)err_msg);
-        Log.print("'	'");
-        // if (const char* msg = mbedtls_low_level_strerr(ret)) {
-        //	Log.print(msg);
-        // }
-        Log.println('\'');
-        return RetStat::ERROR_MEASUREMENT_SIGNATURE_VERIFIY_FAILED;
+        AppendRecvToBuf(BufEnum::L);
+
+        assert(MeasurementIndices.any());
+        uint8_t idx = GetFirstMeasurementIndex();
+        MeasurementIndices.reset(idx);
+        return try_get_measurements(idx);
     }
-    //	Transport->setup_timeout(1000);
     return rs;
 }
 

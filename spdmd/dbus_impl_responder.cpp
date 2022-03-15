@@ -200,6 +200,7 @@ spdmcpp::RetStat Responder::handleRecv(std::vector<uint8_t>& buf)
 }
 
 void Responder::refresh(uint8_t slot, std::vector<uint8_t> nonc,
+                        std::vector<uint8_t> measurementIndices,
                         uint32_t sessionId)
 {
     if (Connection.is_waiting_for_response())
@@ -220,10 +221,40 @@ void Responder::refresh(uint8_t slot, std::vector<uint8_t> nonc,
         getLog().iprintln("WARNING - sessionId unsupported!");
     }
 
+    std::bitset<256> meas;
+    if (measurementIndices.empty() ||
+        (measurementIndices.size() == 1 && measurementIndices[0] == 255))
+    {
+        meas.set(255);
+    }
+    else
+    {
+        for (auto ind : measurementIndices)
+        {
+            if (ind >= 1 && ind < 255)
+            {
+                meas.set(ind);
+            }
+            else
+            {
+                getLog().iprint("WARNING - invalid measurement index value '");
+                getLog().print(ind);
+                getLog().println(
+                    "' when specifying multiple indices, ignoring this value!");
+            }
+        }
+        if (meas.none())
+        {
+            // this would happen if all values in the array were incorrect,
+            // fallback to the default of 255
+            meas.set(255);
+        }
+    }
+
     if (nonc.size() == 32)
     {
         auto rs = Connection.refresh_measurements(
-            slot, *reinterpret_cast<nonce_array_32*>(nonc.data()));
+            slot, *reinterpret_cast<nonce_array_32*>(nonc.data()), meas);
         SPDMCPP_LOG_TRACE_RS(getLog(), rs);
     }
     else
@@ -233,7 +264,7 @@ void Responder::refresh(uint8_t slot, std::vector<uint8_t> nonc,
             getLog().iprint("WARNING - nonce has invalid size = ");
             getLog().println(nonc.size());
         }
-        auto rs = Connection.refresh_measurements(slot);
+        auto rs = Connection.refresh_measurements(slot, meas);
         SPDMCPP_LOG_TRACE_RS(getLog(), rs);
     }
 }

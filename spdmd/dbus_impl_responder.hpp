@@ -76,7 +76,8 @@ class Responder : public ResponderIntf
 
     ~Responder();
 
-    void refresh(uint8_t slot, std::vector<uint8_t> nonce,
+    void refresh(uint8_t slot, std::vector<uint8_t> nonc,
+                 std::vector<uint8_t> measurementIndices,
                  uint32_t sessionId) override;
 
     spdmcpp::LogClass& getLog()

@@ -9,6 +9,7 @@
 #include <mbedtls/x509_crt.h>
 
 #include <array>
+#include <bitset>
 #include <cassert>
 #include <cstdint>
 #include <cstdio>
@@ -24,6 +25,7 @@ namespace spdmcpp
 //  and/or error policies as well, although those would have to be much more
 //  specific I imagine...
 
+/*
 class FlowClass
 {
   public:
@@ -59,7 +61,7 @@ class QueryFlowClass : public FlowClass
 
   private:
     StateEnum State = STATE_START;
-};
+};*/
 
 class TimingClass
 {
@@ -105,6 +107,8 @@ class TimingClass
 
 class ConnectionClass
 {
+    // TODO this has become extremely spaghetti (not enough time to do better,
+    // and spdm spec is very stateful...),byl worth trying to refactor
   public:
     typedef uint8_t SlotIdx;
     static constexpr SlotIdx SLOT_NUM = 8;
@@ -127,7 +131,11 @@ class ConnectionClass
 
     RetStat init_connection();
     RetStat refresh_measurements(SlotIdx slotidx);
-    RetStat refresh_measurements(SlotIdx slotidx, nonce_array_32& nonce);
+    RetStat refresh_measurements(SlotIdx slotidx, const nonce_array_32& nonce);
+    RetStat refresh_measurements(SlotIdx slotidx,
+                                 const std::bitset<256>& measurement_indices);
+    RetStat refresh_measurements(SlotIdx slotidx, const nonce_array_32& nonce,
+                                 const std::bitset<256>& measurement_indices);
     void reset_connection();
 
     SlotIdx GetCurrentCertificateSlotIdx() const
@@ -157,6 +165,7 @@ class ConnectionClass
     [[nodiscard]] RetStat try_get_certificate(SlotIdx idx);
     [[nodiscard]] RetStat try_get_certificate_chunk(SlotIdx idx);
     [[nodiscard]] RetStat try_get_measurements();
+    [[nodiscard]] RetStat try_get_measurements(uint8_t idx);
 
     [[nodiscard]] RetStat try_challenge();
 
@@ -327,7 +336,7 @@ class ConnectionClass
     // TODO test perf/memory and decide if we'll use Buffers or running hashes,
     // or a mixture
     HashClass HashM1M2;
-    HashClass HashL1L2;
+    // HashClass HashL1L2;
     std::vector<uint8_t> Bufs[static_cast<size_t>(BufEnum::NUM)];
     std::vector<uint8_t>& RefBuf(BufEnum bufidx)
     {
@@ -364,6 +373,7 @@ class ConnectionClass
     packet_decode_info PacketDecodeInfo;
 
     nonce_array_32 MeasurementNonce;
+    std::bitset<256> MeasurementIndices;
     SlotIdx CertificateSlotIdx = SLOT_NUM;
 
     RequestResponseEnum WaitingForResponse = RequestResponseEnum::INVALID;
@@ -376,6 +386,18 @@ class ConnectionClass
     {
         GotInfo |=
             1 << static_cast<std::underlying_type_t<ConnectionInfoEnum>>(info);
+    }
+
+    uint8_t GetFirstMeasurementIndex() const
+    {
+        assert(MeasurementIndices.any());
+        for (uint8_t i = 0; i < MeasurementIndices.size(); ++i)
+        {
+            if (MeasurementIndices[i])
+                return i;
+        }
+        // std::unreachable();
+        return 255;
     }
 
     RetStat choose_version();
