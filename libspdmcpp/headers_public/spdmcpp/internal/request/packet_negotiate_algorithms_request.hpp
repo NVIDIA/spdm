@@ -247,6 +247,8 @@ struct packet_negotiate_algorithms_request_var
     buf.resize(off + p.Min.Length);
     auto rs = packet_encode_internal(p.Min, buf, off);
 
+    //TODO HANDLE ExtAsymCount and ExtHashCount!!!
+    
     for (const auto& iter : p.PacketReqAlgVector)
     {
         rs = packet_encode_internal(iter, buf, off);
@@ -261,6 +263,8 @@ struct packet_negotiate_algorithms_request_var
                            const std::vector<uint8_t>& buf, size_t& off)
 {
     auto rs = packet_decode_internal(p.Min, buf, off);
+
+    //TODO HANDLE ExtAsymCount and ExtHashCount!!!
 
     p.PacketReqAlgVector.resize(p.Min.Header.Param1);
     for (size_t i = 0; i < p.PacketReqAlgVector.size(); ++i)

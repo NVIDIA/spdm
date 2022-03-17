@@ -63,7 +63,10 @@ struct packet_get_measurements_request_var
         if (Min.has_nonce())
         {
             size += sizeof(Nonce);
-            size += sizeof(SlotIDParam);
+            if (Min.Header.MessageVersion != MessageVersionEnum::SPDM_1_0)
+            {
+                size += sizeof(SlotIDParam);
+            }
         }
         assert(size <= std::numeric_limits<uint16_t>::max());
         return static_cast<uint16_t>(size);
@@ -110,7 +113,10 @@ struct packet_get_measurements_request_var
     if (p.has_nonce())
     {
         packet_encode_basic(p.Nonce, buf, off);
-        packet_encode_basic(p.SlotIDParam, buf, off);
+        if (p.Min.Header.MessageVersion != MessageVersionEnum::SPDM_1_0)
+        {
+            packet_encode_basic(p.SlotIDParam, buf, off);
+        }
     }
     return rs;
 }
@@ -129,9 +135,12 @@ struct packet_get_measurements_request_var
         if (is_error(rs))
             return rs;
 
-        rs = packet_decode_basic(p.SlotIDParam, buf, off);
-        if (is_error(rs))
-            return rs;
+        if (p.Min.Header.MessageVersion != MessageVersionEnum::SPDM_1_0)
+        {
+            rs = packet_decode_basic(p.SlotIDParam, buf, off);
+            if (is_error(rs))
+                return rs;
+        }
     }
 
     return rs;

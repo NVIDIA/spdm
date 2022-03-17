@@ -90,6 +90,7 @@ struct packet_decode_info
 // separator for clang-format ordering
 
 #include "internal/request/packet_challenge_request.hpp"
+#include "internal/request/packet_get_capabilities_1_0_request.hpp"
 #include "internal/request/packet_get_capabilities_request.hpp"
 #include "internal/request/packet_get_certificate_request.hpp"
 #include "internal/request/packet_get_digests_request.hpp"

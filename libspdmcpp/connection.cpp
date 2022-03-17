@@ -259,26 +259,43 @@ RetStat ConnectionClass::try_get_capabilities()
     SPDMCPP_LOG_TRACE_FUNC(Log);
     assert(HasInfo(ConnectionInfoEnum::CHOOSEN_VERSION));
 
-    packet_get_capabilities_request request;
-    request.Header.MessageVersion = MessageVersion;
-    // 			request.Flags = RequesterCapabilitiesFlags::CERT_CAP |
-    // RequesterCapabilitiesFlags::CHAL_CAP |
-    // RequesterCapabilitiesFlags::ENCRYPT_CAP |
-    // RequesterCapabilitiesFlags::MAC_CAP;
-    request.Flags = RequesterCapabilitiesFlags::CHAL_CAP;
-    /*	request.Flags |= RequesterCapabilitiesFlags::ENCRYPT_CAP |
-    RequesterCapabilitiesFlags::MAC_CAP;
-    //	request.Flags |= RequesterCapabilitiesFlags::MUT_AUTH_CAP;
-        request.Flags |= RequesterCapabilitiesFlags::KEY_EX_CAP;
-        request.Flags |= RequesterCapabilitiesFlags::PSK_CAP_01;
-        request.Flags |= RequesterCapabilitiesFlags::ENCAP_CAP;
-        request.Flags |= RequesterCapabilitiesFlags::HBEAT_CAP;
-        request.Flags |= RequesterCapabilitiesFlags::KEY_UPD_CAP;
-        request.Flags |= RequesterCapabilitiesFlags::HANDSHAKE_IN_THE_CLEAR_CAP;
-        */
-    auto rs = send_request_setup_response(
-        request, packet_capabilities_response(), BufEnum::A, Timings.getT1());
-    SPDMCPP_LOG_TRACE_RS(Log, rs);
+    RetStat rs = RetStat::ERROR_UNKNOWN;
+    if (MessageVersion == MessageVersionEnum::SPDM_1_0)
+    {
+        packet_get_capabilities_1_0_request request;
+        request.Header.MessageVersion = MessageVersion;
+
+        rs =
+            send_request_setup_response(request, packet_capabilities_response(),
+                                        BufEnum::A, Timings.getT1());
+        SPDMCPP_LOG_TRACE_RS(Log, rs);
+    }
+    else
+    {
+        packet_get_capabilities_request request;
+        request.Header.MessageVersion = MessageVersion;
+        // 			request.Flags = RequesterCapabilitiesFlags::CERT_CAP |
+        // RequesterCapabilitiesFlags::CHAL_CAP |
+        // RequesterCapabilitiesFlags::ENCRYPT_CAP |
+        // RequesterCapabilitiesFlags::MAC_CAP;
+        request.Flags = RequesterCapabilitiesFlags::CHAL_CAP;
+        /*	request.Flags |= RequesterCapabilitiesFlags::ENCRYPT_CAP |
+        RequesterCapabilitiesFlags::MAC_CAP;
+        //	request.Flags |= RequesterCapabilitiesFlags::MUT_AUTH_CAP;
+            request.Flags |= RequesterCapabilitiesFlags::KEY_EX_CAP;
+            request.Flags |= RequesterCapabilitiesFlags::PSK_CAP_01;
+            request.Flags |= RequesterCapabilitiesFlags::ENCAP_CAP;
+            request.Flags |= RequesterCapabilitiesFlags::HBEAT_CAP;
+            request.Flags |= RequesterCapabilitiesFlags::KEY_UPD_CAP;
+            request.Flags |=
+        RequesterCapabilitiesFlags::HANDSHAKE_IN_THE_CLEAR_CAP;
+            */
+
+        rs =
+            send_request_setup_response(request, packet_capabilities_response(),
+                                        BufEnum::A, Timings.getT1());
+        SPDMCPP_LOG_TRACE_RS(Log, rs);
+    }
     return rs;
 }
 template <>
@@ -307,7 +324,6 @@ RetStat ConnectionClass::try_negotiate_algorithms()
 
     packet_negotiate_algorithms_request_var request;
     request.Min.Header.MessageVersion = MessageVersion;
-    request.Min.Length = sizeof(request.Min);
     request.Min.MeasurementSpecification = 1 << 0;
     // 		request.Min.BaseAsymAlgo = BaseAsymAlgoFlags::TPM_ALG_RSASSA_2048 |
     // BaseAsymAlgoFlags::TPM_ALG_RSAPSS_2048;
@@ -319,14 +335,24 @@ RetStat ConnectionClass::try_negotiate_algorithms()
     // 		request.Flags = RequesterCapabilitiesFlags::CERT_CAP |
     // RequesterCapabilitiesFlags::CHAL_CAP;
 
-    request.PacketReqAlgVector.push_back(
+    /*
+    if (MessageVersion == MessageVersionEnum::SPDM_1_0) {
+
+    }
+    else
+    {*/
+        // request.PacketReqAlgVector.push_back(PacketReqAlgStruct::buildSupported2(
+            // AlgTypeEnum::ReqBaseAsymAlg, 0x0F, 0x00));
+    /*request.PacketReqAlgVector.push_back(
         PacketReqAlgStruct::buildSupported2(AlgTypeEnum::DHE, 0x1b, 0x00));
     request.PacketReqAlgVector.push_back(PacketReqAlgStruct::buildSupported2(
         AlgTypeEnum::AEADCipherSuite, 0x06, 0x00));
     request.PacketReqAlgVector.push_back(PacketReqAlgStruct::buildSupported2(
         AlgTypeEnum::ReqBaseAsymAlg, 0x0F, 0x00));
     request.PacketReqAlgVector.push_back(PacketReqAlgStruct::buildSupported2(
-        AlgTypeEnum::KeySchedule, 0x01, 0x00));
+        AlgTypeEnum::KeySchedule, 0x01, 0x00));*/
+    // }
+
     request.finalize();
 
     auto rs = send_request_setup_response(
