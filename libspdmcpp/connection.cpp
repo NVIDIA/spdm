@@ -823,6 +823,13 @@ RetStat ConnectionClass::handle_recv<packet_measurements_response_var>()
         AppendToBuf(BufEnum::L, &ResponseBuffer[ResponseBufferSPDMOffset],
                     ResponseBuffer.size() - ResponseBufferSPDMOffset -
                         PacketDecodeInfo.SignatureSize);
+
+        { // store measurement signature
+            MeasurementSignature.resize(PacketDecodeInfo.SignatureSize);
+            size_t off = ResponseBuffer.size() - MeasurementSignature.size();
+            memcpy(MeasurementSignature.data(), &ResponseBuffer[off],
+                   MeasurementSignature.size());
+        }
         std::vector<uint8_t> hash;
 #if 0
         HashL1L2.hash_finish(hash);

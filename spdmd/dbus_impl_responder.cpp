@@ -92,8 +92,13 @@ void Responder::syncSlotsInfo()
         }
     }
     {
-        const auto& buf = Connection.getSignedMeasurementsBuffer();
-        signedMeasurements(buf);
+        const auto& meas = Connection.getSignedMeasurementsBuffer();
+        const auto& sig = Connection.getMeasurementSignature();
+        std::vector<uint8_t> buf;
+        buf.reserve(meas.size() + sig.size());
+        buf.insert(buf.end(), meas.begin(), meas.end());
+        buf.insert(buf.end(), sig.begin(), sig.end());
+        signedMeasurements(std::move(buf));
     }
     {
         const nonce_array_32& arr = Connection.getMeasurementNonce();

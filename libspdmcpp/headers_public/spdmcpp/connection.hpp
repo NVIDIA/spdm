@@ -214,6 +214,10 @@ class ConnectionClass
     {
         return MeasurementNonce;
     }
+    const std::vector<uint8_t>& getMeasurementSignature() const
+    {
+        return MeasurementSignature;
+    }
 
     std::vector<uint8_t>& getResponseBufferRef()
     {
@@ -372,6 +376,7 @@ class ConnectionClass
 
     packet_decode_info PacketDecodeInfo;
 
+    std::vector<uint8_t> MeasurementSignature;
     nonce_array_32 MeasurementNonce;
     std::bitset<256> MeasurementIndices;
     SlotIdx CertificateSlotIdx = SLOT_NUM;
