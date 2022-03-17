@@ -28,7 +28,7 @@ namespace spdmcpp
 RetStat ConnectionClass::init_connection()
 {
     SPDMCPP_LOG_TRACE_FUNC(Log);
-    HashM1M2.setup(HashEnum::SHA_384);
+    // HashM1M2.setup(HashEnum::SHA_384);
     CertificateSlotIdx = 0;
     fill_random(MeasurementNonce);
     MeasurementIndices.reset();

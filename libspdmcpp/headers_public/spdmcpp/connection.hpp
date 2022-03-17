@@ -335,7 +335,7 @@ class ConnectionClass
     // calculate all supported hashes in parallel?
     // TODO test perf/memory and decide if we'll use Buffers or running hashes,
     // or a mixture
-    HashClass HashM1M2;
+    // HashClass HashM1M2;
     // HashClass HashL1L2;
     std::vector<uint8_t> Bufs[static_cast<size_t>(BufEnum::NUM)];
     std::vector<uint8_t>& RefBuf(BufEnum bufidx)
@@ -353,7 +353,7 @@ class ConnectionClass
 
     void AppendToBuf(BufEnum bufidx, uint8_t* data, size_t size)
     {
-        HashM1M2.update(data, size);
+        // HashM1M2.update(data, size);
         std::vector<uint8_t>& buf = RefBuf(bufidx);
         size_t off = buf.size();
         buf.resize(off + size);
