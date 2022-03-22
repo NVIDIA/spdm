@@ -88,9 +88,7 @@ class Responder : public ResponderIntf
     spdmcpp::RetStat handleRecv(std::vector<uint8_t>& buf);
 
   protected:
-    typedef std::vector<std::tuple<
-        uint8_t,
-        std::vector<std::tuple<uint8_t, uint8_t, std::vector<uint8_t>>>>>
+    typedef std::vector<std::tuple<uint8_t, uint8_t, std::vector<uint8_t>>>
         MeasurementsContainerType;
     typedef std::vector<std::tuple<uint8_t, std::vector<uint8_t>>>
         CertificatesContainerType;

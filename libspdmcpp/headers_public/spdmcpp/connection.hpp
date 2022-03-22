@@ -200,23 +200,27 @@ class ConnectionClass
 
     typedef std::map<uint8_t, packet_measurement_field_var>
         DMTFMeasurementsContainer;
-    const DMTFMeasurementsContainer& getDMTFMeasurements(SlotIdx slotidx) const
+    const DMTFMeasurementsContainer& getDMTFMeasurements() const
     {
-        assert(slotidx < SLOT_NUM);
-        assert(SlotHasInfo(slotidx, SlotInfoEnum::MEASUREMENTS));
-        return Slots[slotidx].DMTFMeasurements;
+        return DMTFMeasurements;
     }
-    const std::vector<uint8_t>& getSignedMeasurementsBuffer() const
+    const std::vector<uint8_t>& getSignedMeasurementsBuffer()
+        const // TODO this may no longer be necessary and we could yet again
+              // switch back to a running Hash
     {
         return RefBuf(BufEnum::L);
+    }
+    const std::vector<uint8_t>& getSignedMeasurementsHash() const
+    {
+        return MeasurementsHash;
+    }
+    const std::vector<uint8_t>& getMeasurementsSignature() const
+    {
+        return MeasurementsSignature;
     }
     const nonce_array_32& getMeasurementNonce() const
     {
         return MeasurementNonce;
-    }
-    const std::vector<uint8_t>& getMeasurementSignature() const
-    {
-        return MeasurementSignature;
     }
 
     std::vector<uint8_t>& getResponseBufferRef()
@@ -247,8 +251,6 @@ class ConnectionClass
         std::vector<uint8_t> Certificates; // TODO should unnecessary in the en
         std::vector<mbedtls_x509_crt*>
             MCertificates; // TODO should be abstracted in the end
-
-        DMTFMeasurementsContainer DMTFMeasurements;
 
         size_t CertificateOffset =
             0; // offset into Certificates[] where the DER data starts
@@ -294,8 +296,6 @@ class ConnectionClass
             for (auto cert : MCertificates)
                 mbedtls_x509_crt_free(cert);
             MCertificates.clear();
-
-            DMTFMeasurements.clear();
         }
     };
 
@@ -376,7 +376,9 @@ class ConnectionClass
 
     packet_decode_info PacketDecodeInfo;
 
-    std::vector<uint8_t> MeasurementSignature;
+    DMTFMeasurementsContainer DMTFMeasurements;
+    std::vector<uint8_t> MeasurementsHash;
+    std::vector<uint8_t> MeasurementsSignature;
     nonce_array_32 MeasurementNonce;
     std::bitset<256> MeasurementIndices;
     SlotIdx CertificateSlotIdx = SLOT_NUM;

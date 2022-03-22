@@ -98,6 +98,7 @@ void ConnectionClass::reset_connection()
     Algorithms = packet_algorithms_response_var();
     PacketDecodeInfo = packet_decode_info();
     SupportedVersions.clear();
+    DMTFMeasurements.clear();
     for (auto& s : Slots)
         s.clear();
 
@@ -736,13 +737,13 @@ RetStat ConnectionClass::handle_recv<packet_challenge_auth_response_var>()
         Log.iprint("computed m2 hash = ");
         Log.println(hash.data(), hash.size());
 
-        // 			HashM1M2.hash_finish(hash.data(), hash.size());
-        // 			Log.iprint("computed m2 hash = ");
-        // 			Log.println(hash.data(), hash.size());
+        // HashM1M2.hash_finish(hash.data(), hash.size());
+        // Log.iprint("computed m2 hash = ");
+        // Log.println(hash.data(), hash.size());
 
         Log.iprint("resp.SignatureVector = ");
         Log.println(resp.SignatureVector.data(), resp.SignatureVector.size());
-        // 			resp.SignatureVector[10] = 'X';	//TODO TEST
+        // resp.SignatureVector[10] = 'X';	//TODO TEST
 
         {
             // TODO SlotIdx
@@ -781,10 +782,10 @@ RetStat ConnectionClass::try_get_measurements()
     SPDMCPP_LOG_TRACE_FUNC(Log);
     assert(MessageVersion != MessageVersionEnum::UNKNOWN);
 
-    SlotClass& slot = Slots[CertificateSlotIdx];
+    // SlotClass& slot = Slots[CertificateSlotIdx];
 
     // HashL1L2.setup(getSignatureHash());
-    slot.DMTFMeasurements.clear();
+    DMTFMeasurements.clear();
 
     if (MeasurementIndices[255])
     {
@@ -840,6 +841,34 @@ RetStat ConnectionClass::handle_recv<packet_measurements_response_var>()
     auto rs = interpret_response(resp, PacketDecodeInfo);
     SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
 
+    // parse and store DMTF Measurements
+    for (const auto& block : resp.MeasurementBlockVector)
+    {
+        if (block.Min.MeasurementSpecification == 1)
+        {
+            if (DMTFMeasurements.find(block.Min.Index) !=
+                DMTFMeasurements.end())
+            {
+                Log.iprintln("DUPLICATE MeasurementBlock Index!"); // TODO
+                                                                   // Warning!!!
+            }
+            else
+            {
+                size_t off = 0;
+                auto rs =
+                    packet_decode_internal(DMTFMeasurements[block.Min.Index],
+                                           block.MeasurementVector, off);
+                SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+                if (off != block.MeasurementVector.size())
+                {
+                    Log.iprintln(
+                        "MeasurementBlock not fully parsed!"); // TODO
+                                                               // Warning!!!
+                }
+            }
+        }
+    }
+
     if (PacketDecodeInfo.GetMeasurementsParam1 & 1)
     {
         /*HashL1L2.update(&ResponseBuffer[ResponseBufferSPDMOffset],
@@ -851,12 +880,13 @@ RetStat ConnectionClass::handle_recv<packet_measurements_response_var>()
                         PacketDecodeInfo.SignatureSize);
 
         { // store measurement signature
-            MeasurementSignature.resize(PacketDecodeInfo.SignatureSize);
-            size_t off = ResponseBuffer.size() - MeasurementSignature.size();
-            memcpy(MeasurementSignature.data(), &ResponseBuffer[off],
-                   MeasurementSignature.size());
+            MeasurementsSignature.resize(PacketDecodeInfo.SignatureSize);
+            size_t off = ResponseBuffer.size() - MeasurementsSignature.size();
+            memcpy(MeasurementsSignature.data(), &ResponseBuffer[off],
+                   MeasurementsSignature.size());
         }
-        std::vector<uint8_t> hash;
+        std::vector<uint8_t>& hash = MeasurementsHash;
+        hash.clear();
 #if 0
         HashL1L2.hash_finish(hash);
 #else
@@ -871,37 +901,7 @@ RetStat ConnectionClass::handle_recv<packet_measurements_response_var>()
         if (!ret)
         {
             Log.iprintln("measurements SIGNATURE verify PASSED!");
-
-            SlotClass& slot = Slots[CertificateSlotIdx];
-            // parse DMTF Measurements
-            for (const auto& block : resp.MeasurementBlockVector)
-            {
-                if (block.Min.MeasurementSpecification == 1)
-                {
-                    if (slot.DMTFMeasurements.find(block.Min.Index) !=
-                        slot.DMTFMeasurements.end())
-                    {
-                        Log.iprintln(
-                            "DUPLICATE MeasurementBlock Index!"); // TODO
-                                                                  // Warning!!!
-                    }
-                    else
-                    {
-                        size_t off = 0;
-                        auto rs = packet_decode_internal(
-                            slot.DMTFMeasurements[block.Min.Index],
-                            block.MeasurementVector, off);
-                        SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
-                        if (off != block.MeasurementVector.size())
-                        {
-                            Log.iprintln(
-                                "MeasurementBlock not fully parsed!"); // TODO
-                                                                       // Warning!!!
-                        }
-                    }
-                }
-            }
-            slot.MarkInfo(SlotInfoEnum::MEASUREMENTS);
+            MarkInfo(ConnectionInfoEnum::MEASUREMENTS);
         }
         else
         {

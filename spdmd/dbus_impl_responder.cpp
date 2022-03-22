@@ -71,35 +71,25 @@ void Responder::syncSlotsInfo()
                 std::swap(cert, std::get<1>(certs.back()));
             }
         }
-        if (Connection.SlotHasInfo(idx, SlotInfoEnum::MEASUREMENTS))
+    }
+    if (Connection.HasInfo(ConnectionInfoEnum::MEASUREMENTS))
+    {
+        const ConnectionClass::DMTFMeasurementsContainer& src =
+            Connection.getDMTFMeasurements();
+        for (auto& field : src)
         {
-            const ConnectionClass::DMTFMeasurementsContainer& src =
-                Connection.getDMTFMeasurements(idx);
             meas.resize(meas.size() + 1);
-            auto& slot = meas.back();
-            std::get<0>(slot) = idx;
-            for (auto& field : src)
-            {
-                auto& dst_vec = std::get<1>(slot);
-                // auto& dst_vec = dst;
-                dst_vec.resize(dst_vec.size() + 1);
-                auto& d = dst_vec.back();
+            auto& m = meas.back();
 
-                std::get<0>(d) = field.first;
-                std::get<1>(d) = field.second.Min.Type;
-                std::get<2>(d) = std::vector<uint8_t>(field.second.ValueVector);
-            }
+            std::get<0>(m) = field.first;
+            std::get<1>(m) = field.second.Min.Type;
+            std::get<2>(m) = std::vector<uint8_t>(field.second.ValueVector);
         }
     }
-    {
-        const auto& meas = Connection.getSignedMeasurementsBuffer();
-        const auto& sig = Connection.getMeasurementSignature();
-        std::vector<uint8_t> buf;
-        buf.reserve(meas.size() + sig.size());
-        buf.insert(buf.end(), meas.begin(), meas.end());
-        buf.insert(buf.end(), sig.begin(), sig.end());
-        signedMeasurements(std::move(buf));
-    }
+
+    measurementsHash(Connection.getSignedMeasurementsHash());
+    measurementsSignature(Connection.getMeasurementsSignature());
+
     {
         const nonce_array_32& arr = Connection.getMeasurementNonce();
         std::vector<uint8_t> nonc(sizeof(arr));
