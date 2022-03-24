@@ -1,4 +1,6 @@
 
+#include "../../packet.hpp"
+
 #pragma once
 
 struct packet_get_certificate_request

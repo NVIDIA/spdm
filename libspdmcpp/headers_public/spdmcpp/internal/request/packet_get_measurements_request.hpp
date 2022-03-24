@@ -1,4 +1,6 @@
 
+#include "../../packet.hpp"
+
 #pragma once
 
 struct packet_get_measurements_request_min

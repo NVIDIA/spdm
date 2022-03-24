@@ -1,4 +1,6 @@
 
+#include "../../packet.hpp"
+
 #pragma once
 
 struct packet_algorithms_response_min

@@ -1,4 +1,6 @@
 
+#include "../packet.hpp"
+
 #pragma once
 
 struct packet_version_number // TODO bitfields are ill-defined endianness-wise

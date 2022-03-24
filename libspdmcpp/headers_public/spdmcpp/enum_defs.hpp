@@ -1,4 +1,6 @@
 
+#include "enum.hpp"
+
 // library API
 ENUM_START(RetStat, int32_t)
 ENUM_VALUE(RetStat, OK, 0)

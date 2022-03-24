@@ -1,4 +1,6 @@
 
+#include "connection.hpp"
+
 #pragma once
 
 namespace spdmcpp

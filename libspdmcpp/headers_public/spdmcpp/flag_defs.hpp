@@ -1,4 +1,6 @@
 
+#include "flag.hpp"
+
 // CAPABILITIES
 
 FLAG_START(RequesterCapabilitiesFlags, uint32_t)

@@ -1,4 +1,6 @@
 
+#include "../packet.hpp"
+
 #pragma once
 
 // helper for basic types
