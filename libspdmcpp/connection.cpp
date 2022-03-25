@@ -806,8 +806,6 @@ RetStat ConnectionClass::try_get_measurements(uint8_t idx)
     SPDMCPP_LOG_TRACE_FUNC(Log);
     assert(MessageVersion != MessageVersionEnum::UNKNOWN);
 
-    // SlotClass& slot = Slots[CertificateSlotIdx];
-
     packet_get_measurements_request_var request;
     request.Min.Header.MessageVersion = MessageVersion;
 
@@ -817,6 +815,7 @@ RetStat ConnectionClass::try_get_measurements(uint8_t idx)
             0x1;
         request.set_nonce();
         memcpy(request.Nonce, MeasurementNonce, sizeof(request.Nonce));
+        request.SlotIDParam = CertificateSlotIdx;
     }
     else
     {
