@@ -12,8 +12,6 @@
 #include <algorithm>
 #include <fstream>
 
-char err_msg[64]; // TODO remove! not thread safe
-
 #define SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs)                                 \
     do                                                                         \
     {                                                                          \
@@ -341,8 +339,8 @@ RetStat ConnectionClass::try_negotiate_algorithms()
     }
     else
     {*/
-        // request.PacketReqAlgVector.push_back(PacketReqAlgStruct::buildSupported2(
-            // AlgTypeEnum::ReqBaseAsymAlg, 0x0F, 0x00));
+    // request.PacketReqAlgVector.push_back(PacketReqAlgStruct::buildSupported2(
+    // AlgTypeEnum::ReqBaseAsymAlg, 0x0F, 0x00));
     /*request.PacketReqAlgVector.push_back(
         PacketReqAlgStruct::buildSupported2(AlgTypeEnum::DHE, 0x1b, 0x00));
     request.PacketReqAlgVector.push_back(PacketReqAlgStruct::buildSupported2(
@@ -546,6 +544,7 @@ RetStat ConnectionClass::handle_recv<packet_certificate_response_var>()
                 Log.print(ret);
                 Log.print(" = '");
                 // Log.print(mbedtls_high_level_strerr(ret));
+                char err_msg[128];
                 mbedtls_strerror(ret, err_msg, sizeof(err_msg));
                 Log.print((const char*)err_msg);
                 Log.println('\'');
@@ -760,6 +759,7 @@ RetStat ConnectionClass::handle_recv<packet_challenge_auth_response_var>()
                 Log.iprint("mbedtls_ecdsa_verify ret = ");
                 Log.print(ret);
                 Log.print(" = '");
+                char err_msg[128];
                 mbedtls_strerror(ret, err_msg, sizeof(err_msg));
                 Log.print((const char*)err_msg);
                 Log.print("'	'");
@@ -908,6 +908,7 @@ RetStat ConnectionClass::handle_recv<packet_measurements_response_var>()
             Log.iprint("mbedtls_ecdsa_verify ret = ");
             Log.print(ret);
             Log.print(" = '");
+            char err_msg[128];
             mbedtls_strerror(ret, err_msg, sizeof(err_msg));
             Log.print((const char*)err_msg);
             Log.print("'	'");
