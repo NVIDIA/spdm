@@ -1,15 +1,13 @@
 project('spdmcpp',
 	'cpp',
 	version: '0.1.0',
-	meson_version: '>=0.56.2',
+	meson_version: '>=0.57.0',
 	default_options: ['cpp_std=c++20', 'warning_level=3']
 )
 
 if get_option('tests').enabled()
 	gtest = dependency('gtest', main: true, disabler: true, required: false)
 	gmock = dependency('gmock', disabler: true, required: false)
-	assert(gtest.found(), 'Couldn\'t find gtest, either provide or disable tests with: -Dtests=disabled')
-	assert(gmock.found(), 'Couldn\'t find gmock, either provide or disable tests with: -Dtests=disabled')
 endif
 
 #at the moment we can't use default_option werror=true because it's passed to subprojects and subproject dependencies, and atm specifically fmt fails
