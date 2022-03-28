@@ -86,9 +86,20 @@ void Responder::syncSlotsInfo()
             std::get<2>(m) = std::vector<uint8_t>(field.second.ValueVector);
         }
     }
-
     measurementsHash(Connection.getSignedMeasurementsHash());
-    measurementsSignature(Connection.getMeasurementsSignature());
+    {
+        const std::vector<uint8_t>& l2 =
+            Connection.getSignedMeasurementsBuffer();
+        const std::vector<uint8_t>& sig = Connection.getMeasurementsSignature();
+
+        std::vector<uint8_t> buf;
+        buf.reserve(l2.size() + sig.size());
+        buf.insert(buf.end(), l2.begin(), l2.end());
+        buf.insert(buf.end(), sig.begin(), sig.end());
+
+        signedMeasurements(std::move(buf));
+        measurementsSignature(sig);
+    }
 
     {
         const nonce_array_32& arr = Connection.getMeasurementNonce();
