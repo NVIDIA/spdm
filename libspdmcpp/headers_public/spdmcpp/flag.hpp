@@ -40,10 +40,13 @@ std::string to_string_hex(T v)
     return stream.str();
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define FLAG_START(T, UT)                                                      \
     enum class T : UT                                                          \
     {
-#define FLAG_VALUE(T, N, V) N = V,
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+#define FLAG_VALUE(T, N, V) N = (V),
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define FLAG_END(T, UT)                                                        \
     }                                                                          \
     ;                                                                          \
@@ -74,11 +77,13 @@ std::string to_string_hex(T v)
 #undef FLAG_VALUE
 #undef FLAG_END
 
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define FLAG_START(T, UT)                                                      \
     inline std::string get_string(T flags)                                     \
     {                                                                          \
         std::string ret = "(";                                                 \
         bool first = true;
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define FLAG_VALUE(T, N, V)                                                    \
     if (!!T::N && (flags & T::N) == T::N)                                      \
     {                                                                          \
@@ -87,6 +92,7 @@ std::string to_string_hex(T v)
         ret += #T "::" #N;                                                     \
         first = false;                                                         \
     }
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define FLAG_END(T, UT)                                                        \
     return ret + ")";                                                          \
     }
@@ -97,11 +103,13 @@ std::string to_string_hex(T v)
 #undef FLAG_VALUE
 #undef FLAG_END
 
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define FLAG_START(T, UT)                                                      \
     inline std::string get_debug_string(T flags)                               \
     {                                                                          \
         std::string ret = "(" + to_string_hex(static_cast<UT>(flags)) + " ";   \
         bool first = true;
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define FLAG_VALUE(T, N, V)                                                    \
     if (!!T::N && (flags & T::N) == T::N)                                      \
     {                                                                          \
@@ -110,6 +118,7 @@ std::string to_string_hex(T v)
         ret += #T "::" #N;                                                     \
         first = false;                                                         \
     }
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define FLAG_END(T, UT)                                                        \
     return ret + ")";                                                          \
     }
@@ -120,6 +129,7 @@ std::string to_string_hex(T v)
 #undef FLAG_VALUE
 #undef FLAG_END
 
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define FLAG_START(T, UT)                                                      \
     inline std::ostream& operator<<(std::ostream& stream, T e)                 \
     {                                                                          \
@@ -127,7 +137,9 @@ std::string to_string_hex(T v)
         stream.write(str.data(), str.size());                                  \
         return stream;                                                         \
     }
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define FLAG_VALUE(T, N, V)
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define FLAG_END(T, UT)
 
 #include "flag_defs.hpp"

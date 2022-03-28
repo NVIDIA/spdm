@@ -14,10 +14,13 @@
 namespace spdmcpp
 {
 
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define ENUM_START(T, UT)                                                      \
     enum class T : UT                                                          \
     {
-#define ENUM_VALUE(T, N, V) N = V,
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+#define ENUM_VALUE(T, N, V) N = (V),
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define ENUM_END()                                                             \
     }                                                                          \
     ;
@@ -28,14 +31,17 @@ namespace spdmcpp
 #undef ENUM_VALUE
 #undef ENUM_END
 
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define ENUM_START(T, UT)                                                      \
     inline const char* get_cstr(T e)                                           \
     {                                                                          \
         switch (e)                                                             \
         {
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define ENUM_VALUE(T, N, V)                                                    \
     case T::N:                                                                 \
         return #T "::" #N;
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define ENUM_END()                                                             \
     }                                                                          \
     return "UNKNOWN";                                                          \
@@ -47,6 +53,7 @@ namespace spdmcpp
 #undef ENUM_VALUE
 #undef ENUM_END
 
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define ENUM_START(T, UT)                                                      \
     inline std::ostream& operator<<(std::ostream& stream, T e)                 \
     {                                                                          \
@@ -54,7 +61,9 @@ namespace spdmcpp
         stream.write(cstr, strlen(cstr));                                      \
         return stream;                                                         \
     }
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define ENUM_VALUE(T, N, V)
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define ENUM_END()
 
 #include "enum_defs.hpp"
