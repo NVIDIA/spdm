@@ -1,6 +1,9 @@
 
 #include "flag.hpp"
 
+#ifdef SPDMCPP_FLAG_HPP // this is necessary to avoid issues with clang-tidy etc
+                        // being run for this header
+
 // CAPABILITIES
 
 FLAG_START(RequesterCapabilitiesFlags, uint32_t)
@@ -95,3 +98,5 @@ FLAG_VALUE(MeasurementHashAlgoFlags, TPM_ALG_SHA3_256, 1 << 4)
 FLAG_VALUE(MeasurementHashAlgoFlags, TPM_ALG_SHA3_384, 1 << 5)
 FLAG_VALUE(MeasurementHashAlgoFlags, TPM_ALG_SHA3_512, 1 << 6)
 FLAG_END(MeasurementHashAlgoFlags, uint32_t)
+
+#endif

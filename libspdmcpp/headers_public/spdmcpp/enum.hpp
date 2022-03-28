@@ -8,6 +8,9 @@
 #include <limits>
 #include <ostream>
 
+#define SPDMCPP_ENUM_HPP // this is necessary to avoid issues with clang-tidy
+                         // etc being run for enum_defs.hpp
+
 namespace spdmcpp
 {
 #define ENUM_START(T, UT)                                                      \
@@ -71,3 +74,5 @@ constexpr inline bool is_response(RequestResponseEnum code)
 }
 
 } // namespace spdmcpp
+
+#undef SPDMCPP_ENUM_HPP

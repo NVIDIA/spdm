@@ -1,6 +1,8 @@
 
 #include "enum.hpp"
 
+#ifdef SPDMCPP_ENUM_HPP
+
 // library API
 ENUM_START(RetStat, int32_t)
 ENUM_VALUE(RetStat, OK, 0)
@@ -109,3 +111,5 @@ ENUM_VALUE(AlgTypeEnum, AEADCipherSuite, 3)
 ENUM_VALUE(AlgTypeEnum, ReqBaseAsymAlg, 4)
 ENUM_VALUE(AlgTypeEnum, KeySchedule, 5)
 ENUM_END()
+
+#endif

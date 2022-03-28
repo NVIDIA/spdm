@@ -10,6 +10,9 @@
 #include <ostream>
 #include <sstream>
 
+#define SPDMCPP_FLAG_HPP // this is necessary to avoid issues with clang-tidy
+                         // etc being run for flag_defs.hpp
+
 namespace spdmcpp
 {
 template <typename T>
@@ -210,3 +213,5 @@ inline uint16_t get_signature_size(BaseAsymAlgoFlags flags)
 }
 
 } // namespace spdmcpp
+
+#undef SPDMCPP_FLAG_HPP
