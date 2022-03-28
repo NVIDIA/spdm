@@ -6,7 +6,6 @@
 #include <systemd/sd-bus.h>
 #include <unistd.h>
 
-#include <nlohmann/json.hpp>
 #include <sdbusplus/server.hpp>
 #include <xyz/openbmc_project/Logging/Entry/server.hpp>
 
@@ -44,7 +43,6 @@ namespace utils
 {
 
 namespace fs = std::filesystem;
-using Json = nlohmann::json;
 
 /**
  *  @brief creates an error log
@@ -209,16 +207,6 @@ inline std::string findParent(const std::string& dbusObj)
     fs::path p(dbusObj);
     return p.parent_path().string();
 }
-
-/** @brief Convert a value in the JSON to a D-Bus property value
- *
- *  @param[in] type - type of the D-Bus property
- *  @param[in] value - value in the JSON file
- *
- *  @return PropertyValue - the D-Bus property value
- */
-PropertyValue jsonEntryToDbusVal(std::string_view type,
-                                 const nlohmann::json& value);
 
 /** @brief Convert the buffer to std::string
  *

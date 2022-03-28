@@ -19,7 +19,6 @@ executable(
     link_with: libspdmcpp_requester,
 	dependencies: [
 		CLI11_dep,
-		nlohmann_dep,
 		phosphor_dbus_interfaces,
 		sdbusplus, 
 		sdeventplus,

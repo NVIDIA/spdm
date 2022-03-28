@@ -50,15 +50,6 @@ phosphor_dbus_interfaces = dependency(
   fallback: ['phosphor-dbus-interfaces', 'phosphor_dbus_interfaces_dep'],
 )
 
-if comp.has_header('nlohmann/json.hpp')
-  nlohmann_dep = declare_dependency()
-else
-  nlohmann_dep = dependency(
-    'nlohmann-json',
-    fallback: [ 'nlohmann-json', 'nlohmann_json_dep' ],
-  )
-endif
-
 if comp.has_header('CLI/CLI.hpp')
   CLI11_dep = declare_dependency()
 else
