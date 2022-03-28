@@ -1,13 +1,10 @@
 
 #include "common.hpp"
-#include "cxxopts.hpp"
 
 #include <sdeventplus/event.hpp>
 #include <spdmcpp/mctp_support.hpp>
 
 #define DEFAULT_SPDM_PLATFORM_PORT 2323
-
-cxxopts::Options options("spdmcpp_emu_requester", "spdmcpp_emu_requester");
 
 struct ProgramOptions
 {
