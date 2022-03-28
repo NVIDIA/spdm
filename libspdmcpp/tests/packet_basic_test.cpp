@@ -12,6 +12,7 @@
 
 using namespace spdmcpp;
 
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define SPDMCPP_TEST_ASSERT_RS(rs, val)                                        \
     do                                                                         \
     {                                                                          \

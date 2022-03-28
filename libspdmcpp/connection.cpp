@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <fstream>
 
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs)                                 \
     do                                                                         \
     {                                                                          \
@@ -982,6 +983,7 @@ RetStat ConnectionClass::handleRecv()
     RetStat rs = RetStat::ERROR_UNKNOWN;
     switch (code)
     {
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define DTYPE(type)                                                            \
     case type::requestResponseCode:                                            \
         rs = handleRecv<type>();                                               \
@@ -998,6 +1000,7 @@ RetStat ConnectionClass::handleRecv()
             Log.println(code);
             return RetStat::ERROR_UNKNOWN_REQUEST_RESPONSE_CODE;
     }
+#undef DTYPE
     SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
     return rs;
 }

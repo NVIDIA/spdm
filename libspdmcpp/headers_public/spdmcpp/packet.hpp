@@ -26,30 +26,39 @@ namespace spdmcpp
 // to speed up typing this out and avoid mistakes, assuming there's no pushback
 // against heavy macro usage?
 
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define SPDMCPP_LOG_expr(log, expr, ...)                                       \
     do                                                                         \
     {                                                                          \
         (log).print(#expr ": ");                                               \
         (log).print(expr __VA_OPT__(, ) __VA_ARGS__);                          \
     } while (false)
+
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define SPDMCPP_LOG_iexprln(log, expr, ...)                                    \
     do                                                                         \
     {                                                                          \
         (log).iprint(#expr ":\t");                                             \
         (log).println(expr __VA_OPT__(, ) __VA_ARGS__);                        \
     } while (false)
+
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define SPDMCPP_LOG_idataln(log, expr, ...)                                    \
     do                                                                         \
     {                                                                          \
         (log).iprint(#expr ":\t");                                             \
         (log).println((expr).data(), (expr.size())__VA_OPT__(, ) __VA_ARGS__); \
     } while (false)
+
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define SPDMCPP_LOG_iflagsln(log, flags)                                       \
     do                                                                         \
     {                                                                          \
         (log).iprint(#flags ":\t");                                            \
         (log).println(get_debug_string(flags));                                \
     } while (false)
+
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define SPDMCPP_LOG_printMl(log, expr)                                         \
     do                                                                         \
     {                                                                          \

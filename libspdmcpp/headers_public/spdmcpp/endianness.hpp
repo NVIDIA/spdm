@@ -64,6 +64,7 @@ inline void endianCopy(uint32_t src, uint32_t& dst)
 
 // TODO proper macro check!!! with override for testing? or just have always
 // swapping functions? and alias/stub for each type?!
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define SPDMCPP_ENDIAN_SWAP 0
 
 #if SPDMCPP_ENDIAN_SWAP

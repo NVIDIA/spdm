@@ -218,6 +218,7 @@ class IndentHelper
     LogClass& Log;
 }; // class IndentHelper
 
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define SPDMCPP_LOG_INDENT(log) IndentHelper log_indent_helper_##__LINE__((log))
 
 /** @class TraceHelper
@@ -257,12 +258,14 @@ class TraceHelper
     std::string Function;
 }; // class TraceHelper
 
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define SPDMCPP_LOG_TRACE_FUNC(log)                                            \
     if ((log).logLevel >= spdmcpp::LogClass::Level::Debug)                     \
     {                                                                          \
         spdmcpp::TraceHelper log_trace_helper_##__LINE__((log), __func__);     \
     }
 
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define SPDMCPP_LOG_TRACE_BLOCK(log)                                           \
     if ((log).logLevel >= spdmcpp::LogClass::Level::Debug)                     \
     {                                                                          \
@@ -270,6 +273,7 @@ class TraceHelper
                                                          __FILE__, __LINE__);  \
     }
 
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define SPDMCPP_LOG_TRACE_RS(log, rs)                                          \
     if ((log).logLevel >= spdmcpp::LogClass::Level::Debug)                     \
     {                                                                          \
