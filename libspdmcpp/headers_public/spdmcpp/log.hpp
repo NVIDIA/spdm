@@ -18,6 +18,10 @@
 namespace spdmcpp
 {
 
+/** @class LogClass
+ *  @brief Class for detailed logging of events
+ *  @details Supports indentation and is meant to be used per-thread
+ */
 class LogClass
 {
   public:
@@ -216,6 +220,9 @@ class IndentHelper
 
 #define SPDMCPP_LOG_INDENT(log) IndentHelper log_indent_helper_##__LINE__((log))
 
+/** @class TraceHelper
+ *  @brief Helper class for automatic indenting and unindenting blocks of code
+ */
 class TraceHelper
 {
   public:

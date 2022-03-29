@@ -16,10 +16,6 @@
 
 namespace spdmcpp
 {
-// TODO implement warnings and global (maybe granular?) warning policies!?
-//  and/or error policies as well, although those would have to be much more
-//  specific I imagine...
-
 typedef uint64_t timeout_us_t; /// in units of 1 micro second
 enum : timeout_us_t
 {
@@ -37,8 +33,7 @@ enum : timeout_ms_t
 class ConnectionClass;
 class ContextClass;
 
-class TransportClass // TODO almost for sure will require custom data
-                     // per-connection, also how to handle encrypted sessions?!
+class TransportClass
 {
   public:
     class LayerState

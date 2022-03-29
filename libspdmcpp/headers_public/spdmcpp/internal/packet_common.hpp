@@ -38,6 +38,15 @@ template <typename T>
     return RetStat::OK;
 }
 
+/** @brief The top function for decoding SPDM packets
+ *  @param[out] p - The packet to decode into, if the decoded packet type does
+ * not match decoding is stopped and RetStat::ERROR_WRONG_REQUEST_RESPONSE_CODE
+ * is returned
+ *  @param[in] buf - The buffer from which to decode the packet
+ *  @param[inout] off - An offset into the buffer at which to start decoding,
+ * the value shall be increased as the packet is being decoded such that at the
+ * end it marks the offset right after the decoded packet
+ */
 template <typename T, typename... Targs>
 [[nodiscard]] RetStat packetDecode(T& p, const std::vector<uint8_t>& buf,
                                    size_t& off, Targs... fargs)
@@ -93,6 +102,13 @@ template <typename T>
     return RetStat::OK;
 }
 
+/** @brief The top function for encoding SPDM packets
+ *  @param[in] p - The packet to encode
+ *  @param[out] buf - The buffer to write the data into, will be resized if
+ * necessary
+ *  @param[in] start - An offset at which to write into the buffer, typically
+ * used
+ */
 template <typename T>
 [[nodiscard]] RetStat packetEncode(const T& p, std::vector<uint8_t>& buf,
                                    size_t start = 0)

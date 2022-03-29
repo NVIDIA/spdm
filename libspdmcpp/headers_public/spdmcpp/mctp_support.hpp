@@ -22,6 +22,10 @@ namespace spdmcpp
 {
 // these are for use with the mctp-demux-daemon
 
+/** @class MctpTransportClass
+ *  @brief Support class for transport through the mctp-demux-daemon
+ *  @details This class should be further derived to add timeout support
+ */
 class MctpTransportClass : public TransportClass
 {
   public:

@@ -22,6 +22,10 @@ namespace dbus_api
 
 class Responder;
 
+/** @class MctpTransportClass
+ *  @brief Support class for transport through the mctp-demux-daemon with
+ * timeouts handled by sdeventplus
+ */
 class MctpTransportClass : public spdmcpp::MctpTransportClass
 {
   public:
