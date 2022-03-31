@@ -40,6 +40,14 @@ ENUM_VALUE(SlotInfoEnum, CERTIFICATES, 1)
 ENUM_VALUE(SlotInfoEnum, NUM, 3)
 ENUM_END()
 
+ENUM_START(HashEnum, uint8_t)
+ENUM_VALUE(HashEnum, NONE, 0)
+ENUM_VALUE(HashEnum, SHA_256, 1)
+ENUM_VALUE(HashEnum, SHA_384, 2)
+ENUM_VALUE(HashEnum, SHA_512, 3)
+ENUM_VALUE(HashEnum, INVALID, 4)
+ENUM_END()
+
 // MCTP
 ENUM_START(MCTPMessageTypeEnum, uint8_t)
 ENUM_VALUE(MCTPMessageTypeEnum, CONTROL, 0x00)

@@ -86,7 +86,7 @@ inline void endian_host_spdm_copy(const T& src, T& dst)
 #else
 // little endian
 template <typename T>
-inline void endian_host_spdm_swap(T& value)
+inline void endian_host_spdm_swap(T& /*value*/)
 {}
 template <typename T>
 inline T endian_host_spdm_read(T value)

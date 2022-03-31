@@ -13,6 +13,7 @@
 
 namespace spdmcpp
 {
+
 #define ENUM_START(T, UT)                                                      \
     enum class T : UT                                                          \
     {

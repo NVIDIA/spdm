@@ -99,10 +99,7 @@ class TimingClass
                              // openbmc in qemu is extremely slow
     static constexpr timeout_ms_t ST1 = 100;
 
-    timeout_ms_t T1 = 0;
-
     timeout_ms_t CT = 0;
-    timeout_ms_t T2 = 0;
 };
 
 class ConnectionClass

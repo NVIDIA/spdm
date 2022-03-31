@@ -2,6 +2,7 @@
 #pragma once
 
 #include "common.hpp"
+#include "enum.hpp"
 #include "flag.hpp"
 
 #include <mbedtls/md.h>
@@ -17,17 +18,6 @@
 
 namespace spdmcpp
 {
-enum class HashEnum : uint8_t
-{
-    NONE,
-    SHA_256,
-    SHA_384,
-    SHA_512,
-    /*	SHA3_256,
-        SHA3_384,
-        SHA3_512,*/
-    INVALID,
-};
 
 inline HashEnum to_hash(BaseHashAlgoFlags flags)
 {
