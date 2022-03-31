@@ -30,7 +30,10 @@
 
 #include <sdeventplus/source/io.hpp>
 #include <sdeventplus/source/time.hpp>
+
 #include <spdmcpp/common.hpp>
+#include <spdmcpp/context.hpp>
+#include <spdmcpp/connection.hpp>
 
 namespace spdmcpp
 {

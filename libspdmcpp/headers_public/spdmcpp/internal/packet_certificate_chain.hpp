@@ -3,6 +3,8 @@
 
 #pragma once
 
+#ifdef SPDMCPP_PACKET_HPP
+
 struct packet_certificate_chain
 {
     uint16_t Length = 0;
@@ -27,3 +29,5 @@ inline void endian_host_spdm_copy(const packet_certificate_chain& src,
     endian_host_spdm_copy(src.Length, dst.Length);
     dst.Reserved = src.Reserved;
 }
+
+#endif

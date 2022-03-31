@@ -3,6 +3,8 @@
 
 #pragma once
 
+#ifdef SPDMCPP_PACKET_HPP
+
 struct packet_measurement_field_min
 {
     uint8_t Type = 0;
@@ -93,3 +95,5 @@ struct packet_measurement_field_var
     rs = packet_decode_basic(p.ValueVector, buf, off);
     return rs;
 }
+
+#endif

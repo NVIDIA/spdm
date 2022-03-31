@@ -1,15 +1,12 @@
 
 #pragma once
 
+#include "enum.hpp"
+
 #include <cassert>
 #include <cstdint>
 #include <cstring>
 #include <limits>
-
-// #include <array>
-// #include <vector>
-
-#include "enum.hpp"
 
 namespace spdmcpp
 {

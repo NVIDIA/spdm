@@ -3,6 +3,8 @@
 
 #pragma once
 
+#ifdef SPDMCPP_PACKET_HPP
+
 struct PacketReqAlgStruct
 {
     AlgTypeEnum AlgType = AlgTypeEnum::UNKNOWN;
@@ -279,3 +281,5 @@ struct packet_negotiate_algorithms_request_var
     }
     return rs;
 }
+
+#endif

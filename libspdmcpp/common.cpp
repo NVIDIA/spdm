@@ -3,6 +3,7 @@
 #include <mbedtls/x509_crt.h>
 
 #include <spdmcpp/common.hpp>
+#include <spdmcpp/context.hpp>
 
 #include <algorithm>
 #include <fstream>

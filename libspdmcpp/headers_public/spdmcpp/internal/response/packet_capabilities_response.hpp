@@ -3,6 +3,8 @@
 
 #pragma once
 
+#ifdef SPDMCPP_PACKET_HPP
+
 struct packet_capabilities_response
 {
     packet_message_header Header = packet_message_header(RequestResponseCode);
@@ -42,3 +44,5 @@ inline void endian_host_spdm_copy(const packet_capabilities_response& src,
     endian_host_spdm_copy(src.Reserved1, dst.Reserved1);
     endian_host_spdm_copy(src.Flags, dst.Flags);
 }
+
+#endif

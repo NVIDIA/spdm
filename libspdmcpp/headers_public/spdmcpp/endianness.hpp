@@ -1,9 +1,9 @@
 
 #pragma once
 
-#include <spdmcpp/enum.hpp>
-#include <spdmcpp/flag.hpp>
-#include <spdmcpp/retstat.hpp>
+#include "enum.hpp"
+#include "flag.hpp"
+#include "retstat.hpp"
 
 #include <array>
 #include <cassert>

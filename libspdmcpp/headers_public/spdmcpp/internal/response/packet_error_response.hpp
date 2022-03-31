@@ -3,6 +3,8 @@
 
 #pragma once
 
+#ifdef SPDMCPP_PACKET_HPP
+
 struct packet_error_response_min
 {
     packet_message_header Header = packet_message_header(RequestResponseCode);
@@ -77,3 +79,5 @@ struct packet_error_response_var
     auto rs = packet_encode_internal(p.Min, buf, off);
     return rs;
 }
+
+#endif

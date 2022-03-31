@@ -1,10 +1,10 @@
 
 #pragma once
 
-#include <spdmcpp/endianness.hpp>
-#include <spdmcpp/enum.hpp>
-#include <spdmcpp/flag.hpp>
-#include <spdmcpp/retstat.hpp>
+#include "endianness.hpp"
+#include "enum.hpp"
+#include "flag.hpp"
+#include "retstat.hpp"
 
 #include <array>
 #include <cassert>

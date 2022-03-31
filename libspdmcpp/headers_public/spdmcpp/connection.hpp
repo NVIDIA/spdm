@@ -2,6 +2,7 @@
 #pragma once
 
 #include "common.hpp"
+#include "context.hpp"
 #include "hash.hpp"
 
 #include <mbedtls/md.h>

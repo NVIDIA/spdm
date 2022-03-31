@@ -3,6 +3,8 @@
 
 #pragma once
 
+#ifdef SPDMCPP_PACKET_HPP
+
 struct packet_measurements_response_min
 {
     packet_message_header Header = packet_message_header(RequestResponseCode);
@@ -212,3 +214,5 @@ struct packet_measurements_response_var // TODO all variable packets don't need
 
     return rs;
 }
+
+#endif

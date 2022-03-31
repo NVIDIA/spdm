@@ -3,6 +3,8 @@
 
 #pragma once
 
+#ifdef SPDMCPP_PACKET_HPP
+
 struct packet_challenge_auth_response_min
 {
     packet_message_header Header = packet_message_header(RequestResponseCode);
@@ -156,3 +158,5 @@ struct packet_challenge_auth_response_var
     rs = packet_decode_basic(p.SignatureVector, buf, off);
     return rs;
 }
+
+#endif

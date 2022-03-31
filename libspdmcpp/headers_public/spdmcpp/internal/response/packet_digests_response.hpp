@@ -3,6 +3,8 @@
 
 #pragma once
 
+#ifdef SPDMCPP_PACKET_HPP
+
 struct packet_digests_response_min
 {
     packet_message_header Header = packet_message_header(RequestResponseCode);
@@ -124,3 +126,5 @@ struct packet_digests_response_var
     }
     return RetStat::OK;
 }
+
+#endif

@@ -1,4 +1,5 @@
 #include <spdmcpp/common.hpp>
+#include <spdmcpp/hash.hpp>
 #include <spdmcpp/helpers.hpp>
 
 #include <array>

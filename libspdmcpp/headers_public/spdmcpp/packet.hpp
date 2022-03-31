@@ -1,9 +1,9 @@
 
 #pragma once
 
-#include <spdmcpp/enum.hpp>
-#include <spdmcpp/flag.hpp>
-#include <spdmcpp/log.hpp>
+#include "enum.hpp"
+#include "flag.hpp"
+#include "log.hpp"
 
 #include <array>
 #include <cassert>
@@ -13,6 +13,9 @@
 #include <iostream>
 #include <limits>
 #include <vector>
+
+#define SPDMCPP_PACKET_HPP // this is necessary to avoid issues with clang-tidy
+                           // etc being run for enum_defs.hpp
 
 namespace spdmcpp
 {
@@ -113,3 +116,5 @@ struct packet_decode_info
 #undef SPDMCPP_LOG_iflagsln
 #undef SPDMCPP_LOG_print_ml
 } // namespace spdmcpp
+
+#undef SPDMCPP_PACKET_HPP

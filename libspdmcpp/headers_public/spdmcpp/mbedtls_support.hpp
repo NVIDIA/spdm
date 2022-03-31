@@ -3,11 +3,17 @@
 
 #include "flag.hpp"
 
+#include <mbedtls/ecdh.h>
+#include <mbedtls/pk.h>
+#include <mbedtls/x509.h>
+#include <mbedtls/x509_crt.h>
+
 #include <cassert>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <limits>
+#include <vector>
 
 namespace spdmcpp
 {

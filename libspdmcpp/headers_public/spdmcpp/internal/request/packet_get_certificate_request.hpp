@@ -3,6 +3,8 @@
 
 #pragma once
 
+#ifdef SPDMCPP_PACKET_HPP
+
 struct packet_get_certificate_request
 {
     packet_message_header Header = packet_message_header(RequestResponseCode);
@@ -29,3 +31,5 @@ inline void endian_host_spdm_copy(const packet_get_certificate_request& src,
     endian_host_spdm_copy(src.Offset, dst.Offset);
     endian_host_spdm_copy(src.Length, dst.Length);
 }
+
+#endif

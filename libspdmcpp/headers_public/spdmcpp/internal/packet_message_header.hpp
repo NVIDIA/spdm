@@ -3,6 +3,8 @@
 
 #pragma once
 
+#ifdef SPDMCPP_PACKET_HPP
+
 struct packet_message_header
 {
     MessageVersionEnum MessageVersion = MessageVersionEnum::SPDM_1_0;
@@ -90,3 +92,5 @@ inline void endian_host_spdm_copy(const packet_message_header& src,
     endian_host_spdm_copy(src.Param1, dst.Param1);
     endian_host_spdm_copy(src.Param2, dst.Param2);
 }
+
+#endif

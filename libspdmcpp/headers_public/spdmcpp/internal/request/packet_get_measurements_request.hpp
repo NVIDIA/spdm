@@ -3,6 +3,8 @@
 
 #pragma once
 
+#ifdef SPDMCPP_PACKET_HPP
+
 struct packet_get_measurements_request_min
 {
     packet_message_header Header = packet_message_header(RequestResponseCode);
@@ -147,3 +149,5 @@ struct packet_get_measurements_request_var
 
     return rs;
 }
+
+#endif

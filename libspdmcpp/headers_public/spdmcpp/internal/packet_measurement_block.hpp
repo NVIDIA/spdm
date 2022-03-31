@@ -3,6 +3,8 @@
 
 #pragma once
 
+#ifdef SPDMCPP_PACKET_HPP
+
 struct packet_measurement_block_min
 {
     uint8_t Index = 0;
@@ -110,3 +112,5 @@ struct packet_measurement_block_var
     rs = packet_decode_basic(p.MeasurementVector, buf, off);
     return rs;
 }
+
+#endif

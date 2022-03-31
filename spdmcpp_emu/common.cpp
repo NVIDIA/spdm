@@ -1,5 +1,6 @@
 
 #include <common.hpp>
+#include <spdmcpp/context.hpp>
 
 // #include <sdeventplus/utility/timer.hpp>
 #include <sdeventplus/source/time.hpp>

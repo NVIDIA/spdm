@@ -3,6 +3,8 @@
 
 #pragma once
 
+#ifdef SPDMCPP_PACKET_HPP
+
 struct packet_version_number // TODO bitfields are ill-defined endianness-wise
                              // iirc!?
 {
@@ -59,3 +61,5 @@ inline void endian_host_spdm_copy(const packet_version_number& src,
 {
     dst = src; // TODO surely wrong
 }
+
+#endif

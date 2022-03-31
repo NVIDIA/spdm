@@ -3,6 +3,8 @@
 
 #pragma once
 
+#ifdef SPDMCPP_PACKET_HPP
+
 // helper for basic types
 template <typename T>
 [[nodiscard]] RetStat packet_decode_basic(T& p, const std::vector<uint8_t>& buf,
@@ -159,3 +161,5 @@ template <size_t N>
 {
     return packet_decode_basic(dst, N, buf, start);
 }
+
+#endif

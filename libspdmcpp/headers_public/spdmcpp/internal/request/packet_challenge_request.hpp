@@ -3,6 +3,8 @@
 
 #pragma once
 
+#ifdef SPDMCPP_PACKET_HPP
+
 struct packet_challenge_request
 {
     packet_message_header Header = packet_message_header(RequestResponseCode);
@@ -27,3 +29,5 @@ inline void endian_host_spdm_copy(const packet_challenge_request& src,
     endian_host_spdm_copy(src.Header, dst.Header);
     memcpy(dst.Nonce, src.Nonce, sizeof(dst.Nonce));
 }
+
+#endif
