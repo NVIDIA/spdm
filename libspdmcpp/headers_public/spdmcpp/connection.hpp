@@ -543,7 +543,7 @@ class ConnectionClass
 
     /** @brief The per certificate slot information queried from the Responder
      */
-    SlotClass Slots[slotNum];
+    std::array<SlotClass, slotNum> Slots;
 
     TimingClass Timings;
 
