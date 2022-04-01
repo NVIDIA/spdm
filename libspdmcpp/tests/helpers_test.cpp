@@ -72,6 +72,14 @@ TEST(Helpers, fillPseudoRandom_array)
     EXPECT_EQ(memcmp(buf, refBuf, sizeof(buf)), 0);
 }
 
+TEST(Helpers, fillPseudoRandom_stdarray)
+{
+    std::array<uint8_t, sizeof(refBuf)> buf;
+    fillPseudoRandom(buf);
+
+    EXPECT_EQ(memcmp(buf.data(), refBuf, sizeof(buf)), 0);
+}
+
 TEST(Helpers, fillPseudoRandom_vector)
 {
     std::vector<uint8_t> buf;
@@ -113,6 +121,26 @@ TEST(Helpers, fillRandom_array)
     EXPECT_GE(nonZero,
               256u); // if more than half is zeros something's definitely broken
     EXPECT_NE(memcmp(buf, refBuf, sizeof(buf)),
+              0); // shouldn't match pseudo-random data
+}
+
+TEST(Helpers, fillRandom_stdarray)
+{
+    std::array<uint8_t, sizeof(refBuf)> buf;
+    buf.fill(0);
+    fillRandom(buf);
+
+    size_t nonZero = 0;
+    for (auto& v : buf)
+    {
+        if (v)
+        {
+            ++nonZero;
+        }
+    }
+    EXPECT_GE(nonZero,
+              256u); // if more than half is zeros something's definitely broken
+    EXPECT_NE(memcmp(buf.data(), refBuf, buf.size()),
               0); // shouldn't match pseudo-random data
 }
 
