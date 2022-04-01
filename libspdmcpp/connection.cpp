@@ -501,7 +501,7 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
         SPDMCPP_LOG_TRACE_RS(Log, rs);
         return rs;
     }
-    else
+    
     {
         {
             std::vector<uint8_t> hash;
