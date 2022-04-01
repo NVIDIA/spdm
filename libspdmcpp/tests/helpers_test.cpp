@@ -10,7 +10,7 @@
 
 using namespace spdmcpp;
 
-uint8_t ref_buf[] = {
+uint8_t refBuf[] = {
     0xc7, 0x9b, 0x3d, 0xdc, 0xd3, 0xe4, 0xf7, 0x2e, 0xf9, 0xc2, 0x74, 0xc0,
     0x9c, 0x9b, 0xc6, 0xcb, 0xa4, 0x63, 0xb9, 0x57, 0x09, 0xa9, 0x4d, 0xe7,
     0x0f, 0xb8, 0xdb, 0x79, 0x60, 0x7f, 0xae, 0x72, 0x42, 0x88, 0x59, 0xfe,
@@ -55,7 +55,7 @@ uint8_t ref_buf[] = {
     0xde, 0x79, 0xd9, 0xf4, 0x04, 0x05, 0x27, 0x1e, 0x2f, 0x8a, 0x48, 0x09,
     0x51, 0x22, 0x15, 0xb1, 0x5e, 0x8c, 0xe7, 0xc6};
 
-struct test_struct
+struct TestStruct
 {
     char data0;
     uint32_t data1;
@@ -64,76 +64,76 @@ struct test_struct
     void* data3;
 };
 
-TEST(Helpers, fill_pseudorandom_array)
+TEST(Helpers, fillPseudoRandom_array)
 {
-    uint8_t buf[sizeof(ref_buf)];
-    fill_pseudorandom(buf);
+    uint8_t buf[sizeof(refBuf)];
+    fillPseudoRandom(buf);
 
-    EXPECT_EQ(memcmp(buf, ref_buf, sizeof(buf)), 0);
+    EXPECT_EQ(memcmp(buf, refBuf, sizeof(buf)), 0);
 }
 
-TEST(Helpers, fill_pseudorandom_vector)
+TEST(Helpers, fillPseudoRandom_vector)
 {
     std::vector<uint8_t> buf;
-    buf.resize(sizeof(ref_buf));
-    fill_pseudorandom(buf);
+    buf.resize(sizeof(refBuf));
+    fillPseudoRandom(buf);
 
     // LogClass log(std::cerr);
     // log.println(buf.data(), buf.size());
 
     EXPECT_EQ(buf.size(), 512u);
-    EXPECT_EQ(memcmp(buf.data(), ref_buf, buf.size()), 0);
+    EXPECT_EQ(memcmp(buf.data(), refBuf, buf.size()), 0);
 }
 
-TEST(Helpers, fill_pseudorandom_type)
+TEST(Helpers, fillPseudoRandomType)
 {
-    auto str = return_pseudorandom_type<test_struct>();
+    auto str = returnPseudoRandomType<TestStruct>();
 
     // LogClass log(std::cerr);
     // log.println(buf.data(), buf.size());
     EXPECT_GT(sizeof(str), 64u);
-    EXPECT_LT(sizeof(str), sizeof(ref_buf));
-    EXPECT_EQ(memcmp(&str, ref_buf, sizeof(str)), 0);
+    EXPECT_LT(sizeof(str), sizeof(refBuf));
+    EXPECT_EQ(memcmp(&str, refBuf, sizeof(str)), 0);
 }
 
-TEST(Helpers, fill_random_array)
+TEST(Helpers, fillRandom_array)
 {
-    uint8_t buf[sizeof(ref_buf)];
+    uint8_t buf[sizeof(refBuf)];
     memset(buf, 0, sizeof(buf));
-    fill_random(buf);
+    fillRandom(buf);
 
-    size_t non_zero = 0;
+    size_t nonZero = 0;
     for (auto& v : buf)
     {
         if (v)
         {
-            ++non_zero;
+            ++nonZero;
         }
     }
-    EXPECT_GE(non_zero,
+    EXPECT_GE(nonZero,
               256u); // if more than half is zeros something's definitely broken
-    EXPECT_NE(memcmp(buf, ref_buf, sizeof(buf)),
+    EXPECT_NE(memcmp(buf, refBuf, sizeof(buf)),
               0); // shouldn't match pseudo-random data
 }
 
-TEST(Helpers, fill_random_vector)
+TEST(Helpers, fillRandom_vector)
 {
     std::vector<uint8_t> buf;
-    buf.resize(sizeof(ref_buf));
-    fill_random(buf);
+    buf.resize(sizeof(refBuf));
+    fillRandom(buf);
 
-    size_t non_zero = 0;
+    size_t nonZero = 0;
     for (auto& v : buf)
     {
         if (v)
         {
-            ++non_zero;
+            ++nonZero;
         }
     }
 
     EXPECT_EQ(buf.size(), 512u);
-    EXPECT_GE(non_zero,
+    EXPECT_GE(nonZero,
               256u); // if more than half is zeros something's definitely broken
-    EXPECT_NE(memcmp(buf.data(), ref_buf, buf.size()),
+    EXPECT_NE(memcmp(buf.data(), refBuf, buf.size()),
               0); // shouldn't match pseudo-random data
 }

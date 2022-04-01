@@ -6,12 +6,12 @@
 namespace spdmcpp
 {
 template <typename T>
-RetStat ConnectionClass::send_request(const T& packet, BufEnum bufidx)
+RetStat ConnectionClass::sendRequest(const T& packet, BufEnum bufidx)
 {
-    Log.iprint("send_request(");
+    Log.iprint("sendRequest(");
     Log.print(typeid(packet).name());
     Log.println("):");
-    packet.print_ml(Log);
+    packet.printMl(Log);
 
     std::vector<uint8_t>& buf = SendBuffer;
     buf.clear();
@@ -19,31 +19,31 @@ RetStat ConnectionClass::send_request(const T& packet, BufEnum bufidx)
 
     if (Transport)
     {
-        Transport->encode_pre(buf, lay);
+        Transport->encodePre(buf, lay);
     }
 
-    auto rs = packet_encode(packet, buf, lay.get_end_offset());
-    if (is_error(rs))
+    auto rs = packetEncode(packet, buf, lay.getEndOffset());
+    if (isError(rs))
     {
         return rs;
     }
-    if (T::RequestResponseCode ==
+    if (T::requestResponseCode ==
             RequestResponseEnum::REQUEST_GET_MEASUREMENTS ||
-        T::RequestResponseCode == RequestResponseEnum::RESPONSE_MEASUREMENTS)
+        T::requestResponseCode == RequestResponseEnum::RESPONSE_MEASUREMENTS)
     {
         // assert(bufidx == BufEnum::NUM);
-        // size_t off = lay.get_end_offset();
+        // size_t off = lay.getEndOffset();
         // HashL1L2.update(&buf[off], buf.size() - off);
     }
     if (bufidx != BufEnum::NUM)
     {
-        size_t off = lay.get_end_offset();
-        AppendToBuf(bufidx, &buf[off], buf.size() - off);
+        size_t off = lay.getEndOffset();
+        appendToBuf(bufidx, &buf[off], buf.size() - off);
     }
 
     if (Transport)
     {
-        Transport->encode_post(buf, lay);
+        Transport->encodePost(buf, lay);
     }
 
     Log.iprint("Context->IO->write() buf.size() = ");
@@ -56,65 +56,65 @@ RetStat ConnectionClass::send_request(const T& packet, BufEnum bufidx)
 }
 
 template <typename T, typename... Targs>
-RetStat ConnectionClass::interpret_response(T& packet, Targs... fargs)
+RetStat ConnectionClass::interpretResponse(T& packet, Targs... fargs)
 {
     TransportClass::LayerState lay; // TODO double decode
     if (Transport)
     {
         Transport->decode(ResponseBuffer, lay);
     }
-    size_t off = lay.get_end_offset();
-    auto rs = packet_decode(packet, ResponseBuffer, off, fargs...);
-    if (is_error(rs))
+    size_t off = lay.getEndOffset();
+    auto rs = packetDecode(packet, ResponseBuffer, off, fargs...);
+    if (isError(rs))
     {
         if (rs == RetStat::ERROR_WRONG_REQUEST_RESPONSE_CODE)
         {
             Log.iprint("wrong code is: ");
-            Log.println(packet_message_header_get_requestresponsecode(
-                &ResponseBuffer[lay.get_end_offset()]));
+            Log.println(packetMessageHeaderGetRequestresponsecode(
+                &ResponseBuffer[lay.getEndOffset()]));
         }
         return rs;
     }
-    Log.iprint("interpret_response(");
+    Log.iprint("interpretResponse(");
     Log.print(typeid(packet).name());
     Log.println("):");
-    packet.print_ml(Log);
+    packet.printMl(Log);
     return rs;
 }
 
 template <typename T>
-RetStat ConnectionClass::async_response()
+RetStat ConnectionClass::asyncResponse()
 {
-    Log.iprint("async_response(");
+    Log.iprint("asyncResponse(");
     Log.print(typeid(T).name());
     Log.println("):");
     assert(WaitingForResponse == RequestResponseEnum::INVALID);
-    static_assert(is_response(T::RequestResponseCode));
-    WaitingForResponse = T::RequestResponseCode;
+    static_assert(isResponse(T::requestResponseCode));
+    WaitingForResponse = T::requestResponseCode;
     return RetStat::OK;
 }
 
 template <typename T, typename R>
-RetStat ConnectionClass::send_request_setup_response(const T& request,
-                                                     const R& /*response*/,
-                                                     BufEnum bufidx,
-                                                     timeout_ms_t timeout,
-                                                     uint16_t retry)
+RetStat ConnectionClass::sendRequestSetupResponse(const T& request,
+                                                  const R& /*response*/,
+                                                  BufEnum bufidx,
+                                                  timeout_ms_t timeout,
+                                                  uint16_t retry)
 {
-    auto rs = send_request(request, bufidx);
-    if (is_error(rs))
+    auto rs = sendRequest(request, bufidx);
+    if (isError(rs))
     {
         return rs;
     }
-    rs = async_response<R>();
-    if (is_error(rs))
+    rs = asyncResponse<R>();
+    if (isError(rs))
     {
         return rs;
     }
     if (timeout != TIMEOUT_MS_INFINITE)
     {
-        rs = Transport->setup_timeout(timeout);
-        if (is_error(rs))
+        rs = Transport->setupTimeout(timeout);
+        if (isError(rs))
         {
             return rs;
         }

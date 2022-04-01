@@ -5,24 +5,24 @@
 
 #ifdef SPDMCPP_PACKET_HPP
 
-struct packet_get_version_request
+struct PacketGetVersionRequest
 {
-    packet_message_header Header = packet_message_header(RequestResponseCode);
-    static constexpr RequestResponseEnum RequestResponseCode =
+    PacketMessageHeader Header = PacketMessageHeader(requestResponseCode);
+    static constexpr RequestResponseEnum requestResponseCode =
         RequestResponseEnum::REQUEST_GET_VERSION;
-    static constexpr bool size_is_constant = true;
+    static constexpr bool sizeIsConstant = true;
 
-    void print_ml(LogClass& log) const
+    void printMl(LogClass& log) const
     {
         SPDMCPP_LOG_INDENT(log);
-        SPDMCPP_LOG_print_ml(log, Header);
+        SPDMCPP_LOG_printMl(log, Header);
     }
 };
 
-inline void endian_host_spdm_copy(const packet_get_version_request& src,
-                                  packet_get_version_request& dst)
+inline void endianHostSpdmCopy(const PacketGetVersionRequest& src,
+                               PacketGetVersionRequest& dst)
 {
-    endian_host_spdm_copy(src.Header, dst.Header);
+    endianHostSpdmCopy(src.Header, dst.Header);
 }
 
 #endif

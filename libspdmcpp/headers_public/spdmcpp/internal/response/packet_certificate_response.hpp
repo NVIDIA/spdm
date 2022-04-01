@@ -5,48 +5,48 @@
 
 #ifdef SPDMCPP_PACKET_HPP
 
-struct packet_certificate_response_min
+struct PacketCertificateResponseMin
 {
-    packet_message_header Header = packet_message_header(RequestResponseCode);
+    PacketMessageHeader Header = PacketMessageHeader(requestResponseCode);
     uint16_t PortionLength = 0;
     uint16_t RemainderLength = 0;
 
-    static constexpr RequestResponseEnum RequestResponseCode =
+    static constexpr RequestResponseEnum requestResponseCode =
         RequestResponseEnum::RESPONSE_CERTIFICATE;
-    static constexpr bool size_is_constant = true;
+    static constexpr bool sizeIsConstant = true;
 
-    void print_ml(LogClass& log) const
+    void printMl(LogClass& log) const
     {
         SPDMCPP_LOG_INDENT(log);
-        SPDMCPP_LOG_print_ml(log, Header);
+        SPDMCPP_LOG_printMl(log, Header);
         SPDMCPP_LOG_iexprln(log, PortionLength);
         SPDMCPP_LOG_iexprln(log, RemainderLength);
     }
 
-    bool operator==(const packet_certificate_response_min& other) const
+    bool operator==(const PacketCertificateResponseMin& other) const
     {
         return memcmp(this, &other, sizeof(other)) == 0;
     }
 };
 
-inline void endian_host_spdm_copy(const packet_certificate_response_min& src,
-                                  packet_certificate_response_min& dst)
+inline void endianHostSpdmCopy(const PacketCertificateResponseMin& src,
+                               PacketCertificateResponseMin& dst)
 {
-    endian_host_spdm_copy(src.Header, dst.Header);
-    endian_host_spdm_copy(src.PortionLength, dst.PortionLength);
-    endian_host_spdm_copy(src.RemainderLength, dst.RemainderLength);
+    endianHostSpdmCopy(src.Header, dst.Header);
+    endianHostSpdmCopy(src.PortionLength, dst.PortionLength);
+    endianHostSpdmCopy(src.RemainderLength, dst.RemainderLength);
 }
 
-struct packet_certificate_response_var
+struct PacketCertificateResponseVar
 {
-    packet_certificate_response_min Min;
+    PacketCertificateResponseMin Min;
     std::vector<uint8_t> CertificateVector;
 
-    static constexpr RequestResponseEnum RequestResponseCode =
+    static constexpr RequestResponseEnum requestResponseCode =
         RequestResponseEnum::RESPONSE_CERTIFICATE;
-    static constexpr bool size_is_constant = false;
+    static constexpr bool sizeIsConstant = false;
 
-    bool operator==(const packet_certificate_response_var& other) const
+    bool operator==(const PacketCertificateResponseVar& other) const
     {
         if (Min != other.Min)
         {
@@ -65,33 +65,41 @@ struct packet_certificate_response_var
         return RetStat::OK;
     }
 
-    void print_ml(LogClass& log) const
+    void printMl(LogClass& log) const
     {
         SPDMCPP_LOG_INDENT(log);
-        SPDMCPP_LOG_print_ml(log, Min);
+        SPDMCPP_LOG_printMl(log, Min);
         SPDMCPP_LOG_iexprln(log, CertificateVector.size());
         if (!CertificateVector.empty())
-            SPDMCPP_LOG_idataln(log, CertificateVector);
+        {
+            {
+                SPDMCPP_LOG_idataln(log, CertificateVector);
+            }
+        }
     }
 };
 
 [[nodiscard]] inline RetStat
-    packet_encode_internal(const packet_certificate_response_var& p,
-                           std::vector<uint8_t>& buf, size_t& off)
+    packetEncodeInternal(const PacketCertificateResponseVar& p,
+                         std::vector<uint8_t>& buf, size_t& off)
 {
-    auto rs = packet_encode_internal(p.Min, buf, off);
+    auto rs = packetEncodeInternal(p.Min, buf, off);
 
-    packet_encode_basic(p.CertificateVector, buf, off);
+    packetEncodeBasic(p.CertificateVector, buf, off);
     return rs;
 }
 
 [[nodiscard]] inline RetStat
-    packet_decode_internal(packet_certificate_response_var& p,
-                           const std::vector<uint8_t>& buf, size_t& off)
+    packetDecodeInternal(PacketCertificateResponseVar& p,
+                         const std::vector<uint8_t>& buf, size_t& off)
 {
-    auto rs = packet_decode_internal(p.Min, buf, off);
-    if (is_error(rs))
-        return rs;
+    auto rs = packetDecodeInternal(p.Min, buf, off);
+    if (isError(rs))
+    {
+        {
+            return rs;
+        }
+    }
 
     p.CertificateVector.resize(p.Min.PortionLength);
     memcpy(p.CertificateVector.data(), &buf[off], p.CertificateVector.size());

@@ -5,15 +5,15 @@
 
 #ifdef SPDMCPP_PACKET_HPP
 
-struct packet_measurement_block_min
+struct PacketMeasurementBlockMin
 {
     uint8_t Index = 0;
     uint8_t MeasurementSpecification = 0; // TODO enum?
     uint16_t MeasurementSize = 0;
 
-    static constexpr bool size_is_constant = true;
+    static constexpr bool sizeIsConstant = true;
 
-    void print_ml(LogClass& log) const
+    void printMl(LogClass& log) const
     {
         SPDMCPP_LOG_INDENT(log);
         SPDMCPP_LOG_iexprln(log, Index);
@@ -24,29 +24,29 @@ struct packet_measurement_block_min
         log.print("   ");
     }
 
-    bool operator==(const packet_measurement_block_min& other) const
+    bool operator==(const PacketMeasurementBlockMin& other) const
     {
         return memcmp(this, &other, sizeof(other)) == 0;
     }
 };
 
-inline void endian_host_spdm_copy(const packet_measurement_block_min& src,
-                                  packet_measurement_block_min& dst)
+inline void endianHostSpdmCopy(const PacketMeasurementBlockMin& src,
+                               PacketMeasurementBlockMin& dst)
 {
-    endian_host_spdm_copy(src.Index, dst.Index);
-    endian_host_spdm_copy(src.MeasurementSpecification,
-                          dst.MeasurementSpecification);
-    endian_host_spdm_copy(src.MeasurementSize, dst.MeasurementSize);
+    endianHostSpdmCopy(src.Index, dst.Index);
+    endianHostSpdmCopy(src.MeasurementSpecification,
+                       dst.MeasurementSpecification);
+    endianHostSpdmCopy(src.MeasurementSize, dst.MeasurementSize);
 }
 
-struct packet_measurement_block_var
+struct PacketMeasurementBlockVar
 {
-    packet_measurement_block_min Min;
+    PacketMeasurementBlockMin Min;
     std::vector<uint8_t> MeasurementVector;
 
-    static constexpr bool size_is_constant = false;
+    static constexpr bool sizeIsConstant = false;
 
-    uint32_t get_size() const
+    uint32_t getSize() const
     {
         size_t size = 0;
         size += sizeof(Min);
@@ -66,7 +66,7 @@ struct packet_measurement_block_var
         return RetStat::OK;
     }
 
-    bool operator==(const packet_measurement_block_var& other) const
+    bool operator==(const PacketMeasurementBlockVar& other) const
     {
         if (Min != other.Min)
         {
@@ -79,37 +79,41 @@ struct packet_measurement_block_var
         return true;
     }
 
-    void print_ml(LogClass& log) const
+    void printMl(LogClass& log) const
     {
         SPDMCPP_LOG_INDENT(log);
-        SPDMCPP_LOG_print_ml(log, Min);
+        SPDMCPP_LOG_printMl(log, Min);
         SPDMCPP_LOG_idataln(log, MeasurementVector);
     }
 };
 
 [[nodiscard]] inline RetStat
-    packet_encode_internal(const packet_measurement_block_var& p,
-                           std::vector<uint8_t>& buf, size_t& off)
+    packetEncodeInternal(const PacketMeasurementBlockVar& p,
+                         std::vector<uint8_t>& buf, size_t& off)
 {
-    auto rs = packet_encode_internal(p.Min, buf, off);
-    if (is_error(rs))
+    auto rs = packetEncodeInternal(p.Min, buf, off);
+    if (isError(rs))
     {
         return rs;
     }
-    packet_encode_basic(p.MeasurementVector, buf, off);
+    packetEncodeBasic(p.MeasurementVector, buf, off);
     return rs;
 }
 
 [[nodiscard]] inline RetStat
-    packet_decode_internal(packet_measurement_block_var& p,
-                           const std::vector<uint8_t>& buf, size_t& off)
+    packetDecodeInternal(PacketMeasurementBlockVar& p,
+                         const std::vector<uint8_t>& buf, size_t& off)
 {
-    auto rs = packet_decode_basic(p.Min, buf, off);
-    if (is_error(rs))
-        return rs;
+    auto rs = packetDecodeBasic(p.Min, buf, off);
+    if (isError(rs))
+    {
+        {
+            return rs;
+        }
+    }
 
     p.MeasurementVector.resize(p.Min.MeasurementSize);
-    rs = packet_decode_basic(p.MeasurementVector, buf, off);
+    rs = packetDecodeBasic(p.MeasurementVector, buf, off);
     return rs;
 }
 

@@ -5,13 +5,13 @@
 
 #ifdef SPDMCPP_PACKET_HPP
 
-struct packet_error_response_min
+struct PacketErrorResponseMin
 {
-    packet_message_header Header = packet_message_header(RequestResponseCode);
+    PacketMessageHeader Header = PacketMessageHeader(requestResponseCode);
 
-    static constexpr RequestResponseEnum RequestResponseCode =
+    static constexpr RequestResponseEnum requestResponseCode =
         RequestResponseEnum::RESPONSE_ERROR;
-    static constexpr bool size_is_constant = true;
+    static constexpr bool sizeIsConstant = true;
 
     void print(LogClass& log) const
     {
@@ -19,35 +19,35 @@ struct packet_error_response_min
         // TODO handle custom data
     }
 
-    void print_ml(LogClass& log) const
+    void printMl(LogClass& log) const
     {
         SPDMCPP_LOG_INDENT(log);
-        SPDMCPP_LOG_print_ml(log, Header);
+        SPDMCPP_LOG_printMl(log, Header);
     }
 
-    bool operator==(const packet_error_response_min& other) const
+    bool operator==(const PacketErrorResponseMin& other) const
     {
         return memcmp(this, &other, sizeof(other)) == 0;
     }
 };
 
-inline void endian_host_spdm_copy(const packet_error_response_min& src,
-                                  packet_error_response_min& dst)
+inline void endianHostSpdmCopy(const PacketErrorResponseMin& src,
+                               PacketErrorResponseMin& dst)
 {
-    endian_host_spdm_copy(src.Header, dst.Header);
+    endianHostSpdmCopy(src.Header, dst.Header);
 }
 
-struct packet_error_response_var
+struct PacketErrorResponseVar
 {
-    packet_error_response_min Min;
+    PacketErrorResponseMin Min;
     // TODO handle custom data
 
-    static constexpr RequestResponseEnum RequestResponseCode =
+    static constexpr RequestResponseEnum requestResponseCode =
         RequestResponseEnum::RESPONSE_ERROR;
-    static constexpr bool size_is_constant =
+    static constexpr bool sizeIsConstant =
         false; // TODO decide how we need/want to handle such packets
 
-    bool operator==(const packet_error_response_var& other) const
+    bool operator==(const PacketErrorResponseVar& other) const
     {
         if (Min != other.Min)
         {
@@ -56,27 +56,27 @@ struct packet_error_response_var
         return true;
     }
 
-    void print_ml(LogClass& log) const
+    void printMl(LogClass& log) const
     {
         SPDMCPP_LOG_INDENT(log);
-        SPDMCPP_LOG_print_ml(log, Min);
+        SPDMCPP_LOG_printMl(log, Min);
     }
 };
 
 [[nodiscard]] inline RetStat
-    packet_decode_internal(packet_error_response_var& p,
-                           const std::vector<uint8_t>& buf, size_t& off)
+    packetDecodeInternal(PacketErrorResponseVar& p,
+                         const std::vector<uint8_t>& buf, size_t& off)
 {
-    auto rs = packet_decode_internal(p.Min, buf, off);
+    auto rs = packetDecodeInternal(p.Min, buf, off);
     // TODO handle custom data
     return rs;
 }
 [[nodiscard]] inline RetStat
-    packet_encode_internal(const packet_error_response_var& p,
-                           std::vector<uint8_t>& buf, size_t& off)
+    packetEncodeInternal(const PacketErrorResponseVar& p,
+                         std::vector<uint8_t>& buf, size_t& off)
 {
     // TODO handle custom data
-    auto rs = packet_encode_internal(p.Min, buf, off);
+    auto rs = packetEncodeInternal(p.Min, buf, off);
     return rs;
 }
 

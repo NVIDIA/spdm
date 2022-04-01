@@ -22,7 +22,7 @@ namespace spdmcpp
 // TODO add packet constructors or some such, for safety of not forgetting to
 // set some parameter?! although it may be a bit annoying to handle layering?
 // TODO move most of the stuff to .cpp files
-// TODO really could use more macros for endian_host_spdm_copy and direct_copy
+// TODO really could use more macros for endianHostSpdmCopy and direct_copy
 // to speed up typing this out and avoid mistakes, assuming there's no pushback
 // against heavy macro usage?
 
@@ -50,22 +50,22 @@ namespace spdmcpp
         (log).iprint(#flags ":\t");                                            \
         (log).println(get_debug_string(flags));                                \
     } while (false)
-#define SPDMCPP_LOG_print_ml(log, expr)                                        \
+#define SPDMCPP_LOG_printMl(log, expr)                                         \
     do                                                                         \
     {                                                                          \
         (log).iprintln(#expr ":\t");                                           \
-        (expr).print_ml(log);                                                  \
+        (expr).printMl(log);                                                   \
     } while (false)
 
 template <typename T, size_t N>
-constexpr size_t sizeof_array(const T (&array)[N])
+constexpr size_t sizeofArray(const T (&array)[N])
 {
     return sizeof(array);
 }
 
 typedef uint8_t nonce_array_32[32];
 
-struct packet_decode_info
+struct PacketDecodeInfo
 {
     uint16_t BaseHashSize = 0;
     uint16_t MeasurementHashSize = 0;
@@ -114,7 +114,7 @@ struct packet_decode_info
 #undef SPDMCPP_LOG_expr
 #undef SPDMCPP_LOG_iexprln
 #undef SPDMCPP_LOG_iflagsln
-#undef SPDMCPP_LOG_print_ml
+#undef SPDMCPP_LOG_printMl
 } // namespace spdmcpp
 
 #undef SPDMCPP_PACKET_HPP

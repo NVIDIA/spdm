@@ -12,11 +12,11 @@
 
 namespace spdmcpp
 {
-constexpr std::mt19937::result_type mt19937_default_seed = 13;
+constexpr std::mt19937::result_type mt19937DefaultSeed = 13;
 
 inline void
-    fill_pseudorandom(std::vector<uint8_t>& buf,
-                      std::mt19937::result_type seed = mt19937_default_seed)
+    fillPseudoRandom(std::vector<uint8_t>& buf,
+                     std::mt19937::result_type seed = mt19937DefaultSeed)
 {
     std::mt19937 gen(seed);
     std::uniform_int_distribution<uint8_t> distrib(1); // avoid 0
@@ -26,8 +26,8 @@ inline void
     }
 }
 template <size_t N>
-void fill_pseudorandom(uint8_t (&buf)[N],
-                       std::mt19937::result_type seed = mt19937_default_seed)
+void fillPseudoRandom(uint8_t (&buf)[N],
+                      std::mt19937::result_type seed = mt19937DefaultSeed)
 {
 #if 1
     std::mt19937 gen(seed);
@@ -45,22 +45,23 @@ void fill_pseudorandom(uint8_t (&buf)[N],
 }
 
 template <typename T>
-inline void fill_pseudorandom_type(
-    T& dst, std::mt19937::result_type seed = mt19937_default_seed)
+inline void
+    fillPseudoRandomType(T& dst,
+                         std::mt19937::result_type seed = mt19937DefaultSeed)
 {
-    fill_pseudorandom(reinterpret_cast<uint8_t(&)[sizeof(T)]>(dst), seed);
+    fillPseudoRandom(reinterpret_cast<uint8_t(&)[sizeof(T)]>(dst), seed);
 }
 
 template <typename T>
-inline T return_pseudorandom_type(
-    std::mt19937::result_type seed = mt19937_default_seed)
+inline T
+    returnPseudoRandomType(std::mt19937::result_type seed = mt19937DefaultSeed)
 {
     T dst;
-    fill_pseudorandom_type(dst, seed);
+    fillPseudoRandomType(dst, seed);
     return dst;
 }
 
-inline void fill_random(std::vector<uint8_t>& buf)
+inline void fillRandom(std::vector<uint8_t>& buf)
 {
 #if 1
     std::random_device rd;
@@ -79,7 +80,7 @@ inline void fill_random(std::vector<uint8_t>& buf)
 }
 
 template <size_t N>
-void fill_random(uint8_t (&buf)[N])
+void fillRandom(uint8_t (&buf)[N])
 {
 #if 1
     std::random_device rd;

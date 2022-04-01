@@ -48,15 +48,15 @@ namespace spdmcpp
         }
     }*/
 
-inline void endian_copy(uint8_t src, uint8_t& dst)
+inline void endianCopy(uint8_t src, uint8_t& dst)
 {
     dst = src;
 }
-inline void endian_copy(uint16_t src, uint16_t& dst)
+inline void endianCopy(uint16_t src, uint16_t& dst)
 {
     dst = (src >> 8) | (src << 8);
 }
-inline void endian_copy(uint32_t src, uint32_t& dst)
+inline void endianCopy(uint32_t src, uint32_t& dst)
 {
     src = ((src >> 8) & 0x00FF00FF) | ((src << 8) & 0xFF00FF00);
     dst = (src >> 16) | (src << 16);
@@ -79,22 +79,22 @@ inline T endian_host_spdm_read(T value)
     return endian_read(value);
 }
 template <typename T>
-inline void endian_host_spdm_copy(const T& src, T& dst)
+inline void endianHostSpdmCopy(const T& src, T& dst)
 {
     endian_copy(src, dst);
 }
 #else
 // little endian
 template <typename T>
-inline void endian_host_spdm_swap(T& /*value*/)
+inline void endianHostSpdmSwap(T& /*value*/)
 {}
 template <typename T>
-inline T endian_host_spdm_read(T value)
+inline T endianHostSpdmRead(T value)
 {
     return value;
 }
 template <typename T>
-inline void endian_host_spdm_copy(const T& src, T& dst)
+inline void endianHostSpdmCopy(const T& src, T& dst)
 {
     dst = src;
 }

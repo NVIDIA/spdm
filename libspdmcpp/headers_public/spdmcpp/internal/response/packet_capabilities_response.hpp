@@ -5,29 +5,29 @@
 
 #ifdef SPDMCPP_PACKET_HPP
 
-struct packet_capabilities_response
+struct PacketCapabilitiesResponse
 {
-    packet_message_header Header = packet_message_header(RequestResponseCode);
+    PacketMessageHeader Header = PacketMessageHeader(requestResponseCode);
     uint8_t Reserved0 = 0;
     uint8_t CTExponent = 0;
     uint16_t Reserved1 = 0;
     ResponderCapabilitiesFlags Flags = ResponderCapabilitiesFlags::NIL;
 
-    static constexpr RequestResponseEnum RequestResponseCode =
+    static constexpr RequestResponseEnum requestResponseCode =
         RequestResponseEnum::RESPONSE_CAPABILITIES;
-    static constexpr bool size_is_constant = true;
+    static constexpr bool sizeIsConstant = true;
 
-    packet_capabilities_response() = default;
-    packet_capabilities_response(uint8_t ct_exponent,
-                                 ResponderCapabilitiesFlags flags) :
-        CTExponent(ct_exponent),
+    PacketCapabilitiesResponse() = default;
+    PacketCapabilitiesResponse(uint8_t ctExponent,
+                               ResponderCapabilitiesFlags flags) :
+        CTExponent(ctExponent),
         Flags(flags)
     {}
 
-    void print_ml(LogClass& log) const
+    void printMl(LogClass& log) const
     {
         SPDMCPP_LOG_INDENT(log);
-        SPDMCPP_LOG_print_ml(log, Header);
+        SPDMCPP_LOG_printMl(log, Header);
         SPDMCPP_LOG_iexprln(log, Reserved0);
         SPDMCPP_LOG_iexprln(log, CTExponent);
         SPDMCPP_LOG_iexprln(log, Reserved1);
@@ -35,14 +35,14 @@ struct packet_capabilities_response
     }
 };
 
-inline void endian_host_spdm_copy(const packet_capabilities_response& src,
-                                  packet_capabilities_response& dst)
+inline void endianHostSpdmCopy(const PacketCapabilitiesResponse& src,
+                               PacketCapabilitiesResponse& dst)
 {
-    endian_host_spdm_copy(src.Header, dst.Header);
-    endian_host_spdm_copy(src.Reserved0, dst.Reserved0);
-    endian_host_spdm_copy(src.CTExponent, dst.CTExponent);
-    endian_host_spdm_copy(src.Reserved1, dst.Reserved1);
-    endian_host_spdm_copy(src.Flags, dst.Flags);
+    endianHostSpdmCopy(src.Header, dst.Header);
+    endianHostSpdmCopy(src.Reserved0, dst.Reserved0);
+    endianHostSpdmCopy(src.CTExponent, dst.CTExponent);
+    endianHostSpdmCopy(src.Reserved1, dst.Reserved1);
+    endianHostSpdmCopy(src.Flags, dst.Flags);
 }
 
 #endif

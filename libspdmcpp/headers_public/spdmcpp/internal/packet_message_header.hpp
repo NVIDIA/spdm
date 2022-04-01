@@ -5,20 +5,20 @@
 
 #ifdef SPDMCPP_PACKET_HPP
 
-struct packet_message_header
+struct PacketMessageHeader
 {
     MessageVersionEnum MessageVersion = MessageVersionEnum::SPDM_1_0;
-    RequestResponseEnum RequestResponseCode = RequestResponseEnum::INVALID;
+    RequestResponseEnum requestResponseCode = RequestResponseEnum::INVALID;
     uint8_t Param1 = 0;
     uint8_t Param2 = 0;
 
-    static constexpr bool size_is_constant = true;
+    static constexpr bool sizeIsConstant = true;
 
-    packet_message_header() = default;
-    packet_message_header(RequestResponseEnum rr) : RequestResponseCode(rr)
+    PacketMessageHeader() = default;
+    PacketMessageHeader(RequestResponseEnum rr) : requestResponseCode(rr)
     {}
-    packet_message_header(MessageVersionEnum v, RequestResponseEnum rr) :
-        MessageVersion(v), RequestResponseCode(rr)
+    PacketMessageHeader(MessageVersionEnum v, RequestResponseEnum rr) :
+        MessageVersion(v), requestResponseCode(rr)
     {}
 
     void print(LogClass& log) const
@@ -26,18 +26,18 @@ struct packet_message_header
         log.print('<');
         SPDMCPP_LOG_expr(log, MessageVersion);
         log.print("   ");
-        SPDMCPP_LOG_expr(log, RequestResponseCode);
+        SPDMCPP_LOG_expr(log, requestResponseCode);
         log.print("   ");
         SPDMCPP_LOG_expr(log, Param1);
         log.print("   ");
         SPDMCPP_LOG_expr(log, Param2);
         log.print(">");
     }
-    void print_ml(LogClass& log) const
+    void printMl(LogClass& log) const
     {
         SPDMCPP_LOG_INDENT(log);
         SPDMCPP_LOG_iexprln(log, MessageVersion);
-        SPDMCPP_LOG_iexprln(log, RequestResponseCode);
+        SPDMCPP_LOG_iexprln(log, requestResponseCode);
         SPDMCPP_LOG_iexprln(log, Param1);
         SPDMCPP_LOG_iexprln(log, Param2);
     }
@@ -47,32 +47,32 @@ struct packet_message_header
 // be really convenient to use it!!!
 
 [[nodiscard]] inline MessageVersionEnum
-    packet_message_header_get_version(const uint8_t* buf)
+    packetMessageHeaderGetVersion(const uint8_t* buf)
 {
-    auto& p = *reinterpret_cast<const packet_message_header*>(buf);
-    static_assert(sizeof(p.RequestResponseCode) == 1);
+    auto& p = *reinterpret_cast<const PacketMessageHeader*>(buf);
+    static_assert(sizeof(p.requestResponseCode) == 1);
     return p.MessageVersion;
 }
 [[nodiscard]] inline RequestResponseEnum
-    packet_message_header_get_requestresponsecode(const uint8_t* buf)
+    packetMessageHeaderGetRequestresponsecode(const uint8_t* buf)
 {
-    auto& p = *reinterpret_cast<const packet_message_header*>(buf);
-    static_assert(sizeof(p.RequestResponseCode) == 1);
-    return p.RequestResponseCode;
+    auto& p = *reinterpret_cast<const PacketMessageHeader*>(buf);
+    static_assert(sizeof(p.requestResponseCode) == 1);
+    return p.requestResponseCode;
 }
 inline void
-    packet_message_header_set_requestresponsecode(uint8_t* buf,
-                                                  RequestResponseEnum rrcode)
+    packetMessageHeaderSetRequestresponsecode(uint8_t* buf,
+                                              RequestResponseEnum rrcode)
 {
-    auto& p = *reinterpret_cast<packet_message_header*>(buf);
-    static_assert(sizeof(p.RequestResponseCode) == 1);
-    p.RequestResponseCode = rrcode;
+    auto& p = *reinterpret_cast<PacketMessageHeader*>(buf);
+    static_assert(sizeof(p.requestResponseCode) == 1);
+    p.requestResponseCode = rrcode;
 }
 /*	inline void endian_swap(packet_message_header& p)//TODO decide, likely not
    needed?
     {
         endian_swap(p.spdm_version);
-        endian_swap(p.RequestResponseCode);
+        endian_swap(p.requestResponseCode);
         endian_swap(p.param1);
         endian_swap(p.param2);
     }*/
@@ -80,17 +80,17 @@ inline void
    likely not needed?
     {
         endian_host_spdm_swap(p.spdm_version);
-        endian_host_spdm_swap(p.RequestResponseCode);
+        endian_host_spdm_swap(p.requestResponseCode);
         endian_host_spdm_swap(p.param1);
         endian_host_spdm_swap(p.param2);
     }*/
-inline void endian_host_spdm_copy(const packet_message_header& src,
-                                  packet_message_header& dst)
+inline void endianHostSpdmCopy(const PacketMessageHeader& src,
+                               PacketMessageHeader& dst)
 {
-    endian_host_spdm_copy(src.MessageVersion, dst.MessageVersion);
-    endian_host_spdm_copy(src.RequestResponseCode, dst.RequestResponseCode);
-    endian_host_spdm_copy(src.Param1, dst.Param1);
-    endian_host_spdm_copy(src.Param2, dst.Param2);
+    endianHostSpdmCopy(src.MessageVersion, dst.MessageVersion);
+    endianHostSpdmCopy(src.requestResponseCode, dst.requestResponseCode);
+    endianHostSpdmCopy(src.Param1, dst.Param1);
+    endianHostSpdmCopy(src.Param2, dst.Param2);
 }
 
 #endif

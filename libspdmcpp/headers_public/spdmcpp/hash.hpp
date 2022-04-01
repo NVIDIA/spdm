@@ -19,9 +19,9 @@
 namespace spdmcpp
 {
 
-inline HashEnum to_hash(BaseHashAlgoFlags flags)
+inline HashEnum toHash(BaseHashAlgoFlags flags)
 {
-    assert(count_bits(static_cast<std::underlying_type_t<BaseHashAlgoFlags>>(
+    assert(countBits(static_cast<std::underlying_type_t<BaseHashAlgoFlags>>(
                flags)) <= 1);
     switch (flags)
     {
@@ -42,11 +42,11 @@ inline HashEnum to_hash(BaseHashAlgoFlags flags)
     }
 }
 
-inline HashEnum to_hash(MeasurementHashAlgoFlags flags)
+inline HashEnum toHash(MeasurementHashAlgoFlags flags)
 {
-    assert(count_bits(
-               static_cast<std::underlying_type_t<MeasurementHashAlgoFlags>>(
-                   flags)) <= 1);
+    assert(
+        countBits(static_cast<std::underlying_type_t<MeasurementHashAlgoFlags>>(
+            flags)) <= 1);
     switch (flags)
     {
         case MeasurementHashAlgoFlags::RAW_BIT_STREAM_ONLY:
@@ -69,7 +69,7 @@ inline HashEnum to_hash(MeasurementHashAlgoFlags flags)
     }
 }
 
-inline mbedtls_md_type_t to_mbedtls(HashEnum algo)
+inline mbedtls_md_type_t toMbedtls(HashEnum algo)
 {
     switch (algo)
     {
@@ -94,7 +94,7 @@ class HashClass
         HashClass ha;
         ha.setup(algo);
         ha.update(buf, size);
-        ha.hash_finish(hash);
+        ha.hashFinish(hash);
     }
     static void compute(std::vector<uint8_t>& hash, HashEnum algo,
                         const std::vector<uint8_t>& buf, size_t off = 0,
@@ -128,7 +128,7 @@ class HashClass
 
     void setup(HashEnum algo)
     {
-        mbedtls_md_type_t type = to_mbedtls(algo);
+        mbedtls_md_type_t type = toMbedtls(algo);
         int ret = mbedtls_md_setup(&Ctx, mbedtls_md_info_from_type(type), 0);
         assert(ret == 0); // TODO failure possible?
         ret = mbedtls_md_starts(&Ctx);
@@ -152,7 +152,7 @@ class HashClass
 
     //	void hash_output(uint8_t* buf, size_t size)
 
-    void hash_finish(uint8_t* buf, size_t size)
+    void hashFinish(uint8_t* buf, size_t size)
     {
         assert(mbedtls_md_get_size(Ctx.md_info) == size);
         int ret = mbedtls_md_finish(&Ctx, buf);
@@ -160,10 +160,10 @@ class HashClass
         //	ret = mbedtls_md_starts(&Ctx);
         //	assert(ret == 0);//TODO failure possible?
     }
-    void hash_finish(std::vector<uint8_t>& buf)
+    void hashFinish(std::vector<uint8_t>& buf)
     {
         buf.resize(mbedtls_md_get_size(Ctx.md_info));
-        hash_finish(buf.data(), buf.size());
+        hashFinish(buf.data(), buf.size());
     }
 
   private:

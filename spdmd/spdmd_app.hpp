@@ -50,7 +50,7 @@ class SpdmdApp : SpdmdAppContext
     /** @brief Create new Responder object
      *
      */
-    bool createResponder(uint8_t eid, const std::string& inventory_path);
+    bool createResponder(uint8_t eid, const std::string& inventoryPath);
 
     /** @brief Enter SPDM daemon into forever loop
      *
@@ -79,7 +79,7 @@ class SpdmdApp : SpdmdAppContext
 
     /** @brief MCTP interface auxiliary object - used for transmission purposes
      * over MCTP */
-    spdmcpp::MCTP_IOClass mctpIo;
+    spdmcpp::MctpIoClass mctpIo;
 
     /** @brief Event handlar for MCTP events - used for transmission purposes
      * over MCTP */

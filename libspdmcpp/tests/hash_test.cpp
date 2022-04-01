@@ -13,7 +13,7 @@
 
 using namespace spdmcpp;
 
-uint8_t ref_buf[] = {
+uint8_t refBuf[] = {
     0xc7, 0x9b, 0x3d, 0xdc, 0xd3, 0xe4, 0xf7, 0x2e, 0xf9, 0xc2, 0x74, 0xc0,
     0x9c, 0x9b, 0xc6, 0xcb, 0xa4, 0x63, 0xb9, 0x57, 0x09, 0xa9, 0x4d, 0xe7,
     0x0f, 0xb8, 0xdb, 0x79, 0x60, 0x7f, 0xae, 0x72, 0x42, 0x88, 0x59, 0xfe,
@@ -58,7 +58,7 @@ uint8_t ref_buf[] = {
     0xde, 0x79, 0xd9, 0xf4, 0x04, 0x05, 0x27, 0x1e, 0x2f, 0x8a, 0x48, 0x09,
     0x51, 0x22, 0x15, 0xb1, 0x5e, 0x8c, 0xe7, 0xc6};
 
-uint8_t char_to_uint(char c)
+uint8_t charToUint(char c)
 {
     if (c >= '0' && c <= '9')
     {
@@ -78,22 +78,22 @@ uint8_t char_to_uint(char c)
 }
 
 template <size_t N>
-void string_to_hash(uint8_t (&arr)[N], const char* str)
+void stringToHash(uint8_t (&arr)[N], const char* str)
 {
     size_t len = strlen(str);
     ASSERT_EQ(len, 2 * N);
     for (size_t i = 0; i < N; ++i)
     {
-        arr[i] = char_to_uint(str[2 * i + 1]);
-        arr[i] |= char_to_uint(str[2 * i]) << 4;
+        arr[i] = charToUint(str[2 * i + 1]);
+        arr[i] |= charToUint(str[2 * i]) << 4;
     }
 }
 
 TEST(Hash, SHA256)
 {
-    uint8_t ref_hash[32];
-    string_to_hash(
-        ref_hash,
+    uint8_t refHash[32];
+    stringToHash(
+        refHash,
         "33c452d940f6b206bc539bfe92b3151317fb70dfe2c17ecf59375c9f745d1102");
 
     /*std::ofstream file;
@@ -111,51 +111,51 @@ TEST(Hash, SHA256)
     std::vector<uint8_t> hash;
     {
         HashEnum en = HashEnum::SHA_256;
-        EXPECT_EQ(en, to_hash(BaseHashAlgoFlags::TPM_ALG_SHA_256));
-        EXPECT_EQ(en, to_hash(MeasurementHashAlgoFlags::TPM_ALG_SHA_256));
-        HashClass::compute(hash, en, ref_buf, sizeof(ref_buf));
+        EXPECT_EQ(en, toHash(BaseHashAlgoFlags::TPM_ALG_SHA_256));
+        EXPECT_EQ(en, toHash(MeasurementHashAlgoFlags::TPM_ALG_SHA_256));
+        HashClass::compute(hash, en, refBuf, sizeof(refBuf));
     }
     // ASSERT_THAT(hash, ElementsAre(ref_hash));
-    EXPECT_EQ(hash.size(), sizeof(ref_hash));
-    EXPECT_EQ(memcmp(hash.data(), ref_hash, sizeof(ref_hash)), 0);
+    EXPECT_EQ(hash.size(), sizeof(refHash));
+    EXPECT_EQ(memcmp(hash.data(), refHash, sizeof(refHash)), 0);
 }
 
 TEST(Hash, SHA384)
 {
-    uint8_t ref_hash[48];
-    string_to_hash(
-        ref_hash,
+    uint8_t refHash[48];
+    stringToHash(
+        refHash,
         "6625f7f39c1f107ae4344afd711dfde3e2045cc8c467f1a785e75ade18986e5f5db2d8e73b680051d92295e307915533");
 
     std::vector<uint8_t> hash;
     {
         HashEnum en = HashEnum::SHA_384;
-        EXPECT_EQ(en, to_hash(BaseHashAlgoFlags::TPM_ALG_SHA_384));
-        EXPECT_EQ(en, to_hash(MeasurementHashAlgoFlags::TPM_ALG_SHA_384));
-        HashClass::compute(hash, en, ref_buf, sizeof(ref_buf));
+        EXPECT_EQ(en, toHash(BaseHashAlgoFlags::TPM_ALG_SHA_384));
+        EXPECT_EQ(en, toHash(MeasurementHashAlgoFlags::TPM_ALG_SHA_384));
+        HashClass::compute(hash, en, refBuf, sizeof(refBuf));
     }
 
     // ASSERT_THAT(hash, ElementsAre(ref_hash));
-    EXPECT_EQ(hash.size(), sizeof(ref_hash));
-    EXPECT_EQ(memcmp(hash.data(), ref_hash, sizeof(ref_hash)), 0);
+    EXPECT_EQ(hash.size(), sizeof(refHash));
+    EXPECT_EQ(memcmp(hash.data(), refHash, sizeof(refHash)), 0);
 }
 
 TEST(Hash, SHA512)
 {
-    uint8_t ref_hash[64];
-    string_to_hash(
-        ref_hash,
+    uint8_t refHash[64];
+    stringToHash(
+        refHash,
         "64fff176528eba19be10b0122741796ebb753dc72cfe9259e95eff49cada7cab50e2cdb9b380e3334065d0d44493ec1d01ac0bbcf8bd64115554a41a33a12a57");
 
     std::vector<uint8_t> hash;
     {
         HashEnum en = HashEnum::SHA_512;
-        EXPECT_EQ(en, to_hash(BaseHashAlgoFlags::TPM_ALG_SHA_512));
-        EXPECT_EQ(en, to_hash(MeasurementHashAlgoFlags::TPM_ALG_SHA_512));
-        HashClass::compute(hash, en, ref_buf, sizeof(ref_buf));
+        EXPECT_EQ(en, toHash(BaseHashAlgoFlags::TPM_ALG_SHA_512));
+        EXPECT_EQ(en, toHash(MeasurementHashAlgoFlags::TPM_ALG_SHA_512));
+        HashClass::compute(hash, en, refBuf, sizeof(refBuf));
     }
 
     // ASSERT_THAT(hash, ElementsAre(ref_hash));
-    EXPECT_EQ(hash.size(), sizeof(ref_hash));
-    EXPECT_EQ(memcmp(hash.data(), ref_hash, sizeof(ref_hash)), 0);
+    EXPECT_EQ(hash.size(), sizeof(refHash));
+    EXPECT_EQ(memcmp(hash.data(), refHash, sizeof(refHash)), 0);
 }

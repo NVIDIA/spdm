@@ -11,7 +11,7 @@
 namespace spdmd
 {
 
-const std::string INVENTORY_DEFAULT_PATH = "/xyz/openbmc_project/inventory";
+const std::string inventoryDefaultPath = "/xyz/openbmc_project/inventory";
 
 MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
     bus(spdmApp.getBus()), spdmApp(spdmApp),
@@ -151,8 +151,8 @@ std::string MctpDiscovery::getInventoryPath(const std::string& uuid)
     {
         auto method = bus.new_method_call(
             "xyz.openbmc_project.Inventory.Manager",
-            INVENTORY_DEFAULT_PATH.c_str(),
-            "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
+            inventoryDefaultPath.c_str(), "org.freedesktop.DBus.ObjectManager",
+            "GetManagedObjects");
         auto reply = bus.call(method);
         reply.read(objects);
 
@@ -164,8 +164,7 @@ std::string MctpDiscovery::getInventoryPath(const std::string& uuid)
                 std::string id = getUUID(interfaces);
                 if (id == uuid)
                 {
-                    return INVENTORY_DEFAULT_PATH + "/" +
-                           std::string(objectPath);
+                    return inventoryDefaultPath + "/" + std::string(objectPath);
                 }
             }
         }
@@ -174,7 +173,7 @@ std::string MctpDiscovery::getInventoryPath(const std::string& uuid)
     {
         spdmApp.getLog().print(e.what());
     }
-    return INVENTORY_DEFAULT_PATH + "/INVALID";
+    return inventoryDefaultPath + "/INVALID";
 }
 
 } // namespace spdmd

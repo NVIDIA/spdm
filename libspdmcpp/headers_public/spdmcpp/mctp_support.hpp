@@ -22,30 +22,30 @@ namespace spdmcpp
 {
 // these are for use with the mctp-demux-daemon
 
-class MCTP_TransportClass : public TransportClass
+class MctpTransportClass : public TransportClass
 {
   public:
-    MCTP_TransportClass(uint8_t eid) : EID(eid)
+    MctpTransportClass(uint8_t eid) : EID(eid)
     {}
-    virtual ~MCTP_TransportClass()
+    virtual ~MctpTransportClass()
     {}
 
-    void SetEID(uint8_t eid)
+    void setEid(uint8_t eid)
     {
         assert(EID == 0);
         EID = eid;
     }
 
-    virtual RetStat encode_pre(std::vector<uint8_t>& /*buf*/,
-                               LayerState& lay) override
+    virtual RetStat encodePre(std::vector<uint8_t>& /*buf*/,
+                              LayerState& lay) override
     {
-        set_layer_size(lay, sizeof(header_type));
+        setLayerSize(lay, sizeof(HeaderType));
         return RetStat::OK;
     }
-    virtual RetStat encode_post(std::vector<uint8_t>& buf,
-                                LayerState& lay) override
+    virtual RetStat encodePost(std::vector<uint8_t>& buf,
+                               LayerState& lay) override
     {
-        auto& header = get_header_ref<header_type>(buf, lay);
+        auto& header = getHeaderRef<HeaderType>(buf, lay);
         header.eid = EID;
         header.type = MCTPMessageTypeEnum::SPDM;
         return RetStat::OK;
@@ -53,8 +53,8 @@ class MCTP_TransportClass : public TransportClass
 
     virtual RetStat decode(std::vector<uint8_t>& buf, LayerState& lay) override
     {
-        set_layer_size(lay, sizeof(header_type));
-        auto& header = get_header_ref<header_type>(buf, lay);
+        setLayerSize(lay, sizeof(HeaderType));
+        auto& header = getHeaderRef<HeaderType>(buf, lay);
         if (header.type != MCTPMessageTypeEnum::SPDM)
         {
             return RetStat::ERROR_UNKNOWN;
@@ -62,11 +62,11 @@ class MCTP_TransportClass : public TransportClass
         return RetStat::OK;
     }
 
-    static RetStat peek_eid(std::vector<uint8_t>& buf, LayerState& lay,
-                            uint8_t& eid)
+    static RetStat peekEid(std::vector<uint8_t>& buf, LayerState& lay,
+                           uint8_t& eid)
     {
-        set_layer_size(lay, sizeof(header_type));
-        auto& header = get_header_ref<header_type>(buf, lay);
+        setLayerSize(lay, sizeof(HeaderType));
+        auto& header = getHeaderRef<HeaderType>(buf, lay);
         if (header.type != MCTPMessageTypeEnum::SPDM)
         {
             return RetStat::ERROR_UNKNOWN;
@@ -76,23 +76,23 @@ class MCTP_TransportClass : public TransportClass
     }
 
   protected:
-    struct header_type
+    struct HeaderType
     {
         uint8_t eid;
         MCTPMessageTypeEnum type;
 
-        static constexpr bool size_is_constant = true;
+        static constexpr bool sizeIsConstant = true;
     };
 
     uint8_t EID = 0;
 };
 
-class MCTP_IOClass : public IOClass
+class MctpIoClass : public IOClass
 {
   public:
-    MCTP_IOClass(LogClass& log) : Log(log)
+    MctpIoClass(LogClass& log) : Log(log)
     {}
-    ~MCTP_IOClass() override
+    ~MctpIoClass() override
     {}
 
     bool createSocket()
@@ -145,14 +145,14 @@ class MCTP_IOClass : public IOClass
                   timeout_us_t timeout = TIMEOUT_US_INFINITE) override;
     RetStat read(std::vector<uint8_t>& buf,
                  timeout_us_t timeout = TIMEOUT_US_INFINITE) override;
-    // 		RetStat setup_timeout(timeout_ms_t timeout) override;
+    // 		RetStat setupTimeout(timeout_ms_t timeout) override;
     //	private://TODO !!!
     LogClass& Log;
     int Socket = -1;
 };
 
-inline RetStat MCTP_IOClass::write(const std::vector<uint8_t>& buf,
-                                   timeout_us_t /*timeout*/)
+inline RetStat MctpIoClass::write(const std::vector<uint8_t>& buf,
+                                  timeout_us_t /*timeout*/)
 {
     SPDMCPP_LOG_TRACE_FUNC(Log);
     size_t sent = 0;
@@ -170,8 +170,8 @@ inline RetStat MCTP_IOClass::write(const std::vector<uint8_t>& buf,
     return RetStat::OK;
 }
 
-inline RetStat MCTP_IOClass::read(std::vector<uint8_t>& buf,
-                                  timeout_us_t /*timeout*/)
+inline RetStat MctpIoClass::read(std::vector<uint8_t>& buf,
+                                 timeout_us_t /*timeout*/)
 {
     SPDMCPP_LOG_TRACE_FUNC(Log);
     buf.resize(4096); // MCTP_MAX_MSG
@@ -191,7 +191,7 @@ inline RetStat MCTP_IOClass::read(std::vector<uint8_t>& buf,
     return RetStat::OK;
 }
 #if 0
-	inline RetStat MCTP_IOClass::setup_timeout(timeout_ms_t /*timeout*/)
+	inline RetStat MctpIoClass::setupTimeout(timeout_ms_t /*timeout*/)
 	{
 		SPDMCPP_LOG_TRACE_FUNC(Log);
 	/*	constexpr sdeventplus::ClockId cid = sdeventplus::ClockId::Monotonic;

@@ -179,9 +179,9 @@ class DBusHandler : public DBusHandlerInterface
     auto getDbusProperty(const char* objPath, const char* dbusProp,
                          const char* dbusInterface)
     {
-        auto VariantValue =
+        auto variantValue =
             getDbusPropertyVariant(objPath, dbusProp, dbusInterface);
-        return std::get<Property>(VariantValue);
+        return std::get<Property>(variantValue);
     }
 
     /** @brief Set Dbus property

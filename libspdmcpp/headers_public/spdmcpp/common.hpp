@@ -46,11 +46,11 @@ class TransportClass // TODO almost for sure will require custom data
         friend TransportClass;
 
       public:
-        size_t get_offset() const
+        size_t getOffset() const
         {
             return Offset;
         }
-        size_t get_end_offset() const
+        size_t getEndOffset() const
         {
             return Offset + Size;
         }
@@ -63,32 +63,32 @@ class TransportClass // TODO almost for sure will require custom data
     virtual ~TransportClass()
     {}
 
-    virtual RetStat encode_pre(std::vector<uint8_t>& buf, LayerState& lay) = 0;
-    virtual RetStat encode_post(std::vector<uint8_t>& buf, LayerState& lay) = 0;
+    virtual RetStat encodePre(std::vector<uint8_t>& buf, LayerState& lay) = 0;
+    virtual RetStat encodePost(std::vector<uint8_t>& buf, LayerState& lay) = 0;
 
     virtual RetStat decode(std::vector<uint8_t>& buf, LayerState& lay) = 0;
 
-    virtual RetStat setup_timeout(timeout_ms_t /*timeout*/)
+    virtual RetStat setupTimeout(timeout_ms_t /*timeout*/)
     {
         return RetStat::ERROR_UNKNOWN;
     }
-    virtual bool clear_timeout()
+    virtual bool clearTimeout()
     {
         return false;
     }
 
   protected:
     template <class T>
-    static T& get_header_ref(std::vector<uint8_t>& buf, LayerState& lay)
+    static T& getHeaderRef(std::vector<uint8_t>& buf, LayerState& lay)
     {
-        return *reinterpret_cast<T*>(&buf[lay.get_offset()]);
+        return *reinterpret_cast<T*>(&buf[lay.getOffset()]);
     }
 
-    static void set_layer_offset(LayerState& lay, size_t v)
+    static void setLayerOffset(LayerState& lay, size_t v)
     {
         lay.Offset = v;
     }
-    static void set_layer_size(LayerState& lay, size_t v)
+    static void setLayerSize(LayerState& lay, size_t v)
     {
         lay.Size = v;
     }
@@ -102,7 +102,7 @@ class IOClass
                           timeout_us_t timeout = TIMEOUT_US_INFINITE) = 0;
     virtual RetStat read(std::vector<uint8_t>& buf,
                          timeout_us_t timeout = TIMEOUT_US_INFINITE) = 0;
-    virtual RetStat setup_timeout(timeout_us_t /*timeout*/)
+    virtual RetStat setupTimeout(timeout_us_t /*timeout*/)
     {
         return RetStat::ERROR_UNKNOWN;
     }

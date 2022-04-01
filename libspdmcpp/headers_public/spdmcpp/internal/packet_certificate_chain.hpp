@@ -5,12 +5,12 @@
 
 #ifdef SPDMCPP_PACKET_HPP
 
-struct packet_certificate_chain
+struct PacketCertificateChain
 {
     uint16_t Length = 0;
     uint16_t Reserved = 0;
 
-    static constexpr bool size_is_constant = true;
+    static constexpr bool sizeIsConstant = true;
 
     void print(LogClass& log) const
     {
@@ -23,10 +23,10 @@ struct packet_certificate_chain
     }
 };
 
-inline void endian_host_spdm_copy(const packet_certificate_chain& src,
-                                  packet_certificate_chain& dst)
+inline void endianHostSpdmCopy(const PacketCertificateChain& src,
+                               PacketCertificateChain& dst)
 {
-    endian_host_spdm_copy(src.Length, dst.Length);
+    endianHostSpdmCopy(src.Length, dst.Length);
     dst.Reserved = src.Reserved;
 }
 

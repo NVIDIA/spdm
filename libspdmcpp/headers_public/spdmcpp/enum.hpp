@@ -63,12 +63,12 @@ namespace spdmcpp
 #undef ENUM_VALUE
 #undef ENUM_END
 
-constexpr inline bool is_request(RequestResponseEnum code)
+constexpr inline bool isRequest(RequestResponseEnum code)
 {
     return code >= RequestResponseEnum::REQUEST_GET_DIGESTS &&
            code <= RequestResponseEnum::REQUEST_END_SESSION;
 }
-constexpr inline bool is_response(RequestResponseEnum code)
+constexpr inline bool isResponse(RequestResponseEnum code)
 {
     return code >= RequestResponseEnum::RESPONSE_DIGESTS &&
            code <= RequestResponseEnum::RESPONSE_END_SESSION_ACK;

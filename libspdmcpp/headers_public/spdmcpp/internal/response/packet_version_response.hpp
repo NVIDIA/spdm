@@ -5,26 +5,26 @@
 
 #ifdef SPDMCPP_PACKET_HPP
 
-struct packet_version_response_min
+struct PacketVersionResponseMin
 {
-    packet_message_header Header = packet_message_header(RequestResponseCode);
+    PacketMessageHeader Header = PacketMessageHeader(requestResponseCode);
     uint8_t Reserved = 0;
     //    uint8_t VersionNumberEntryCount = 0;
 
-    static constexpr RequestResponseEnum RequestResponseCode =
+    static constexpr RequestResponseEnum requestResponseCode =
         RequestResponseEnum::RESPONSE_VERSION;
-    static constexpr bool size_is_constant =
+    static constexpr bool sizeIsConstant =
         true; // TODO decide how we need/want to handle such packets
 
-    void print_ml(LogClass& log) const
+    void printMl(LogClass& log) const
     {
         SPDMCPP_LOG_INDENT(log);
-        SPDMCPP_LOG_print_ml(log, Header);
+        SPDMCPP_LOG_printMl(log, Header);
         SPDMCPP_LOG_iexprln(log, Reserved);
         // SPDMCPP_LOG_iexprln(log, VersionNumberEntryCount);
     }
 
-    bool operator==(const packet_version_response_min& other) const
+    bool operator==(const PacketVersionResponseMin& other) const
     {
         // TODO should only compare the valid portion of AlgSupported,
         // AlgExternal?
@@ -32,29 +32,29 @@ struct packet_version_response_min
     }
 };
 
-inline void endian_host_spdm_copy(const packet_version_response_min& src,
-                                  packet_version_response_min& dst)
+inline void endianHostSpdmCopy(const PacketVersionResponseMin& src,
+                               PacketVersionResponseMin& dst)
 {
-    endian_host_spdm_copy(src.Header, dst.Header);
+    endianHostSpdmCopy(src.Header, dst.Header);
     dst.Reserved = src.Reserved;
-    // endian_host_spdm_copy(src.VersionNumberEntryCount,
+    // endianHostSpdmCopy(src.VersionNumberEntryCount,
     //   dst.VersionNumberEntryCount);
 }
 
-struct packet_version_response_var
+struct PacketVersionResponseVar
 {
-    packet_version_response_min Min;
-    std::vector<packet_version_number> VersionNumberEntries;
+    PacketVersionResponseMin Min;
+    std::vector<PacketVersionNumber> VersionNumberEntries;
 
-    static constexpr RequestResponseEnum RequestResponseCode =
+    static constexpr RequestResponseEnum requestResponseCode =
         RequestResponseEnum::RESPONSE_VERSION;
-    static constexpr bool size_is_constant =
+    static constexpr bool sizeIsConstant =
         false; // TODO decide how we need/want to handle such packets
 
-    void print_ml(LogClass& log) const
+    void printMl(LogClass& log) const
     {
         SPDMCPP_LOG_INDENT(log);
-        SPDMCPP_LOG_print_ml(log, Min);
+        SPDMCPP_LOG_printMl(log, Min);
 
         for (size_t i = 0; i < VersionNumberEntries.size(); ++i)
         {
@@ -65,7 +65,7 @@ struct packet_version_response_var
         }
     }
 
-    bool operator==(const packet_version_response_var& other) const
+    bool operator==(const PacketVersionResponseVar& other) const
     {
         if (Min != other.Min)
         {
@@ -80,17 +80,17 @@ struct packet_version_response_var
 };
 
 [[nodiscard]] inline RetStat
-    packet_decode_internal(packet_version_response_var& p,
-                           const std::vector<uint8_t>& buf, size_t& off)
+    packetDecodeInternal(PacketVersionResponseVar& p,
+                         const std::vector<uint8_t>& buf, size_t& off)
 {
-    auto rs = packet_decode_internal(p.Min, buf, off);
+    auto rs = packetDecodeInternal(p.Min, buf, off);
     if (rs != RetStat::OK)
     {
         return rs;
     }
     {
         uint8_t size = 0;
-        rs = packet_decode_basic(size, buf, off);
+        rs = packetDecodeBasic(size, buf, off);
         if (rs != RetStat::OK)
         {
             return rs;
@@ -100,7 +100,7 @@ struct packet_version_response_var
     // p.VersionNumberEntries.resize(p.Min.VersionNumberEntryCount);
     for (size_t i = 0; i < p.VersionNumberEntries.size(); ++i)
     {
-        rs = packet_decode_internal(p.VersionNumberEntries[i], buf, off);
+        rs = packetDecodeInternal(p.VersionNumberEntries[i], buf, off);
         if (rs != RetStat::OK)
         {
             return rs;
@@ -110,10 +110,10 @@ struct packet_version_response_var
 }
 
 [[nodiscard]] inline RetStat
-    packet_encode_internal(const packet_version_response_var& p,
-                           std::vector<uint8_t>& buf, size_t& off)
+    packetEncodeInternal(const PacketVersionResponseVar& p,
+                         std::vector<uint8_t>& buf, size_t& off)
 {
-    auto rs = packet_encode_internal(p.Min, buf, off);
+    auto rs = packetEncodeInternal(p.Min, buf, off);
     if (rs != RetStat::OK)
     {
         return rs;
@@ -121,11 +121,11 @@ struct packet_version_response_var
 
     {
         uint8_t size = p.VersionNumberEntries.size();
-        packet_encode_basic(size, buf, off);
+        packetEncodeBasic(size, buf, off);
     }
     for (size_t i = 0; i < p.VersionNumberEntries.size(); ++i)
     {
-        rs = packet_encode_internal(p.VersionNumberEntries[i], buf, off);
+        rs = packetEncodeInternal(p.VersionNumberEntries[i], buf, off);
         if (rs != RetStat::OK)
         {
             return rs;

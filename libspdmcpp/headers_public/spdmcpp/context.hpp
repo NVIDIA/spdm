@@ -24,18 +24,18 @@ class ContextClass
   public:
     ContextClass();
 
-    void register_io(IOClass* io)
+    void registerIo(IOClass* io)
     {
         assert(!IO);
         IO = io;
     }
-    void unregister_io(IOClass* io)
+    void unregisterIo(IOClass* io)
     {
         assert(IO == io);
         IO = nullptr;
     }
 
-    const std::vector<MessageVersionEnum>& get_supported_versions() const
+    const std::vector<MessageVersionEnum>& getSupportedVersions() const
     {
         return SupportedVersions;
     }

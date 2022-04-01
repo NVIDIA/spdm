@@ -35,7 +35,7 @@ class FlowClass
     virtual ~FlowClass() = 0;
 
     virtual RetStat handle_send() = 0;
-    virtual RetStat handle_recv(std::vector<uint8_t>& buf) = 0;
+    virtual RetStat handleRecv(std::vector<uint8_t>& buf) = 0;
 
   protected:
     ConnectionClass* Connection = nullptr;
@@ -58,7 +58,7 @@ class QueryFlowClass : public FlowClass
     };
 
     RetStat handle_send();
-    RetStat handle_recv(std::vector<uint8_t>& buf);
+    RetStat handleRecv(std::vector<uint8_t>& buf);
 
   private:
     StateEnum State = STATE_START;
@@ -69,7 +69,7 @@ class TimingClass
   public:
     timeout_ms_t getT1() const
     {
-        return RTT + ST1;
+        return RTT + sT1;
     }
     timeout_ms_t getT2() const
     {
@@ -98,7 +98,7 @@ class TimingClass
     timeout_ms_t RTT = 3000; // round-trip transport implementation defined,
                              // TODO likely needs to be CLI configurable?!
                              // openbmc in qemu is extremely slow
-    static constexpr timeout_ms_t ST1 = 100;
+    static constexpr timeout_ms_t sT1 = 100;
 
     timeout_ms_t CT = 0;
 };
@@ -109,94 +109,94 @@ class ConnectionClass
     // and spdm spec is very stateful...),byl worth trying to refactor
   public:
     typedef uint8_t SlotIdx;
-    static constexpr SlotIdx SLOT_NUM = 8;
+    static constexpr SlotIdx slotNum = 8;
 
     ConnectionClass(ContextClass* context) : Context(context), Log(std::cout)
     {}
     ~ConnectionClass()
     {}
 
-    void register_transport(TransportClass* transport)
+    void registerTransport(TransportClass* transport)
     {
         assert(!Transport);
         Transport = transport;
     }
-    void unregister_transport(TransportClass* transport)
+    void unregisterTransport(TransportClass* transport)
     {
         assert(Transport == transport);
         Transport = nullptr;
     }
 
-    RetStat init_connection();
-    RetStat refresh_measurements(SlotIdx slotidx);
-    RetStat refresh_measurements(SlotIdx slotidx, const nonce_array_32& nonce);
-    RetStat refresh_measurements(SlotIdx slotidx,
-                                 const std::bitset<256>& measurement_indices);
-    RetStat refresh_measurements(SlotIdx slotidx, const nonce_array_32& nonce,
-                                 const std::bitset<256>& measurement_indices);
-    void reset_connection();
+    RetStat initConnection();
+    RetStat refreshMeasurements(SlotIdx slotidx);
+    RetStat refreshMeasurements(SlotIdx slotidx, const nonce_array_32& nonce);
+    RetStat refreshMeasurements(SlotIdx slotidx,
+                                const std::bitset<256>& measurementIndices);
+    RetStat refreshMeasurements(SlotIdx slotidx, const nonce_array_32& nonce,
+                                const std::bitset<256>& measurementIndices);
+    void resetConnection();
 
-    SlotIdx GetCurrentCertificateSlotIdx() const
+    SlotIdx getCurrentCertificateSlotIdx() const
     {
         return CertificateSlotIdx;
     }
 
-    bool HasInfo(ConnectionInfoEnum info) const
+    bool hasInfo(ConnectionInfoEnum info) const
     {
         return !!(GotInfo &
                   (1 << static_cast<std::underlying_type_t<ConnectionInfoEnum>>(
                        info)));
     }
 
-    bool SlotHasInfo(SlotIdx slotidx, SlotInfoEnum info) const
+    bool slothasInfo(SlotIdx slotidx, SlotInfoEnum info) const
     {
-        assert(slotidx < SLOT_NUM);
+        assert(slotidx < slotNum);
         return !!(
             Slots[slotidx].GotInfo &
             (1 << static_cast<std::underlying_type_t<SlotInfoEnum>>(info)));
     }
 
-    [[nodiscard]] RetStat try_get_version();
-    [[nodiscard]] RetStat try_get_capabilities();
-    [[nodiscard]] RetStat try_negotiate_algorithms();
-    [[nodiscard]] RetStat try_get_digest();
-    [[nodiscard]] RetStat try_get_certificate(SlotIdx idx);
-    [[nodiscard]] RetStat try_get_certificate_chunk(SlotIdx idx);
-    [[nodiscard]] RetStat try_get_measurements();
-    [[nodiscard]] RetStat try_get_measurements(uint8_t idx);
+    [[nodiscard]] RetStat tryGetVersion();
+    [[nodiscard]] RetStat tryGetCapabilities();
+    [[nodiscard]] RetStat tryNegotiateAlgorithms();
+    [[nodiscard]] RetStat tryGetDigest();
+    [[nodiscard]] RetStat tryGetCertificate(SlotIdx idx);
+    [[nodiscard]] RetStat tryGetCertificateChunk(SlotIdx idx);
+    [[nodiscard]] RetStat tryGetMeasurements();
+    [[nodiscard]] RetStat tryGetMeasurements(uint8_t idx);
 
-    [[nodiscard]] RetStat try_challenge();
+    [[nodiscard]] RetStat tryChallenge();
 
     template <class T>
-    [[nodiscard]] RetStat handle_recv();
+    [[nodiscard]] RetStat handleRecv();
 
-    [[nodiscard]] RetStat handle_recv();
-    [[nodiscard]] RetStat handle_timeout();
+    [[nodiscard]] RetStat handleRecv();
+    [[nodiscard]] RetStat handleTimeout();
 
-    bool is_waiting_for_response() const
+    bool isWaitingForResponse() const
     {
         return WaitingForResponse != RequestResponseEnum::INVALID;
     }
 
     HashEnum getSignatureHash() const
     {
-        assert(HasInfo(ConnectionInfoEnum::ALGORITHMS));
-        return to_hash(Algorithms.Min.BaseHashAlgo);
+        assert(hasInfo(ConnectionInfoEnum::ALGORITHMS));
+        return toHash(Algorithms.Min.BaseHashAlgo);
     }
     HashEnum getMeasurementHash() const
     {
-        assert(HasInfo(ConnectionInfoEnum::ALGORITHMS));
-        return to_hash(Algorithms.Min.MeasurementHashAlgo);
+        assert(hasInfo(ConnectionInfoEnum::ALGORITHMS));
+        return toHash(Algorithms.Min.MeasurementHashAlgo);
     }
     MessageVersionEnum getMessageVersion() const
     {
-        assert(HasInfo(ConnectionInfoEnum::CHOOSEN_VERSION));
+        assert(hasInfo(ConnectionInfoEnum::CHOOSEN_VERSION));
         return MessageVersion;
     }
     bool getCertificatesDER(std::vector<uint8_t>& buf, SlotIdx slotidx) const;
     //     bool getCertificatesPEM(std::string& str, SlotIdx slotidx) const;
 
-    typedef std::map<uint8_t, packet_measurement_field_var>
+    typedef std::map<uint8_t, PacketMeasurementFieldVar>
         DMTFMeasurementsContainer;
     const DMTFMeasurementsContainer& getDMTFMeasurements() const
     {
@@ -206,7 +206,7 @@ class ConnectionClass
         const // TODO this may no longer be necessary and we could yet again
               // switch back to a running Hash
     {
-        return RefBuf(BufEnum::L);
+        return refBuf(BufEnum::L);
     }
     const std::vector<uint8_t>& getSignedMeasurementsHash() const
     {
@@ -258,13 +258,13 @@ class ConnectionClass
                       static_cast<std::underlying_type_t<SlotInfoEnum>>(
                           SlotInfoEnum::NUM));
 
-        void MarkInfo(SlotInfoEnum info)
+        void markInfo(SlotInfoEnum info)
         {
             GotInfo |=
                 1 << static_cast<std::underlying_type_t<SlotInfoEnum>>(info);
         }
 
-        mbedtls_x509_crt* GetRootCert() const
+        mbedtls_x509_crt* getRootCert() const
         {
             // assert(MCertificates.size() >= 2);
             if (MCertificates.empty())
@@ -273,7 +273,7 @@ class ConnectionClass
             }
             return MCertificates[0];
         }
-        mbedtls_x509_crt* GetLeafCert() const
+        mbedtls_x509_crt* getLeafCert() const
         {
             // assert(MCertificates.size() >= 2);
             if (MCertificates.empty())
@@ -292,26 +292,29 @@ class ConnectionClass
             Certificates.clear();
 
             for (auto cert : MCertificates)
+            {
                 mbedtls_x509_crt_free(cert);
+            }
             MCertificates.clear();
         }
     };
 
-    RetStat refresh_measurements_internal();
+    RetStat refreshMeasurementsInternal();
 
     template <typename T>
-    RetStat send_request(const T& packet, BufEnum bufidx = BufEnum::NUM);
+    RetStat sendRequest(const T& packet, BufEnum bufidx = BufEnum::NUM);
     template <typename T, typename... Targs>
-    RetStat interpret_response(T& packet, Targs... fargs);
+    RetStat interpretResponse(T& packet, Targs... fargs);
 
     template <typename T>
-    RetStat async_response();
+    RetStat asyncResponse();
     template <typename T, typename R>
-    RetStat send_request_setup_response(
-        const T& request, const R& response, BufEnum bufidx = BufEnum::NUM,
-        timeout_ms_t timeout = TIMEOUT_MS_INFINITE, uint16_t retry = 4);
+    RetStat sendRequestSetupResponse(const T& request, const R& response,
+                                     BufEnum bufidx = BufEnum::NUM,
+                                     timeout_ms_t timeout = TIMEOUT_MS_INFINITE,
+                                     uint16_t retry = 4);
 
-    void clear_timeout();
+    void clearTimeout();
 
     std::vector<uint8_t> SendBuffer;
     timeout_ms_t SendTimeout = 0;
@@ -324,11 +327,11 @@ class ConnectionClass
     TransportClass* Transport = nullptr;
     mutable LogClass Log;
 
-    std::vector<packet_version_number> SupportedVersions;
+    std::vector<PacketVersionNumber> SupportedVersions;
     MessageVersionEnum MessageVersion = MessageVersionEnum::UNKNOWN;
 
-    packet_algorithms_response_var Algorithms;
-    SlotClass Slots[SLOT_NUM];
+    PacketAlgorithmsResponseVar Algorithms;
+    SlotClass Slots[slotNum];
 
     TimingClass Timings;
 
@@ -340,46 +343,46 @@ class ConnectionClass
     // HashClass HashM1M2;
     // HashClass HashL1L2;
     std::vector<uint8_t> Bufs[static_cast<size_t>(BufEnum::NUM)];
-    std::vector<uint8_t>& RefBuf(BufEnum bufidx)
+    std::vector<uint8_t>& refBuf(BufEnum bufidx)
     {
         return Bufs[static_cast<std::underlying_type_t<BufEnum>>(bufidx)];
     }
-    const std::vector<uint8_t>& RefBuf(BufEnum bufidx) const
+    const std::vector<uint8_t>& refBuf(BufEnum bufidx) const
     {
         return Bufs[static_cast<std::underlying_type_t<BufEnum>>(bufidx)];
     }
-    void HashBuf(std::vector<uint8_t>& hash, HashEnum hashtype, BufEnum bufidx)
+    void hashBuf(std::vector<uint8_t>& hash, HashEnum hashtype, BufEnum bufidx)
     {
-        HashClass::compute(hash, hashtype, RefBuf(bufidx));
+        HashClass::compute(hash, hashtype, refBuf(bufidx));
     }
 
-    void AppendToBuf(BufEnum bufidx, uint8_t* data, size_t size)
+    void appendToBuf(BufEnum bufidx, uint8_t* data, size_t size)
     {
         // HashM1M2.update(data, size);
-        std::vector<uint8_t>& buf = RefBuf(bufidx);
+        std::vector<uint8_t>& buf = refBuf(bufidx);
         size_t off = buf.size();
         buf.resize(off + size);
         memcpy(&buf[off], data, size);
     }
-    void AppendRecvToBuf(BufEnum bufidx)
+    void appendRecvToBuf(BufEnum bufidx)
     {
-        AppendToBuf(bufidx, &ResponseBuffer[ResponseBufferSPDMOffset],
+        appendToBuf(bufidx, &ResponseBuffer[ResponseBufferSPDMOffset],
                     ResponseBuffer.size() - ResponseBufferSPDMOffset);
     }
-    void HashRecv(HashClass& hash)
+    void hashRecv(HashClass& hash)
     {
         hash.update(&ResponseBuffer[ResponseBufferSPDMOffset],
                     ResponseBuffer.size() - ResponseBufferSPDMOffset);
     }
 
-    packet_decode_info PacketDecodeInfo;
+    PacketDecodeInfo packetDecodeInfo;
 
     DMTFMeasurementsContainer DMTFMeasurements;
     std::vector<uint8_t> MeasurementsHash;
     std::vector<uint8_t> MeasurementsSignature;
     nonce_array_32 MeasurementNonce;
     std::bitset<256> MeasurementIndices;
-    SlotIdx CertificateSlotIdx = SLOT_NUM;
+    SlotIdx CertificateSlotIdx = slotNum;
 
     RequestResponseEnum WaitingForResponse = RequestResponseEnum::INVALID;
     uint8_t GotInfo = 0;
@@ -387,25 +390,27 @@ class ConnectionClass
                   static_cast<std::underlying_type_t<ConnectionInfoEnum>>(
                       ConnectionInfoEnum::NUM));
 
-    void MarkInfo(ConnectionInfoEnum info)
+    void markInfo(ConnectionInfoEnum info)
     {
         GotInfo |=
             1 << static_cast<std::underlying_type_t<ConnectionInfoEnum>>(info);
     }
 
-    uint8_t GetFirstMeasurementIndex() const
+    uint8_t getFirstMeasurementIndex() const
     {
         assert(MeasurementIndices.any());
         for (uint8_t i = 0; i < MeasurementIndices.size(); ++i)
         {
             if (MeasurementIndices[i])
+            {
                 return i;
+            }
         }
         // std::unreachable();
         return 255;
     }
 
-    RetStat choose_version();
+    RetStat chooseVersion();
 };
 
 } // namespace spdmcpp

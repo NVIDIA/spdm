@@ -5,66 +5,65 @@
 
 #ifdef SPDMCPP_PACKET_HPP
 
-struct packet_get_measurements_request_min
+struct PacketGetMeasurementsRequestMin
 {
-    packet_message_header Header = packet_message_header(RequestResponseCode);
+    PacketMessageHeader Header = PacketMessageHeader(requestResponseCode);
 
-    static constexpr RequestResponseEnum RequestResponseCode =
+    static constexpr RequestResponseEnum requestResponseCode =
         RequestResponseEnum::REQUEST_GET_MEASUREMENTS;
-    static constexpr bool size_is_constant = true;
+    static constexpr bool sizeIsConstant = true;
 
-    bool has_nonce() const
+    bool hasNonce() const
     {
         return Header.Param1 & 0x01;
     }
-    void set_nonce()
+    void setNonce()
     {
         Header.Param1 |= 0x01;
     }
 
-    void print_ml(LogClass& log) const
+    void printMl(LogClass& log) const
     {
         SPDMCPP_LOG_INDENT(log);
-        SPDMCPP_LOG_print_ml(log, Header);
+        SPDMCPP_LOG_printMl(log, Header);
     }
 
-    bool operator==(const packet_get_measurements_request_min& other) const
+    bool operator==(const PacketGetMeasurementsRequestMin& other) const
     {
         return memcmp(this, &other, sizeof(other)) == 0;
     }
 };
 
-inline void
-    endian_host_spdm_copy(const packet_get_measurements_request_min& src,
-                          packet_get_measurements_request_min& dst)
+inline void endianHostSpdmCopy(const PacketGetMeasurementsRequestMin& src,
+                               PacketGetMeasurementsRequestMin& dst)
 {
-    endian_host_spdm_copy(src.Header, dst.Header);
+    endianHostSpdmCopy(src.Header, dst.Header);
 }
 
-struct packet_get_measurements_request_var
+struct PacketGetMeasurementsRequestVar
 {
-    packet_get_measurements_request_min Min;
+    PacketGetMeasurementsRequestMin Min;
     nonce_array_32 Nonce = {0};
     uint8_t SlotIDParam = 0;
 
-    static constexpr RequestResponseEnum RequestResponseCode =
+    static constexpr RequestResponseEnum requestResponseCode =
         RequestResponseEnum::REQUEST_GET_MEASUREMENTS;
-    static constexpr bool size_is_constant = false;
+    static constexpr bool sizeIsConstant = false;
 
-    bool has_nonce() const
+    bool hasNonce() const
     {
-        return Min.has_nonce();
+        return Min.hasNonce();
     }
-    void set_nonce()
+    void setNonce()
     {
-        Min.set_nonce();
+        Min.setNonce();
     }
 
-    uint16_t get_size() const
+    uint16_t getSize() const
     {
         size_t size = 0;
         size += sizeof(Min);
-        if (Min.has_nonce())
+        if (Min.hasNonce())
         {
             size += sizeof(Nonce);
             if (Min.Header.MessageVersion != MessageVersionEnum::SPDM_1_0)
@@ -76,7 +75,7 @@ struct packet_get_measurements_request_var
         return static_cast<uint16_t>(size);
     }
 
-    bool operator==(const packet_get_measurements_request_var& other) const
+    bool operator==(const PacketGetMeasurementsRequestVar& other) const
     {
         if (Min != other.Min)
         {
@@ -93,57 +92,73 @@ struct packet_get_measurements_request_var
         return true;
     }
 
-    void print_ml(LogClass& log) const
+    void printMl(LogClass& log) const
     {
         SPDMCPP_LOG_INDENT(log);
-        SPDMCPP_LOG_print_ml(log, Min);
+        SPDMCPP_LOG_printMl(log, Min);
         log.iprint("Nonce[32]: ");
-        log.println(Nonce, sizeof_array(Nonce));
+        log.println(Nonce, sizeofArray(Nonce));
         SPDMCPP_LOG_iexprln(log, SlotIDParam);
     }
 };
 
 [[nodiscard]] inline RetStat
-    packet_encode_internal(const packet_get_measurements_request_var& p,
-                           std::vector<uint8_t>& buf, size_t& off)
+    packetEncodeInternal(const PacketGetMeasurementsRequestVar& p,
+                         std::vector<uint8_t>& buf, size_t& off)
 {
-    size_t size = p.get_size();
+    size_t size = p.getSize();
     buf.resize(off + size);
 
-    auto rs = packet_encode_internal(p.Min, buf, off);
-    if (is_error(rs))
-        return rs;
-
-    if (p.has_nonce())
+    auto rs = packetEncodeInternal(p.Min, buf, off);
+    if (isError(rs))
     {
-        packet_encode_basic(p.Nonce, buf, off);
+        {
+            return rs;
+        }
+    }
+
+    if (p.hasNonce())
+    {
+        packetEncodeBasic(p.Nonce, buf, off);
         if (p.Min.Header.MessageVersion != MessageVersionEnum::SPDM_1_0)
         {
-            packet_encode_basic(p.SlotIDParam, buf, off);
+            packetEncodeBasic(p.SlotIDParam, buf, off);
         }
     }
     return rs;
 }
 
 [[nodiscard]] inline RetStat
-    packet_decode_internal(packet_get_measurements_request_var& p,
-                           const std::vector<uint8_t>& buf, size_t& off)
+    packetDecodeInternal(PacketGetMeasurementsRequestVar& p,
+                         const std::vector<uint8_t>& buf, size_t& off)
 {
-    auto rs = packet_decode_internal(p.Min, buf, off);
-    if (is_error(rs))
-        return rs;
-
-    if (p.has_nonce())
+    auto rs = packetDecodeInternal(p.Min, buf, off);
+    if (isError(rs))
     {
-        rs = packet_decode_basic(p.Nonce, buf, off);
-        if (is_error(rs))
+        {
             return rs;
+        }
+    }
+
+    if (p.hasNonce())
+    {
+        rs = packetDecodeBasic(p.Nonce, buf, off);
+        if (isError(rs))
+        {
+            {
+                return rs;
+            }
+        }
 
         if (p.Min.Header.MessageVersion != MessageVersionEnum::SPDM_1_0)
         {
-            rs = packet_decode_basic(p.SlotIDParam, buf, off);
-            if (is_error(rs))
-                return rs;
+            rs = packetDecodeBasic(p.SlotIDParam, buf, off);
+            if (isError(rs))
+            {
+                {
+                    return rs;
+                }
+            }
         }
     }
 

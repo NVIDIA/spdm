@@ -14,7 +14,7 @@
 using namespace sdbusplus::xyz::openbmc_project::Common::Error;
 using namespace spdmcpp;
 
-constexpr auto MCTP_DEFAULT_PATH = "/xyz/openbmc_project/mctp";
+constexpr auto mctpDefaultPath = "/xyz/openbmc_project/mctp";
 
 namespace spdmd
 {
@@ -22,7 +22,7 @@ namespace dbus_api
 {
 
 Responder::Responder(SpdmdAppContext& appCtx, const std::string& path,
-                     uint8_t eid, const std::string& inventory_path) :
+                     uint8_t eid, const std::string& inventoryPath) :
     ResponderIntf(appCtx.bus, (path + "/" + std::to_string(eid)).c_str()),
     appContext(appCtx), Connection(&appCtx.context), Transport(eid, *this)
 {
@@ -32,24 +32,24 @@ Responder::Responder(SpdmdAppContext& appCtx, const std::string& path,
         prop.emplace_back(
             "transport_object", "spdm_responder_object",
             sdbusplus::message::object_path(
-                std::string(MCTP_DEFAULT_PATH) + "/0/" +
+                std::string(mctpDefaultPath) + "/0/" +
                 std::to_string(eid))); // TODO proper value for the 0?!
 
         prop.emplace_back("inventory_object", "spdm_responder_object",
-                          sdbusplus::message::object_path(inventory_path));
+                          sdbusplus::message::object_path(inventoryPath));
 
         associations(std::move(prop));
     }
-    Connection.register_transport(&Transport);
+    Connection.registerTransport(&Transport);
 
-    Connection.reset_connection();
-    auto rs = Connection.init_connection();
+    Connection.resetConnection();
+    auto rs = Connection.initConnection();
     SPDMCPP_LOG_TRACE_RS(getLog(), rs);
 }
 
 Responder::~Responder()
 {
-    Connection.unregister_transport(&Transport);
+    Connection.unregisterTransport(&Transport);
 }
 
 void Responder::syncSlotsInfo()
@@ -57,10 +57,10 @@ void Responder::syncSlotsInfo()
     CertificatesContainerType certs;
     MeasurementsContainerType meas;
 
-    for (ConnectionClass::SlotIdx idx = 0; idx < ConnectionClass::SLOT_NUM;
+    for (ConnectionClass::SlotIdx idx = 0; idx < ConnectionClass::slotNum;
          ++idx)
     {
-        if (Connection.SlotHasInfo(idx, SlotInfoEnum::CERTIFICATES))
+        if (Connection.slothasInfo(idx, SlotInfoEnum::CERTIFICATES))
         {
             std::vector<uint8_t> cert;
             if (Connection.getCertificatesDER(cert, idx))
@@ -72,7 +72,7 @@ void Responder::syncSlotsInfo()
             }
         }
     }
-    if (Connection.HasInfo(ConnectionInfoEnum::MEASUREMENTS))
+    if (Connection.hasInfo(ConnectionInfoEnum::MEASUREMENTS))
     {
         const ConnectionClass::DMTFMeasurementsContainer& src =
             Connection.getDMTFMeasurements();
@@ -116,9 +116,9 @@ spdmcpp::RetStat Responder::handleRecv(std::vector<uint8_t>& buf)
 {
     std::swap(buf, Connection.getResponseBufferRef()); // TODO stupid workaround
 
-    auto rs = Connection.handle_recv();
+    auto rs = Connection.handleRecv();
 
-    if (is_error(rs))
+    if (isError(rs))
     {
         switch (rs)
         {
@@ -152,25 +152,25 @@ spdmcpp::RetStat Responder::handleRecv(std::vector<uint8_t>& buf)
                 status(SPDMStatus::Error_Other);
                 appContext.reportError("SPDM other error fail");
         }
-        assert(!Connection.is_waiting_for_response());
+        assert(!Connection.isWaitingForResponse());
         return rs;
     }
 
     ConnectionClass::SlotIdx slotidx =
-        Connection.GetCurrentCertificateSlotIdx();
+        Connection.getCurrentCertificateSlotIdx();
 
-    if (!Connection.is_waiting_for_response())
+    if (!Connection.isWaitingForResponse())
     {
         syncSlotsInfo();
         updateLastUpdateTime();
         status(SPDMStatus::Success);
     }
-    else if (Connection.SlotHasInfo(slotidx, SlotInfoEnum::CERTIFICATES))
+    else if (Connection.slothasInfo(slotidx, SlotInfoEnum::CERTIFICATES))
     {
         syncSlotsInfo();
         status(SPDMStatus::GettingMeasurements);
     }
-    else if (Connection.HasInfo(ConnectionInfoEnum::ALGORITHMS))
+    else if (Connection.hasInfo(ConnectionInfoEnum::ALGORITHMS))
     {
         switch (Connection.getMeasurementHash())
         {
@@ -197,7 +197,7 @@ spdmcpp::RetStat Responder::handleRecv(std::vector<uint8_t>& buf)
         }
         status(SPDMStatus::GettingCertificates);
     }
-    else if (Connection.HasInfo(ConnectionInfoEnum::CHOOSEN_VERSION))
+    else if (Connection.hasInfo(ConnectionInfoEnum::CHOOSEN_VERSION))
     {
         version(static_cast<uint8_t>(Connection.getMessageVersion()));
         status(SPDMStatus::GettingCertificates);
@@ -209,7 +209,7 @@ void Responder::refresh(uint8_t slot, std::vector<uint8_t> nonc,
                         std::vector<uint8_t> measurementIndices,
                         uint32_t sessionId)
 {
-    if (Connection.is_waiting_for_response())
+    if (Connection.isWaitingForResponse())
     {
         // if we're busy processing ignore the refresh call
         // TODO arguably it'd be better to either cancel the current and perform
@@ -259,7 +259,7 @@ void Responder::refresh(uint8_t slot, std::vector<uint8_t> nonc,
 
     if (nonc.size() == 32)
     {
-        auto rs = Connection.refresh_measurements(
+        auto rs = Connection.refreshMeasurements(
             slot, *reinterpret_cast<nonce_array_32*>(nonc.data()), meas);
         SPDMCPP_LOG_TRACE_RS(getLog(), rs);
     }
@@ -270,7 +270,7 @@ void Responder::refresh(uint8_t slot, std::vector<uint8_t> nonc,
             getLog().iprint("WARNING - nonce has invalid size = ");
             getLog().println(nonc.size());
         }
-        auto rs = Connection.refresh_measurements(slot, meas);
+        auto rs = Connection.refreshMeasurements(slot, meas);
         SPDMCPP_LOG_TRACE_RS(getLog(), rs);
     }
 }
@@ -285,25 +285,24 @@ void Responder::updateLastUpdateTime()
             .count());
 }
 
-spdmcpp::RetStat
-    MCTP_TransportClass::setup_timeout(spdmcpp::timeout_ms_t timeout)
+spdmcpp::RetStat MctpTransportClass::setupTimeout(spdmcpp::timeout_ms_t timeout)
 {
     sdeventplus::Event& event = responder.appContext.event;
     assert(!time);
     // TODO !!! verify we're not leaking anything !!!
-    auto time_cb = [this](
-                       sdeventplus::source::Time<clockId>& /*source*/,
-                       sdeventplus::source::Time<clockId>::TimePoint /*time*/) {
+    auto timeCb = [this](
+                      sdeventplus::source::Time<clockId>& /*source*/,
+                      sdeventplus::source::Time<clockId>::TimePoint /*time*/) {
         delete time; // TODO !!! is this safe? !!!
         time = nullptr;
 
-        auto rs = responder.Connection.handle_timeout();
+        auto rs = responder.Connection.handleTimeout();
         if (rs == spdmcpp::RetStat::ERROR_TIMEOUT)
         {
             // no retry attempted, fail with timeout
             responder.status(Responder::SPDMStatus::Error_ConnectionTimeout);
         }
-        else if (is_error(rs))
+        else if (isError(rs))
         {
             responder.status(Responder::SPDMStatus::Error_Other);
         }
@@ -312,11 +311,11 @@ spdmcpp::RetStat
         event,
         sdeventplus::Clock<clockId>(event).now() +
             std::chrono::milliseconds{timeout},
-        std::chrono::milliseconds{1}, std::move(time_cb));
+        std::chrono::milliseconds{1}, std::move(timeCb));
     return RetStat::OK;
 }
 
-bool MCTP_TransportClass::clear_timeout()
+bool MctpTransportClass::clearTimeout()
 {
     if (time)
     {

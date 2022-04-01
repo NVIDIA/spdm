@@ -30,39 +30,44 @@ void print(const std::vector<uint8_t>& buf)
     for (size_t i = 0; i < buf.size(); ++i)
     {
         if (i)
+        {
             std::cerr << " 0x";
+        }
         else
+        {
             std::cerr << "0x";
+        }
         std::cerr << std::hex << (int)buf[i];
     }
 }
 
 template <typename T>
-inline void fill_pseudorandom_packet(
-    T& p, std::mt19937::result_type seed = mt19937_default_seed)
+inline void
+    fillPseudoRandomPacket(T& p,
+                           std::mt19937::result_type seed = mt19937DefaultSeed)
 {
-    static_assert(T::size_is_constant);
-    fill_pseudorandom_type(p, seed);
-    packet_message_header_set_requestresponsecode(
-        reinterpret_cast<uint8_t*>(&p), T::RequestResponseCode);
+    static_assert(T::sizeIsConstant);
+    fillPseudoRandomType(p, seed);
+    packetMessageHeaderSetRequestresponsecode(reinterpret_cast<uint8_t*>(&p),
+                                              T::requestResponseCode);
 }
 
 template <typename T>
-inline T return_pseudorandom_packet(
-    std::mt19937::result_type seed = mt19937_default_seed)
+inline T returnPseudorandomPacket(
+    std::mt19937::result_type seed = mt19937DefaultSeed)
 {
     T p;
-    fill_pseudorandom_packet(p, seed);
+    fillPseudoRandom_packet(p, seed);
     return p;
 }
 
 template <class T>
-bool packet_pseudorandom_decode_encode_basic()
+bool packetPseudorandomDecodeEncodeBasic()
 {
-    static_assert(T::size_is_constant);
+    static_assert(T::sizeIsConstant);
     std::vector<uint8_t> src, dst;
     src.resize(sizeof(T));
-    fill_pseudorandom(src);
+    fillPseudoRandom(src);
     std::cerr << "src: ";
     print(src);
     std::cerr << std::endl;
@@ -70,7 +75,7 @@ bool packet_pseudorandom_decode_encode_basic()
     T packet;
     {
         size_t off = 0;
-        auto rs = packet_decode_basic(packet, src, off);
+        auto rs = packetDecodeBasic(packet, src, off);
         SPDMCPP_TEST_ASSERT_RS(rs, RetStat::OK);
         if (off != src.size())
         {
@@ -79,7 +84,7 @@ bool packet_pseudorandom_decode_encode_basic()
         }
     }
     {
-        auto rs = packet_encode(packet, dst);
+        auto rs = packetEncode(packet, dst);
         SPDMCPP_TEST_ASSERT_RS(rs, RetStat::OK);
     }
     std::cerr << "dst: ";
@@ -94,16 +99,16 @@ bool packet_pseudorandom_decode_encode_basic()
 }
 
 template <class T>
-bool packet_pseudorandom_decode_encode()
+bool packetPseudorandomDecodeEncode()
 {
     LogClass log(std::cerr);
-    static_assert(T::size_is_constant);
+    static_assert(T::sizeIsConstant);
     std::vector<uint8_t> src, dst;
     src.resize(sizeof(T));
-    fill_pseudorandom(src);
+    fillPseudoRandom(src);
 
-    packet_message_header_set_requestresponsecode(src.data(),
-                                                  T::RequestResponseCode);
+    packetMessageHeaderSetRequestresponsecode(src.data(),
+                                              T::requestResponseCode);
 
     std::cerr << "src: ";
     print(src);
@@ -112,13 +117,13 @@ bool packet_pseudorandom_decode_encode()
     T packet;
     {
         size_t off = 0;
-        auto rs = packet_decode(packet, src, off);
+        auto rs = packetDecode(packet, src, off);
         SPDMCPP_TEST_ASSERT_RS(rs, RetStat::OK);
         assert(off == src.size());
     }
-    packet.print_ml(log);
+    packet.printMl(log);
     {
-        auto rs = packet_encode(packet, dst);
+        auto rs = packetEncode(packet, dst);
         SPDMCPP_TEST_ASSERT_RS(rs, RetStat::OK);
     }
     std::cerr << "dst: ";
@@ -133,29 +138,29 @@ bool packet_pseudorandom_decode_encode()
     src.push_back(0xBA);
     {
         size_t off = 0;
-        auto rs = packet_decode(packet, src, off);
+        auto rs = packetDecode(packet, src, off);
         SPDMCPP_TEST_ASSERT_RS(rs, RetStat::WARNING_BUFFER_TOO_BIG);
     }
     src.pop_back();
     src.pop_back();
     {
         size_t off = 0;
-        auto rs = packet_decode(packet, src, off);
+        auto rs = packetDecode(packet, src, off);
         SPDMCPP_TEST_ASSERT_RS(rs, RetStat::ERROR_BUFFER_TOO_SMALL);
     }
     return true;
 }
 
 template <class T, typename... Targs>
-bool packet_encode_decode(const T& src, Targs... fargs)
+bool packetEncodeDecode(const T& src, Targs... fargs)
 {
     LogClass log(std::cerr);
     log.iprintln("src:");
-    src.print_ml(log);
+    src.printMl(log);
 
     std::vector<uint8_t> buf;
     {
-        auto rs = packet_encode(src, buf);
+        auto rs = packetEncode(src, buf);
         if (rs != RetStat::OK)
         {
             std::cerr << "RetStat: " << get_cstr(rs) << std::endl;
@@ -167,7 +172,7 @@ bool packet_encode_decode(const T& src, Targs... fargs)
     T dst;
     {
         size_t off = 0;
-        auto rs = packet_decode(dst, buf, off, fargs...);
+        auto rs = packetDecode(dst, buf, off, fargs...);
         if (rs != RetStat::OK)
         {
             std::cerr << "RetStat: " << get_cstr(rs) << std::endl;
@@ -181,23 +186,23 @@ bool packet_encode_decode(const T& src, Targs... fargs)
         }
     }
     log.iprintln("dst:");
-    dst.print_ml(log);
+    dst.printMl(log);
     std::cerr << std::endl;
     return src == dst; // TODO ?!
     return true;
 }
 
 template <class T, typename... Targs>
-bool packet_encode_decode_internal(const T& src, Targs... fargs)
+bool packetEncodeDecodeInternal(const T& src, Targs... fargs)
 {
     LogClass log(std::cerr);
     log.iprintln("src:");
-    src.print_ml(log);
+    src.printMl(log);
 
     std::vector<uint8_t> buf;
     {
         size_t off = 0;
-        auto rs = packet_encode_internal(src, buf, off);
+        auto rs = packetEncodeInternal(src, buf, off);
         if (rs != RetStat::OK)
         {
             std::cerr << "RetStat: " << get_cstr(rs) << std::endl;
@@ -209,7 +214,7 @@ bool packet_encode_decode_internal(const T& src, Targs... fargs)
     T dst;
     {
         size_t off = 0;
-        auto rs = packet_decode_internal(dst, buf, off, fargs...);
+        auto rs = packetDecodeInternal(dst, buf, off, fargs...);
         if (rs != RetStat::OK)
         {
             std::cerr << "RetStat: " << get_cstr(rs) << std::endl;
@@ -223,7 +228,7 @@ bool packet_encode_decode_internal(const T& src, Targs... fargs)
         }
     }
     log.iprintln("dst:");
-    dst.print_ml(log);
+    dst.printMl(log);
     std::cerr << std::endl;
     return src == dst; // TODO ?!
     return true;
@@ -231,71 +236,59 @@ bool packet_encode_decode_internal(const T& src, Targs... fargs)
 
 TEST(packet_pseudorandom_decode_encode, static_size)
 {
+    EXPECT_TRUE(packetPseudorandomDecodeEncodeBasic<PacketMessageHeader>());
+    EXPECT_TRUE(packetPseudorandomDecodeEncodeBasic<PacketVersionNumber>());
+    EXPECT_TRUE(packetPseudorandomDecodeEncodeBasic<PacketErrorResponseMin>());
+    EXPECT_TRUE(packetPseudorandomDecodeEncodeBasic<PacketCertificateChain>());
     EXPECT_TRUE(
-        packet_pseudorandom_decode_encode_basic<packet_message_header>());
+        packetPseudorandomDecodeEncodeBasic<PacketMeasurementBlockMin>());
+
+    EXPECT_TRUE(packetPseudorandomDecodeEncode<PacketVersionResponseMin>());
+    EXPECT_TRUE(packetPseudorandomDecodeEncode<PacketGetCapabilitiesRequest>());
+    EXPECT_TRUE(packetPseudorandomDecodeEncode<PacketCapabilitiesResponse>());
     EXPECT_TRUE(
-        packet_pseudorandom_decode_encode_basic<packet_version_number>());
+        packetPseudorandomDecodeEncode<PacketNegotiateAlgorithmsRequestMin>());
+    EXPECT_TRUE(packetPseudorandomDecodeEncode<PacketAlgorithmsResponseMin>());
+    EXPECT_TRUE(packetPseudorandomDecodeEncode<PacketGetDigestsRequest>());
+    EXPECT_TRUE(packetPseudorandomDecodeEncode<PacketDigestsResponseMin>());
+    EXPECT_TRUE(packetPseudorandomDecodeEncode<PacketGetCertificateRequest>());
+    EXPECT_TRUE(packetPseudorandomDecodeEncode<PacketCertificateResponseMin>());
+    EXPECT_TRUE(packetPseudorandomDecodeEncode<PacketChallengeRequest>());
     EXPECT_TRUE(
-        packet_pseudorandom_decode_encode_basic<packet_error_response_min>());
-    EXPECT_TRUE(
-        packet_pseudorandom_decode_encode_basic<packet_certificate_chain>());
-    EXPECT_TRUE(packet_pseudorandom_decode_encode_basic<
-                packet_measurement_block_min>());
+        packetPseudorandomDecodeEncode<PacketChallengeAuthResponseMin>());
 
     EXPECT_TRUE(
-        packet_pseudorandom_decode_encode<packet_version_response_min>());
+        packetPseudorandomDecodeEncode<PacketGetMeasurementsRequestMin>());
     EXPECT_TRUE(
-        packet_pseudorandom_decode_encode<packet_get_capabilities_request>());
-    EXPECT_TRUE(
-        packet_pseudorandom_decode_encode<packet_capabilities_response>());
-    EXPECT_TRUE(packet_pseudorandom_decode_encode<
-                packet_negotiate_algorithms_request_min>());
-    EXPECT_TRUE(
-        packet_pseudorandom_decode_encode<packet_algorithms_response_min>());
-    EXPECT_TRUE(
-        packet_pseudorandom_decode_encode<packet_get_digests_request>());
-    EXPECT_TRUE(
-        packet_pseudorandom_decode_encode<packet_digests_response_min>());
-    EXPECT_TRUE(
-        packet_pseudorandom_decode_encode<packet_get_certificate_request>());
-    EXPECT_TRUE(
-        packet_pseudorandom_decode_encode<packet_certificate_response_min>());
-    EXPECT_TRUE(packet_pseudorandom_decode_encode<packet_challenge_request>());
-    EXPECT_TRUE(packet_pseudorandom_decode_encode<
-                packet_challenge_auth_response_min>());
-
-    EXPECT_TRUE(packet_pseudorandom_decode_encode<
-                packet_get_measurements_request_min>());
-    EXPECT_TRUE(
-        packet_pseudorandom_decode_encode<packet_measurements_response_min>());
+        packetPseudorandomDecodeEncode<PacketMeasurementsResponseMin>());
 }
 
-TEST(packet_pseudorandom_encode_decode, packet_error_response_var)
+TEST(packet_pseudorandom_encode_decode, PacketErrorResponseVar)
 {
-    packet_error_response_var p;
-    fill_pseudorandom_packet(p.Min);
+    PacketErrorResponseVar p;
+    fillPseudoRandomPacket(p.Min);
     //     p.VersionNumberEntries.push_back(
-    //         return_pseudorandom_type<packet_version_number>());
+    //         returnPseudoRandomType<packet_version_number>());
     //     p.VersionNumberEntries.push_back(
-    //         return_pseudorandom_type<packet_version_number>());
-    EXPECT_TRUE(packet_encode_decode(p));
+    //         returnPseudoRandomType<packet_version_number>());
+    EXPECT_TRUE(packetEncodeDecode(p));
 }
 
-TEST(packet_pseudorandom_encode_decode, packet_version_response_var)
+TEST(packet_pseudorandom_encode_decode, PacketVersionResponseVar)
 {
-    packet_version_response_var p;
-    fill_pseudorandom_packet(p.Min);
+    PacketVersionResponseVar p;
+    fillPseudoRandomPacket(p.Min);
     p.VersionNumberEntries.push_back(
-        return_pseudorandom_type<packet_version_number>());
+        returnPseudoRandomType<PacketVersionNumber>());
     p.VersionNumberEntries.push_back(
-        return_pseudorandom_type<packet_version_number>());
-    EXPECT_TRUE(packet_encode_decode(p));
+        returnPseudoRandomType<PacketVersionNumber>());
+    EXPECT_TRUE(packetEncodeDecode(p));
 }
 
-TEST(packet_pseudorandom_encode_decode, packet_negotiate_algorithms_request_var)
+TEST(packet_pseudorandom_encode_decode, PacketNegotiateAlgorithmsRequestVar)
 {
-    packet_negotiate_algorithms_request_var p;
-    fill_pseudorandom_packet(p.Min);
+    PacketNegotiateAlgorithmsRequestVar p;
+    fillPseudoRandomPacket(p.Min);
 
     p.PacketReqAlgVector.push_back(
         PacketReqAlgStruct::buildSupported2(AlgTypeEnum::DHE, 0x1b, 0x00));
@@ -308,13 +301,13 @@ TEST(packet_pseudorandom_encode_decode, packet_negotiate_algorithms_request_var)
 
     EXPECT_EQ(p.finalize(), RetStat::OK);
 
-    EXPECT_TRUE(packet_encode_decode(p));
+    EXPECT_TRUE(packetEncodeDecode(p));
 }
 
-TEST(packet_pseudorandom_encode_decode, packet_algorithms_response_var)
+TEST(packet_pseudorandom_encode_decode, PacketAlgorithmsResponseVar)
 {
-    packet_algorithms_response_var p;
-    fill_pseudorandom_packet(p.Min);
+    PacketAlgorithmsResponseVar p;
+    fillPseudoRandomPacket(p.Min);
 
     p.PacketReqAlgVector.push_back(
         PacketReqAlgStruct::buildSupported2(AlgTypeEnum::DHE, 0x1b, 0x00));
@@ -327,218 +320,218 @@ TEST(packet_pseudorandom_encode_decode, packet_algorithms_response_var)
 
     EXPECT_EQ(p.finalize(), RetStat::OK);
 
-    EXPECT_TRUE(packet_encode_decode(p));
+    EXPECT_TRUE(packetEncodeDecode(p));
 }
 
-TEST(packet_pseudorandom_encode_decode, packet_digests_response_var)
+TEST(packet_pseudorandom_encode_decode, PacketDigestsResponseVar)
 {
-    packet_decode_info info;
+    PacketDecodeInfo info;
     info.BaseHashSize = 32;
 
-    packet_digests_response_var p;
+    PacketDigestsResponseVar p;
 
-    fill_pseudorandom_packet(p.Min);
+    fillPseudoRandomPacket(p.Min);
 
     p.Digests[0].resize(info.BaseHashSize);
-    fill_pseudorandom(p.Digests[0]);
+    fillPseudoRandom(p.Digests[0]);
 
     p.Digests[1].resize(info.BaseHashSize);
-    fill_pseudorandom(p.Digests[1]);
+    fillPseudoRandom(p.Digests[1]);
 
     p.Digests[7].resize(info.BaseHashSize);
-    fill_pseudorandom(p.Digests[7]);
+    fillPseudoRandom(p.Digests[7]);
 
     EXPECT_EQ(p.finalize(), RetStat::OK);
 
-    EXPECT_TRUE(packet_encode_decode(p, info));
+    EXPECT_TRUE(packetEncodeDecode(p, info));
 }
 
-TEST(packet_pseudorandom_encode_decode, packet_certificate_response_var)
+TEST(packet_pseudorandom_encode_decode, PacketCertificateResponseVar)
 {
-    packet_certificate_response_var p;
+    PacketCertificateResponseVar p;
 
-    fill_pseudorandom_packet(p.Min);
+    fillPseudoRandomPacket(p.Min);
 
     p.CertificateVector.resize(1023);
-    fill_pseudorandom(p.CertificateVector);
+    fillPseudoRandom(p.CertificateVector);
 
     EXPECT_EQ(p.finalize(), RetStat::OK);
 
-    EXPECT_TRUE(packet_encode_decode(p));
+    EXPECT_TRUE(packetEncodeDecode(p));
 }
 
-TEST(packet_pseudorandom_encode_decode, packet_challenge_auth_response_var)
+TEST(packet_pseudorandom_encode_decode, PacketChallengeAuthResponseVar)
 {
-    packet_decode_info info;
+    PacketDecodeInfo info;
     info.ChallengeParam2 = 0;
     info.BaseHashSize = 32;
     info.SignatureSize = 48;
 
-    packet_challenge_auth_response_var p;
+    PacketChallengeAuthResponseVar p;
 
-    fill_pseudorandom_packet(p.Min);
+    fillPseudoRandomPacket(p.Min);
 
     p.CertChainHashVector.resize(info.BaseHashSize);
-    fill_pseudorandom(p.CertChainHashVector);
+    fillPseudoRandom(p.CertChainHashVector);
 
-    fill_pseudorandom(p.Nonce);
+    fillPseudoRandom(p.Nonce);
 
     p.OpaqueDataVector.resize(127);
-    fill_pseudorandom(p.OpaqueDataVector);
+    fillPseudoRandom(p.OpaqueDataVector);
 
     p.SignatureVector.resize(info.SignatureSize);
-    fill_pseudorandom(p.SignatureVector);
+    fillPseudoRandom(p.SignatureVector);
 
     EXPECT_EQ(p.finalize(), RetStat::OK);
 
-    EXPECT_TRUE(packet_encode_decode(p, info));
+    EXPECT_TRUE(packetEncodeDecode(p, info));
 }
 
-TEST(packet_pseudorandom_encode_decode, packet_challenge_auth_response_var_1)
+TEST(packet_pseudorandom_encode_decode, PacketChallengeAuthResponseVar_1)
 {
-    packet_decode_info info;
+    PacketDecodeInfo info;
     info.ChallengeParam2 = 1;
     info.BaseHashSize = 32;
     info.SignatureSize = 48;
 
-    packet_challenge_auth_response_var p;
+    PacketChallengeAuthResponseVar p;
 
-    fill_pseudorandom_packet(p.Min);
+    fillPseudoRandomPacket(p.Min);
 
     p.CertChainHashVector.resize(info.BaseHashSize);
-    fill_pseudorandom(p.CertChainHashVector);
+    fillPseudoRandom(p.CertChainHashVector);
 
-    fill_pseudorandom(p.Nonce);
+    fillPseudoRandom(p.Nonce);
 
     p.MeasurementSummaryHashVector.resize(info.BaseHashSize);
-    fill_pseudorandom(p.MeasurementSummaryHashVector);
+    fillPseudoRandom(p.MeasurementSummaryHashVector);
 
     p.OpaqueDataVector.resize(127);
-    fill_pseudorandom(p.OpaqueDataVector);
+    fillPseudoRandom(p.OpaqueDataVector);
 
     p.SignatureVector.resize(info.SignatureSize);
-    fill_pseudorandom(p.SignatureVector);
+    fillPseudoRandom(p.SignatureVector);
 
     EXPECT_EQ(p.finalize(), RetStat::OK);
 
-    EXPECT_TRUE(packet_encode_decode(p, info));
+    EXPECT_TRUE(packetEncodeDecode(p, info));
 }
 
-TEST(packet_pseudorandom_encode_decode, packet_get_measurements_request_var)
+TEST(packet_pseudorandom_encode_decode, PacketGetMeasurementsRequestVar)
 {
-    packet_get_measurements_request_var p;
+    PacketGetMeasurementsRequestVar p;
 
-    fill_pseudorandom_packet(p.Min);
+    fillPseudoRandomPacket(p.Min);
 
     p.Min.Header.Param1 = 0; // need to clear to test lack of Nonce
-    // fill_pseudorandom(p.Nonce);
+    // fillPseudoRandom(p.Nonce);
     // p.SlotIDParam = 1;
 
     //     EXPECT_EQ(p.finalize(), RetStat::OK);
 
-    EXPECT_TRUE(packet_encode_decode(p));
+    EXPECT_TRUE(packetEncodeDecode(p));
 }
 
-TEST(packet_pseudorandom_encode_decode, packet_get_measurements_request_var_1)
+TEST(packet_pseudorandom_encode_decode, PacketGetMeasurementsRequestVar_1)
 {
-    packet_get_measurements_request_var p;
+    PacketGetMeasurementsRequestVar p;
 
-    fill_pseudorandom_packet(p.Min);
+    fillPseudoRandomPacket(p.Min);
 
-    p.set_nonce();
-    fill_pseudorandom(p.Nonce);
+    p.setNonce();
+    fillPseudoRandom(p.Nonce);
     p.SlotIDParam = 1;
 
     //     EXPECT_EQ(p.finalize(), RetStat::OK);
 
-    EXPECT_TRUE(packet_encode_decode(p));
+    EXPECT_TRUE(packetEncodeDecode(p));
 }
 
-TEST(packet_pseudorandom_encode_decode, packet_measurement_block_var)
+TEST(packet_pseudorandom_encode_decode, PacketMeasurementBlockVar)
 {
-    packet_measurement_block_var p;
+    PacketMeasurementBlockVar p;
 
-    fill_pseudorandom_type(p.Min);
+    fillPseudoRandomType(p.Min);
 
     p.MeasurementVector.resize(1023);
-    fill_pseudorandom(p.MeasurementVector);
+    fillPseudoRandom(p.MeasurementVector);
 
     EXPECT_EQ(p.finalize(), RetStat::OK);
 
-    EXPECT_TRUE(packet_encode_decode_internal(p));
+    EXPECT_TRUE(packetEncodeDecodeInternal(p));
 }
 
-TEST(packet_pseudorandom_encode_decode, packet_measurement_field_var)
+TEST(packet_pseudorandom_encode_decode, PacketMeasurementFieldVar)
 {
-    packet_measurement_field_var p;
+    PacketMeasurementFieldVar p;
 
-    fill_pseudorandom_type(p.Min);
+    fillPseudoRandomType(p.Min);
 
     p.ValueVector.resize(1023);
-    fill_pseudorandom(p.ValueVector);
+    fillPseudoRandom(p.ValueVector);
 
     EXPECT_EQ(p.finalize(), RetStat::OK);
 
-    EXPECT_TRUE(packet_encode_decode_internal(p));
+    EXPECT_TRUE(packetEncodeDecodeInternal(p));
 }
 
-TEST(packet_pseudorandom_encode_decode, packet_measurements_response_var)
+TEST(packet_pseudorandom_encode_decode, PacketMeasurementsResponseVar)
 {
-    packet_decode_info info;
+    PacketDecodeInfo info;
     info.GetMeasurementsParam1 = 0;
     info.BaseHashSize = 32;
     info.SignatureSize = 48;
 
-    packet_measurements_response_var p;
+    PacketMeasurementsResponseVar p;
 
-    fill_pseudorandom_packet(p.Min);
+    fillPseudoRandomPacket(p.Min);
 
     p.OpaqueDataVector.resize(127);
-    fill_pseudorandom(p.OpaqueDataVector);
+    fillPseudoRandom(p.OpaqueDataVector);
 
     EXPECT_EQ(p.finalize(), RetStat::OK);
 
-    EXPECT_TRUE(packet_encode_decode(p, info));
+    EXPECT_TRUE(packetEncodeDecode(p, info));
 }
 
-TEST(packet_pseudorandom_encode_decode, packet_measurements_response_var_1)
+TEST(packet_pseudorandom_encode_decode, PacketMeasurementsResponseVar_1)
 {
-    packet_decode_info info;
+    PacketDecodeInfo info;
     info.GetMeasurementsParam1 = 1;
     info.BaseHashSize = 32;
     info.SignatureSize = 48;
 
-    packet_measurements_response_var p;
+    PacketMeasurementsResponseVar p;
 
-    fill_pseudorandom_packet(p.Min);
+    fillPseudoRandomPacket(p.Min);
 
     p.MeasurementBlockVector.resize(3);
     {
-        packet_measurement_block_var& b = p.MeasurementBlockVector[0];
-        fill_pseudorandom_type(b.Min);
+        PacketMeasurementBlockVar& b = p.MeasurementBlockVector[0];
+        fillPseudoRandomType(b.Min);
         b.MeasurementVector.resize(1023);
-        fill_pseudorandom(b.MeasurementVector);
+        fillPseudoRandom(b.MeasurementVector);
         EXPECT_EQ(b.finalize(), RetStat::OK);
     }
     {
-        packet_measurement_block_var& b = p.MeasurementBlockVector[1];
-        fill_pseudorandom_type(b.Min);
+        PacketMeasurementBlockVar& b = p.MeasurementBlockVector[1];
+        fillPseudoRandomType(b.Min);
         b.MeasurementVector.resize(3);
-        fill_pseudorandom(b.MeasurementVector);
+        fillPseudoRandom(b.MeasurementVector);
         EXPECT_EQ(b.finalize(), RetStat::OK);
     }
     {
-        packet_measurement_block_var& b = p.MeasurementBlockVector[2];
-        fill_pseudorandom_type(b.Min);
+        PacketMeasurementBlockVar& b = p.MeasurementBlockVector[2];
+        fillPseudoRandomType(b.Min);
         b.MeasurementVector.resize(107);
-        fill_pseudorandom(b.MeasurementVector);
+        fillPseudoRandom(b.MeasurementVector);
         EXPECT_EQ(b.finalize(), RetStat::OK);
     }
 
     p.SignatureVector.resize(info.SignatureSize);
-    fill_pseudorandom(p.SignatureVector);
+    fillPseudoRandom(p.SignatureVector);
 
     EXPECT_EQ(p.finalize(), RetStat::OK);
 
-    EXPECT_TRUE(packet_encode_decode(p, info));
+    EXPECT_TRUE(packetEncodeDecode(p, info));
 }

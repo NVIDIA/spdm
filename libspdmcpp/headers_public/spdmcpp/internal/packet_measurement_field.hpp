@@ -5,39 +5,39 @@
 
 #ifdef SPDMCPP_PACKET_HPP
 
-struct packet_measurement_field_min
+struct PacketMeasurementFieldMin
 {
     uint8_t Type = 0;
     uint16_t Size = 0;
 
-    static constexpr bool size_is_constant = true;
+    static constexpr bool sizeIsConstant = true;
 
-    void print_ml(LogClass& log) const
+    void printMl(LogClass& log) const
     {
         SPDMCPP_LOG_INDENT(log);
         SPDMCPP_LOG_iexprln(log, Type);
         log.print("   ");
     }
 
-    bool operator==(const packet_measurement_field_min& other) const
+    bool operator==(const PacketMeasurementFieldMin& other) const
     {
         return memcmp(this, &other, sizeof(other)) == 0;
     }
 };
 
-inline void endian_host_spdm_copy(const packet_measurement_field_min& src,
-                                  packet_measurement_field_min& dst)
+inline void endianHostSpdmCopy(const PacketMeasurementFieldMin& src,
+                               PacketMeasurementFieldMin& dst)
 {
-    endian_host_spdm_copy(src.Type, dst.Type);
-    endian_host_spdm_copy(src.Size, dst.Size);
+    endianHostSpdmCopy(src.Type, dst.Type);
+    endianHostSpdmCopy(src.Size, dst.Size);
 }
 
-struct packet_measurement_field_var
+struct PacketMeasurementFieldVar
 {
-    packet_measurement_field_min Min;
+    PacketMeasurementFieldMin Min;
     std::vector<uint8_t> ValueVector;
 
-    static constexpr bool size_is_constant = false;
+    static constexpr bool sizeIsConstant = false;
 
     RetStat finalize()
     {
@@ -49,7 +49,7 @@ struct packet_measurement_field_var
         return RetStat::OK;
     }
 
-    bool operator==(const packet_measurement_field_var& other) const
+    bool operator==(const PacketMeasurementFieldVar& other) const
     {
         if (Min != other.Min)
         {
@@ -62,37 +62,41 @@ struct packet_measurement_field_var
         return true;
     }
 
-    void print_ml(LogClass& log) const
+    void printMl(LogClass& log) const
     {
         SPDMCPP_LOG_INDENT(log);
-        SPDMCPP_LOG_print_ml(log, Min);
+        SPDMCPP_LOG_printMl(log, Min);
         SPDMCPP_LOG_idataln(log, ValueVector);
     }
 };
 
 [[nodiscard]] inline RetStat
-    packet_encode_internal(const packet_measurement_field_var& p,
-                           std::vector<uint8_t>& buf, size_t& off)
+    packetEncodeInternal(const PacketMeasurementFieldVar& p,
+                         std::vector<uint8_t>& buf, size_t& off)
 {
-    auto rs = packet_encode_internal(p.Min, buf, off);
-    if (is_error(rs))
+    auto rs = packetEncodeInternal(p.Min, buf, off);
+    if (isError(rs))
     {
         return rs;
     }
-    packet_encode_basic(p.ValueVector, buf, off);
+    packetEncodeBasic(p.ValueVector, buf, off);
     return rs;
 }
 
 [[nodiscard]] inline RetStat
-    packet_decode_internal(packet_measurement_field_var& p,
-                           const std::vector<uint8_t>& buf, size_t& off)
+    packetDecodeInternal(PacketMeasurementFieldVar& p,
+                         const std::vector<uint8_t>& buf, size_t& off)
 {
-    auto rs = packet_decode_basic(p.Min, buf, off);
-    if (is_error(rs))
-        return rs;
+    auto rs = packetDecodeBasic(p.Min, buf, off);
+    if (isError(rs))
+    {
+        {
+            return rs;
+        }
+    }
 
     p.ValueVector.resize(p.Min.Size);
-    rs = packet_decode_basic(p.ValueVector, buf, off);
+    rs = packetDecodeBasic(p.ValueVector, buf, off);
     return rs;
 }
 

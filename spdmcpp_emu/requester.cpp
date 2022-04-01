@@ -16,7 +16,7 @@ struct ProgramOptions
 
     int parse(int argc, char** argv)
     {
-        static struct option long_options[] = {
+        static struct option longOptions[] = {
             {"verbose", required_argument, nullptr, 'v'},
             {"trans", required_argument, nullptr, 't'},
             {"eid", required_argument, nullptr, 'e'},
@@ -25,10 +25,12 @@ struct ProgramOptions
 
         for (;;)
         {
-            auto argflag = getopt_long(argc, argv, "v:", long_options, nullptr);
+            auto argflag = getopt_long(argc, argv, "v:", longOptions, nullptr);
 
             if (argflag == -1)
+            {
                 break;
+            }
 
             switch (argflag)
             {
@@ -50,7 +52,7 @@ struct ProgramOptions
                     }
                     else
                     {
-                        print_usage();
+                        printUsage();
                         return EX_USAGE;
                     }
                     break;
@@ -70,19 +72,19 @@ struct ProgramOptions
                             Verbose = true;
                             break;
                         default:
-                            print_usage();
+                            printUsage();
                             return EX_USAGE;
                     }
                     break;
                 default:
-                    print_usage();
+                    printUsage();
                     return EX_USAGE;
             }
         }
         return 0;
     }
 
-    static void print_usage(void)
+    static void printUsage(void)
     {
         std::cerr << "Usage: spdmcpp_emu_requester [options]\n";
         std::cerr << "Options:\n";
@@ -114,11 +116,11 @@ class EmulatorClient : public EmulatorBase
         {
             case SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_MCTP:
                 IO = new EMUIOClass(*this);
-                Transport = new spdmcpp::EMU_MCTP_TransportClass;
+                Transport = new spdmcpp::EmuMctpTransportClass;
                 break;
             case SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_PCI_DOE:
                 assert(false);
-                //	spdm_register_transport_layer_func(spdm_context,
+                //	spdm_registerTransport_layer_func(spdm_context,
                 // spdm_transport_pci_doe_encode_message,
                 // spdm_transport_pci_doe_decode_message);
                 break;
@@ -128,11 +130,11 @@ class EmulatorClient : public EmulatorBase
                 break;
             case SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_MCTP_DEMUX:
                 IO = new DemuxIOClass(*this);
-                Transport = new spdmcpp::MCTP_TransportClass(opt.EID);
+                Transport = new spdmcpp::MctpTransportClass(opt.EID);
                 break;
             default:
                 assert(false);
-                delete_spdmcpp();
+                deleteSpdmcpp();
                 return false;
         }
 
@@ -141,7 +143,7 @@ class EmulatorClient : public EmulatorBase
             return false;
         }
 
-        if (!create_spdmcpp())
+        if (!createSpdmcpp())
         {
             return false;
         }
@@ -150,7 +152,7 @@ class EmulatorClient : public EmulatorBase
 
         if (Transport)
         {
-            con.register_transport(Transport);
+            con.registerTransport(Transport);
         }
 
         auto callback = [this, &con](sdeventplus::source::IO& /*io*/,
@@ -168,8 +170,8 @@ class EmulatorClient : public EmulatorBase
             IO->read(buf);
             // 			log.iprint("Event recv buf: ");
             // 			log.println(buf.data(), buf.size());
-            (void)con.handle_recv();
-            if (!con.is_waiting_for_response())
+            (void)con.handleRecv();
+            if (!con.isWaitingForResponse())
             {
                 Event.exit(0);
             }
@@ -178,22 +180,22 @@ class EmulatorClient : public EmulatorBase
         sdeventplus::source::IO io(Event, Socket, EPOLLIN, std::move(callback));
 
         constexpr sdeventplus::ClockId cid = sdeventplus::ClockId::Monotonic;
-        auto time_cb =
+        auto timeCb =
             [this, &con](sdeventplus::source::Time<cid>& /*source*/,
                          sdeventplus::source::Time<cid>::TimePoint /*time*/) {
-                // 			std::cerr << "IOClass::setup_timeout callback" <<
+                // 			std::cerr << "IOClass::setupTimeout callback" <<
                 // std::endl;
-                spdmcpp::RetStat rs = con.handle_timeout();
+                spdmcpp::RetStat rs = con.handleTimeout();
                 if (rs == spdmcpp::RetStat::ERROR_TIMEOUT)
                 {
                     Event.exit(0);
                 }
             };
 
-        // 		std::cerr << "IOClass::setup_timeout queue" << std::endl;
+        // 		std::cerr << "IOClass::setupTimeout queue" << std::endl;
         Timeout = new sdeventplus::source::Time<cid>(
             Event, sdeventplus::Clock<cid>(Event).now(),
-            std::chrono::milliseconds{1}, std::move(time_cb));
+            std::chrono::milliseconds{1}, std::move(timeCb));
         Timeout->set_enabled(sdeventplus::source::Enabled::Off);
 
         if (TransportType ==
@@ -201,10 +203,10 @@ class EmulatorClient : public EmulatorBase
             TransportType ==
                 SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_PCI_DOE)
         {
-            buffer_t msg("Client Hello!");
+            BufferType msg("Client Hello!");
             SocketCommandEnum response;
-            buffer_t recv;
-            if (!send_message_receive_response(
+            BufferType recv;
+            if (!sendMessageReceiveResponse(
                     SocketCommandEnum::SOCKET_SPDM_COMMAND_TEST, msg, response,
                     recv))
             {
@@ -214,7 +216,7 @@ class EmulatorClient : public EmulatorBase
             printf("Got back: '%s'\n", recv.data());
         }
 #if 1
-        auto rs = con.init_connection();
+        auto rs = con.initConnection();
         SPDMCPP_LOG_TRACE_RS(con.getLog(), rs);
 #else
         auto cb_in = [&con](sdeventplus::source::IO& /*io*/, int fd,
@@ -231,7 +233,7 @@ class EmulatorClient : public EmulatorBase
             ssize_t peekedLength = read(fd, buf.data(), buf.size());
             if (peekedLength > 0)
             {
-                auto rs = con.init_connection();
+                auto rs = con.initConnection();
                 SPDMCPP_LOG_TRACE_RS(con.getLog(), rs);
             }
         };
@@ -243,11 +245,11 @@ class EmulatorClient : public EmulatorBase
 
         if (Transport)
         {
-            con.unregister_transport(Transport);
+            con.unregisterTransport(Transport);
             delete Transport;
             Transport = nullptr;
         }
-        delete_spdmcpp();
+        deleteSpdmcpp();
         return true;
     }
 
@@ -260,20 +262,20 @@ class EmulatorClient : public EmulatorBase
             case SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_PCI_DOE:
             case SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_NONE:
             {
-                if (!create_socket())
+                if (!createSocket())
                 {
                     return false;
                 }
-                struct in_addr m_ip_address = {0x0100007F}; // TODO option?
-                struct sockaddr_in server_addr;
-                server_addr.sin_family = AF_INET;
-                memcpy(&server_addr.sin_addr.s_addr, &m_ip_address,
+                struct in_addr mIpAddress = {0x0100007F}; // TODO option?
+                struct sockaddr_in serverAddr;
+                serverAddr.sin_family = AF_INET;
+                memcpy(&serverAddr.sin_addr.s_addr, &mIpAddress,
                        sizeof(struct in_addr));
-                server_addr.sin_port = htons(port);
-                memset(server_addr.sin_zero, 0, sizeof(server_addr.sin_zero));
+                serverAddr.sin_port = htons(port);
+                memset(serverAddr.sin_zero, 0, sizeof(serverAddr.sin_zero));
 
-                if (::connect(Socket, (struct sockaddr*)&server_addr,
-                              sizeof(server_addr)) == -1)
+                if (::connect(Socket, (struct sockaddr*)&serverAddr,
+                              sizeof(serverAddr)) == -1)
                 {
                     std::cerr << "connect() error: " << errno << " "
                               << strerror(errno) << " to port: '" << port

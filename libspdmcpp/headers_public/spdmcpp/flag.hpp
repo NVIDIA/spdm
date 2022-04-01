@@ -16,7 +16,7 @@
 namespace spdmcpp
 {
 template <typename T>
-size_t count_bits(T value)
+size_t countBits(T value)
 {
     size_t ret = 0;
     for (size_t i = 0; i < sizeof(T) * 8; ++i)
@@ -24,7 +24,9 @@ size_t count_bits(T value)
         ret += value & 1;
         value >>= 1;
         if (!value)
+        {
             break;
+        }
     }
     return ret;
 }
@@ -134,9 +136,9 @@ std::string to_string_hex(T v)
 #undef FLAG_VALUE
 #undef FLAG_END
 
-inline uint16_t get_hash_size(BaseHashAlgoFlags flags)
+inline uint16_t getHashSize(BaseHashAlgoFlags flags)
 {
-    assert(count_bits(static_cast<std::underlying_type_t<BaseHashAlgoFlags>>(
+    assert(countBits(static_cast<std::underlying_type_t<BaseHashAlgoFlags>>(
                flags)) <= 1);
     switch (flags)
     {
@@ -157,11 +159,11 @@ inline uint16_t get_hash_size(BaseHashAlgoFlags flags)
     }
 }
 
-inline uint16_t get_hash_size(MeasurementHashAlgoFlags flags)
+inline uint16_t getHashSize(MeasurementHashAlgoFlags flags)
 {
-    assert(count_bits(
-               static_cast<std::underlying_type_t<MeasurementHashAlgoFlags>>(
-                   flags)) <= 1);
+    assert(
+        countBits(static_cast<std::underlying_type_t<MeasurementHashAlgoFlags>>(
+            flags)) <= 1);
     switch (flags)
     {
         case MeasurementHashAlgoFlags::RAW_BIT_STREAM_ONLY:
@@ -183,9 +185,9 @@ inline uint16_t get_hash_size(MeasurementHashAlgoFlags flags)
     }
 }
 
-inline uint16_t get_signature_size(BaseAsymAlgoFlags flags)
+inline uint16_t getSignatureSize(BaseAsymAlgoFlags flags)
 {
-    assert(count_bits(static_cast<std::underlying_type_t<BaseAsymAlgoFlags>>(
+    assert(countBits(static_cast<std::underlying_type_t<BaseAsymAlgoFlags>>(
                flags)) <= 1);
     switch (flags)
     {

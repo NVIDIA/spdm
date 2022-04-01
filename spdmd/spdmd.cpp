@@ -13,8 +13,8 @@ using namespace spdmd;
 using namespace sdbusplus;
 
 // Define the SPDM default dbus path location for objects.
-constexpr auto SPDM_DEFAULT_PATH = "/xyz/openbmc_project/SPDM";
-constexpr auto SPDM_DEFAULT_SERVICE = "xyz.openbmc_project.SPDM";
+constexpr auto spdmDefaultPath = "/xyz/openbmc_project/SPDM";
+constexpr auto spdmDefaultService = "xyz.openbmc_project.SPDM";
 
 namespace spdmd
 {
@@ -32,18 +32,18 @@ SpdmdApp::~SpdmdApp()
 
 int SpdmdApp::setupCli(int argc, char** argv)
 {
-    CLI::App app{spdmd::description::NAME + ", version " +
-                 spdmd::description::VERSION};
+    CLI::App app{spdmd::description::name + ", version " +
+                 spdmd::description::version};
 
-    CLI::Option* opt_verbosity =
+    CLI::Option* optVerbosity =
         app.add_option("-v, --verbose", verbose, "Verbose log level (0-7)");
-    opt_verbosity->check(CLI::Range(0, 7));
+    optVerbosity->check(CLI::Range(0, 7));
 
     CLI11_PARSE(app, argc, argv);
 
     if (verbose > spdmcpp::LogClass::Level::Emergency)
     {
-        log.SetLogLevel(verbose);
+        log.setLogLevel(verbose);
         log.print("Verbose log level set to " +
                   Logging::server::convertForMessage(
                       (Logging::server::Entry::Level)verbose) +
@@ -56,18 +56,20 @@ int SpdmdApp::setupCli(int argc, char** argv)
 void SpdmdApp::connectDBus()
 {
     SPDMCPP_LOG_TRACE_FUNC(log);
-    sdbusplus::server::manager_t objManager(bus, SPDM_DEFAULT_PATH);
+    sdbusplus::server::manager_t objManager(bus, spdmDefaultPath);
     bus.attach_event(event.get(), SD_EVENT_PRIORITY_NORMAL);
-    bus.request_name(SPDM_DEFAULT_SERVICE);
+    bus.request_name(spdmDefaultService);
 }
 
 bool SpdmdApp::connectMCTP()
 {
     SPDMCPP_LOG_TRACE_FUNC(log);
     if (!mctpIo.createSocket())
+    {
         return false;
+    }
 
-    context.register_io(&mctpIo);
+    context.registerIo(&mctpIo);
 
     auto callback = [this](sdeventplus::source::IO& /*io*/, int /*fd*/,
                            uint32_t revents) {
@@ -87,7 +89,7 @@ bool SpdmdApp::connectMCTP()
         {
             spdmcpp::TransportClass::LayerState lay; // TODO double decode
             auto rs =
-                spdmcpp::MCTP_TransportClass::peek_eid(packetBuffer, lay, eid);
+                spdmcpp::MctpTransportClass::peekEid(packetBuffer, lay, eid);
 
             SPDMCPP_LOG_TRACE_RS(log, rs);
             if (rs != spdmcpp::RetStat::OK)
@@ -116,7 +118,7 @@ bool SpdmdApp::connectMCTP()
     return true;
 }
 
-bool SpdmdApp::createResponder(uint8_t eid, const std::string& inventory_path)
+bool SpdmdApp::createResponder(uint8_t eid, const std::string& inventoryPath)
 {
     SPDMCPP_LOG_TRACE_FUNC(log);
     if (eid >= responders.size())
@@ -137,7 +139,7 @@ bool SpdmdApp::createResponder(uint8_t eid, const std::string& inventory_path)
     reportNotice(msg);
 
     responders[eid] =
-        new dbus_api::Responder(*this, SPDM_DEFAULT_PATH, eid, inventory_path);
+        new dbus_api::Responder(*this, spdmDefaultPath, eid, inventoryPath);
 
     return true;
 }

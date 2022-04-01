@@ -12,7 +12,7 @@ struct PacketReqAlgStruct
     uint8_t AlgSupported[14] = {0}; // TODO is this really the limit?
     uint32_t AlgExternal[15] = {0}; // TODO is this really is the limit?
 
-    // 		static constexpr bool size_is_constant = false;
+    // 		static constexpr bool sizeIsConstant = false;
     static PacketReqAlgStruct buildSupported2(AlgTypeEnum type, uint8_t algsup0,
                                               uint8_t algsup1)
     {
@@ -44,7 +44,7 @@ struct PacketReqAlgStruct
     }
     // TODO need many more helpers?!
 
-    uint16_t get_size() const
+    uint16_t getSize() const
     {
         size_t size = 0;
         size += sizeof(AlgType);
@@ -75,54 +75,70 @@ struct PacketReqAlgStruct
     }
 };
 
-[[nodiscard]] inline RetStat packet_encode_internal(const PacketReqAlgStruct& p,
-                                                    std::vector<uint8_t>& buf,
-                                                    size_t& start)
+[[nodiscard]] inline RetStat packetEncodeInternal(const PacketReqAlgStruct& p,
+                                                  std::vector<uint8_t>& buf,
+                                                  size_t& start)
 {
     size_t off = start;
-    buf.resize(start + p.get_size());
-    packet_encode_basic(p.AlgType, buf, off);
-    packet_encode_basic(p.AlgCount, buf, off);
+    buf.resize(start + p.getSize());
+    packetEncodeBasic(p.AlgType, buf, off);
+    packetEncodeBasic(p.AlgCount, buf, off);
     for (uint8_t i = 0; i < p.getFixedAlgCount(); ++i)
     {
-        packet_encode_basic(p.AlgSupported[i], buf, off);
+        packetEncodeBasic(p.AlgSupported[i], buf, off);
     }
     for (uint8_t i = 0; i < p.getExtAlgCount(); ++i)
     {
-        packet_encode_basic(p.AlgExternal[i], buf, off);
+        packetEncodeBasic(p.AlgExternal[i], buf, off);
     }
     start = off;
     return RetStat::OK;
 }
 [[nodiscard]] inline RetStat
-    packet_decode_internal(PacketReqAlgStruct& p,
-                           const std::vector<uint8_t>& buf, size_t& off)
+    packetDecodeInternal(PacketReqAlgStruct& p, const std::vector<uint8_t>& buf,
+                         size_t& off)
 {
-    auto rs = packet_decode_basic(p.AlgType, buf, off);
-    if (is_error(rs))
-        return rs;
-    rs = packet_decode_basic(p.AlgCount, buf, off);
-    if (is_error(rs))
-        return rs;
+    auto rs = packetDecodeBasic(p.AlgType, buf, off);
+    if (isError(rs))
+    {
+        {
+            return rs;
+        }
+    }
+    rs = packetDecodeBasic(p.AlgCount, buf, off);
+    if (isError(rs))
+    {
+        {
+            return rs;
+        }
+    }
     // TODO validate p.AlgType & Count?
     for (uint8_t i = 0; i < p.getFixedAlgCount(); ++i)
     {
-        rs = packet_decode_basic(p.AlgSupported[i], buf, off);
-        if (is_error(rs))
-            return rs;
+        rs = packetDecodeBasic(p.AlgSupported[i], buf, off);
+        if (isError(rs))
+        {
+            {
+                return rs;
+            }
+        }
     }
     for (uint8_t i = 0; i < p.getExtAlgCount(); ++i)
     {
-        rs = packet_decode_basic(p.AlgExternal[i], buf, off);
-        if (is_error(rs))
-            return rs;
+        rs = packetDecodeBasic(p.AlgExternal[i], buf, off);
+        if (isError(rs))
+        {
+            {
+                return rs;
+            }
+        }
     }
     return RetStat::OK;
 }
 
-struct packet_negotiate_algorithms_request_min
+struct PacketNegotiateAlgorithmsRequestMin
 {
-    packet_message_header Header = packet_message_header(RequestResponseCode);
+    PacketMessageHeader Header = PacketMessageHeader(requestResponseCode);
     uint16_t Length = 0;
     uint8_t MeasurementSpecification = 0;
     uint8_t Reserved0 = 0;
@@ -135,14 +151,14 @@ struct packet_negotiate_algorithms_request_min
     uint8_t ExtHashCount = 0;
     uint16_t Reserved4 = 0;
 
-    static constexpr RequestResponseEnum RequestResponseCode =
+    static constexpr RequestResponseEnum requestResponseCode =
         RequestResponseEnum::REQUEST_NEGOTIATE_ALGORITHMS;
-    static constexpr bool size_is_constant = true;
+    static constexpr bool sizeIsConstant = true;
 
-    void print_ml(LogClass& log) const
+    void printMl(LogClass& log) const
     {
         SPDMCPP_LOG_INDENT(log);
-        SPDMCPP_LOG_print_ml(log, Header);
+        SPDMCPP_LOG_printMl(log, Header);
         SPDMCPP_LOG_iexprln(log, Length);
         SPDMCPP_LOG_iexprln(log, MeasurementSpecification);
         SPDMCPP_LOG_iexprln(log, Reserved0);
@@ -156,49 +172,48 @@ struct packet_negotiate_algorithms_request_min
         SPDMCPP_LOG_iexprln(log, Reserved4);
     }
 
-    bool operator==(const packet_negotiate_algorithms_request_min& other) const
+    bool operator==(const PacketNegotiateAlgorithmsRequestMin& other) const
     {
         return memcmp(this, &other, sizeof(other)) == 0;
     }
 };
 
-inline void
-    endian_host_spdm_copy(const packet_negotiate_algorithms_request_min& src,
-                          packet_negotiate_algorithms_request_min& dst)
+inline void endianHostSpdmCopy(const PacketNegotiateAlgorithmsRequestMin& src,
+                               PacketNegotiateAlgorithmsRequestMin& dst)
 {
-    endian_host_spdm_copy(src.Header, dst.Header);
-    endian_host_spdm_copy(src.Length, dst.Length);
-    endian_host_spdm_copy(src.MeasurementSpecification,
-                          dst.MeasurementSpecification);
+    endianHostSpdmCopy(src.Header, dst.Header);
+    endianHostSpdmCopy(src.Length, dst.Length);
+    endianHostSpdmCopy(src.MeasurementSpecification,
+                       dst.MeasurementSpecification);
     dst.Reserved0 = src.Reserved0;
-    endian_host_spdm_copy(src.BaseAsymAlgo, dst.BaseAsymAlgo);
-    endian_host_spdm_copy(src.BaseHashAlgo, dst.BaseHashAlgo);
+    endianHostSpdmCopy(src.BaseAsymAlgo, dst.BaseAsymAlgo);
+    endianHostSpdmCopy(src.BaseHashAlgo, dst.BaseHashAlgo);
     dst.Reserved1 = src.Reserved1;
     dst.Reserved2 = src.Reserved2;
     dst.Reserved3 = src.Reserved3;
-    endian_host_spdm_copy(src.ExtAsymCount, dst.ExtAsymCount);
-    endian_host_spdm_copy(src.ExtHashCount, dst.ExtHashCount);
+    endianHostSpdmCopy(src.ExtAsymCount, dst.ExtAsymCount);
+    endianHostSpdmCopy(src.ExtHashCount, dst.ExtHashCount);
     dst.Reserved4 = src.Reserved4;
 }
 
-struct packet_negotiate_algorithms_request_var
+struct PacketNegotiateAlgorithmsRequestVar
 {
-    typedef packet_negotiate_algorithms_request_min MinType;
+    typedef PacketNegotiateAlgorithmsRequestMin MinType;
     MinType Min;
 
     std::vector<PacketReqAlgStruct> PacketReqAlgVector;
 
-    static constexpr RequestResponseEnum RequestResponseCode =
+    static constexpr RequestResponseEnum requestResponseCode =
         RequestResponseEnum::REQUEST_NEGOTIATE_ALGORITHMS;
-    static constexpr bool size_is_constant = false;
+    static constexpr bool sizeIsConstant = false;
 
-    uint16_t get_size() const
+    uint16_t getSize() const
     {
         size_t size = 0;
         size += sizeof(Min);
         for (const auto& iter : PacketReqAlgVector)
         {
-            size += iter.get_size();
+            size += iter.getSize();
         }
         assert(size <= std::numeric_limits<uint16_t>::max());
         return static_cast<uint16_t>(size);
@@ -210,11 +225,11 @@ struct packet_negotiate_algorithms_request_var
             return RetStat::ERROR_UNKNOWN;
         }
         Min.Header.Param1 = static_cast<uint8_t>(PacketReqAlgVector.size());
-        Min.Length = get_size();
+        Min.Length = getSize();
         return RetStat::OK;
     }
 
-    bool operator==(const packet_negotiate_algorithms_request_var& other) const
+    bool operator==(const PacketNegotiateAlgorithmsRequestVar& other) const
     {
         if (Min != other.Min)
         {
@@ -227,10 +242,10 @@ struct packet_negotiate_algorithms_request_var
         return true;
     }
 
-    void print_ml(LogClass& log) const
+    void printMl(LogClass& log) const
     {
         SPDMCPP_LOG_INDENT(log);
-        SPDMCPP_LOG_print_ml(log, Min);
+        SPDMCPP_LOG_printMl(log, Min);
 
         SPDMCPP_LOG_iexprln(
             log, PacketReqAlgVector.size()); // TODO template for vector?!
@@ -245,36 +260,40 @@ struct packet_negotiate_algorithms_request_var
 };
 
 [[nodiscard]] inline RetStat
-    packet_encode_internal(const packet_negotiate_algorithms_request_var& p,
-                           std::vector<uint8_t>& buf, size_t& off)
+    packetEncodeInternal(const PacketNegotiateAlgorithmsRequestVar& p,
+                         std::vector<uint8_t>& buf, size_t& off)
 {
     buf.resize(off + p.Min.Length);
-    auto rs = packet_encode_internal(p.Min, buf, off);
+    auto rs = packetEncodeInternal(p.Min, buf, off);
 
     // TODO HANDLE ExtAsymCount and ExtHashCount!!!
 
     for (const auto& iter : p.PacketReqAlgVector)
     {
-        rs = packet_encode_internal(iter, buf, off);
-        if (is_error(rs))
-            return rs;
+        rs = packetEncodeInternal(iter, buf, off);
+        if (isError(rs))
+        {
+            {
+                return rs;
+            }
+        }
     }
     return rs;
 }
 
 [[nodiscard]] inline RetStat
-    packet_decode_internal(packet_negotiate_algorithms_request_var& p,
-                           const std::vector<uint8_t>& buf, size_t& off)
+    packetDecodeInternal(PacketNegotiateAlgorithmsRequestVar& p,
+                         const std::vector<uint8_t>& buf, size_t& off)
 {
-    auto rs = packet_decode_internal(p.Min, buf, off);
+    auto rs = packetDecodeInternal(p.Min, buf, off);
 
     // TODO HANDLE ExtAsymCount and ExtHashCount!!!
 
     p.PacketReqAlgVector.resize(p.Min.Header.Param1);
     for (size_t i = 0; i < p.PacketReqAlgVector.size(); ++i)
     {
-        rs = packet_decode_internal(p.PacketReqAlgVector[i], buf, off);
-        if (is_error(rs))
+        rs = packetDecodeInternal(p.PacketReqAlgVector[i], buf, off);
+        if (isError(rs))
         {
             return rs;
         }

@@ -43,7 +43,7 @@ class LogClass
         logLevel(reportLevel), Stream(&ostream)
     {}
 
-    void SetLogLevel(Level reportLevel)
+    void setLogLevel(Level reportLevel)
     {
         logLevel = reportLevel;
     }
@@ -52,59 +52,59 @@ class LogClass
 
     void print(char* str)
     {
-        get_ostream() << str;
+        getOstream() << str;
     }
     void print(const char* str)
     {
-        get_ostream() << str;
+        getOstream() << str;
     }
     void print(const std::string& str)
     {
-        get_ostream() << str;
+        getOstream() << str;
     }
 
     void print(char value)
     {
-        get_ostream() << value;
+        getOstream() << value;
     }
 
     void print(uint8_t value)
     {
-        get_ostream() << (int)value;
+        getOstream() << (int)value;
     }
     void print(uint16_t value)
     {
-        get_ostream() << value;
+        getOstream() << value;
     }
     void print(uint32_t value)
     {
-        get_ostream() << value;
+        getOstream() << value;
     }
     void print(uint64_t value)
     {
-        get_ostream() << value;
+        getOstream() << value;
     }
 
     void print(int8_t value)
     {
-        get_ostream() << (int)value;
+        getOstream() << (int)value;
     }
     void print(int16_t value)
     {
-        get_ostream() << value;
+        getOstream() << value;
     }
     void print(int32_t value)
     {
-        get_ostream() << value;
+        getOstream() << value;
     }
     void print(int64_t value)
     {
-        get_ostream() << value;
+        getOstream() << value;
     }
 
     void print(const uint8_t* arr, size_t num)
     {
-        std::ostream& ostr = get_ostream();
+        std::ostream& ostr = getOstream();
         std::ios_base::fmtflags oldf = ostr.flags();
         ostr.setf(std::ios_base::hex | std::ios_base::right |
                       std::ios_base::showbase,
@@ -132,13 +132,13 @@ class LogClass
 
     void endl()
     {
-        get_ostream() << std::endl;
+        getOstream() << std::endl;
     }
 
     template <typename T>
     void print(const T& value)
     {
-        get_ostream() << get_cstr(value);
+        getOstream() << get_cstr(value);
     } // TODO atm this is for enums, but it's likely to be a problem, it also
       // results in confusing errors when calling with a "not yet supported"
       // type
@@ -152,7 +152,7 @@ class LogClass
     template <typename... Targs>
     void iprint(Targs... fargs)
     {
-        print_indent();
+        printIndent();
         print(fargs...);
     }
     template <typename... Targs>
@@ -162,11 +162,13 @@ class LogClass
         endl();
     }
 
-    void print_indent()
+    void printIndent()
     {
         auto i = Indentation;
         while (i--)
-            get_ostream().put('\t');
+        {
+            getOstream().put('\t');
+        }
     }
     void indent()
     {
@@ -182,7 +184,7 @@ class LogClass
         {}
     }
 
-    std::ostream& get_ostream()
+    std::ostream& getOstream()
     {
         return *Stream;
     }

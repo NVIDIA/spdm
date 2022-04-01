@@ -62,7 +62,7 @@ ENUM_VALUE(MessageVersionEnum, SPDM_1_0, 0x10)
 ENUM_VALUE(MessageVersionEnum, SPDM_1_1, 0x11)
 ENUM_END()
 
-// WARNING when changing REMEMBER to MODIFY is_request and is_response
+// WARNING when changing REMEMBER to MODIFY isRequest and isResponse
 // accordingly!
 ENUM_START(RequestResponseEnum, uint8_t)
 ENUM_VALUE(RequestResponseEnum, INVALID,
@@ -108,7 +108,7 @@ ENUM_VALUE(RequestResponseEnum, RESPONSE_ENCAPSULATED_REQUEST, 0x6A)
 ENUM_VALUE(RequestResponseEnum, RESPONSE_ENCAPSULATED_RESPONSE_ACK, 0x6B)
 ENUM_VALUE(RequestResponseEnum, RESPONSE_END_SESSION_ACK, 0x6C)
 ENUM_END()
-// WARNING when changing REMEMBER to MODIFY is_request and is_response
+// WARNING when changing REMEMBER to MODIFY isRequest and isResponse
 // accordingly!
 
 ENUM_START(AlgTypeEnum, uint8_t)

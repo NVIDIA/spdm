@@ -14,7 +14,7 @@ EMUIOClass::~EMUIOClass()
 spdmcpp::RetStat EMUIOClass::write(const std::vector<uint8_t>& buf,
                                    spdmcpp::timeout_us_t /*timeout*/)
 {
-    if (!Emulator.send_platform_data(
+    if (!Emulator.sendPlatformData(
             SocketCommandEnum::SOCKET_SPDM_COMMAND_NORMAL, buf))
     {
         return spdmcpp::RetStat::ERROR_UNKNOWN;
@@ -25,14 +25,14 @@ spdmcpp::RetStat EMUIOClass::read(std::vector<uint8_t>& buf,
                                   spdmcpp::timeout_us_t /*timeout*/)
 {
     SocketCommandEnum response;
-    if (!Emulator.receive_platform_data(response, buf))
+    if (!Emulator.receivePlatformData(response, buf))
     {
         return spdmcpp::RetStat::ERROR_UNKNOWN;
     }
     assert(response == SocketCommandEnum::SOCKET_SPDM_COMMAND_NORMAL);
     return spdmcpp::RetStat::OK;
 }
-spdmcpp::RetStat EMUIOClass::setup_timeout(spdmcpp::timeout_us_t timeout)
+spdmcpp::RetStat EMUIOClass::setupTimeout(spdmcpp::timeout_us_t timeout)
 {
     constexpr sdeventplus::ClockId cid = sdeventplus::ClockId::Monotonic;
     Emulator.Timeout->set_time(sdeventplus::Clock<cid>(Emulator.Event).now() +
@@ -43,11 +43,11 @@ spdmcpp::RetStat EMUIOClass::setup_timeout(spdmcpp::timeout_us_t timeout)
 // 	using sdeventplus::source::Time<cid>;
 	auto callback = [this](sdeventplus::source::Time<cid>& /*source*/, sdeventplus::source::Time<cid>::TimePoint /*time*/)
 	{
-		std::cerr << "DemuxIOClass::setup_timeout callback" << std::endl;
+		std::cerr << "DemuxIOClass::setupTimeout callback" << std::endl;
 // 		assert(false);
 	};
 	
-	std::cerr << "DemuxIOClass::setup_timeout queue" << std::endl;
+	std::cerr << "DemuxIOClass::setupTimeout queue" << std::endl;
 //	sdeventplus::source::Time<cid> time(Emulator.Event, sdeventplus::Clock<cid>(Emulator.Event).now() + std::chrono::microseconds{10}, std::chrono::milliseconds{1}, std::move(callback));
 	new sdeventplus::source::Time<cid>(Emulator.Event, sdeventplus::Clock<cid>(Emulator.Event).now() + std::chrono::milliseconds{1000}, std::chrono::milliseconds{1}, std::move(callback));
 #endif
@@ -96,7 +96,7 @@ spdmcpp::RetStat DemuxIOClass::read(std::vector<uint8_t>& buf,
     buf.resize(result);
     return spdmcpp::RetStat::OK;
 }
-spdmcpp::RetStat DemuxIOClass::setup_timeout(spdmcpp::timeout_us_t timeout)
+spdmcpp::RetStat DemuxIOClass::setupTimeout(spdmcpp::timeout_us_t timeout)
 {
     constexpr sdeventplus::ClockId cid = sdeventplus::ClockId::Monotonic;
     Emulator.Timeout->set_time(sdeventplus::Clock<cid>(Emulator.Event).now() +

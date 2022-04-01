@@ -10,10 +10,12 @@
 
 namespace spdmcpp
 {
-inline bool is_error(RetStat value)
+inline bool isError(RetStat value)
 {
-    if (static_cast<int32_t>(value) < 0) // TODO underlying_type is too new?
+    if (static_cast<int32_t>(value) < 0)
+    { // TODO underlying_type is too new?
         return true;
+    }
     return false;
 }
 

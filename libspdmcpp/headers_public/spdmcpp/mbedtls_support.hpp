@@ -17,16 +17,16 @@
 
 namespace spdmcpp
 {
-inline int verify_signature(mbedtls_x509_crt* cert,
-                            const std::vector<uint8_t>& signature,
-                            const std::vector<uint8_t>& hash)
+inline int verifySignature(mbedtls_x509_crt* cert,
+                           const std::vector<uint8_t>& signature,
+                           const std::vector<uint8_t>& hash)
 {
 #if 0
 		mbedtls_pk_context argh;
 		mbedtls_pk_init(&argh);
 		mbedtls_pk_setup(&argh, cert->pk.pk_info);
-		ret = mbedtls_pk_verify(&cert->pk, to_mbedtls(Algorithms.Min.BaseHashAlgo), hash.data(), hash.size(), resp.SignatureVector.data(), resp.SignatureVector.size());
-	//	ret = mbedtls_pk_verify(&argh, to_mbedtls(Algorithms.Min.BaseHashAlgo), hash.data(), hash.size(), resp.SignatureVector.data(), resp.SignatureVector.size());
+		ret = mbedtls_pk_verify(&cert->pk, toMbedtls(Algorithms.Min.BaseHashAlgo), hash.data(), hash.size(), resp.SignatureVector.data(), resp.SignatureVector.size());
+	//	ret = mbedtls_pk_verify(&argh, toMbedtls(Algorithms.Min.BaseHashAlgo), hash.data(), hash.size(), resp.SignatureVector.data(), resp.SignatureVector.size());
 		SPDMCPP_LOG_TRACE_RS(Log, ret);
 		if (ret) {
 			Log.iprint("mbedtls_pk_verify ret = ");
@@ -53,50 +53,49 @@ inline int verify_signature(mbedtls_x509_crt* cert,
         assert(false);
     }
 
-    size_t half_size = 0;
+    size_t halfSize = 0;
 
     switch (ctx->grp.id)
     {
         case MBEDTLS_ECP_DP_SECP256R1:
-            half_size = 32;
+            halfSize = 32;
             break;
         case MBEDTLS_ECP_DP_SECP384R1:
-            half_size = 48;
+            halfSize = 48;
             break;
         case MBEDTLS_ECP_DP_SECP521R1:
-            half_size = 66;
+            halfSize = 66;
             break;
         default:
             assert(false);
     }
-    if (signature.size() != half_size * 2)
+    if (signature.size() != halfSize * 2)
     {
         assert(false);
     }
 
-    mbedtls_mpi bn_r, bn_s;
-    mbedtls_mpi_init(&bn_r);
-    mbedtls_mpi_init(&bn_s);
+    mbedtls_mpi bnR, bnS;
+    mbedtls_mpi_init(&bnR);
+    mbedtls_mpi_init(&bnS);
 
-    ret = mbedtls_mpi_read_binary(&bn_r, signature.data(), half_size);
+    ret = mbedtls_mpi_read_binary(&bnR, signature.data(), halfSize);
     if (ret != 0)
     {
-        mbedtls_mpi_free(&bn_r);
-        mbedtls_mpi_free(&bn_s);
+        mbedtls_mpi_free(&bnR);
+        mbedtls_mpi_free(&bnS);
         assert(false);
     }
-    ret =
-        mbedtls_mpi_read_binary(&bn_s, signature.data() + half_size, half_size);
+    ret = mbedtls_mpi_read_binary(&bnS, signature.data() + halfSize, halfSize);
     if (ret != 0)
     {
-        mbedtls_mpi_free(&bn_r);
-        mbedtls_mpi_free(&bn_s);
+        mbedtls_mpi_free(&bnR);
+        mbedtls_mpi_free(&bnS);
         assert(false);
     }
     ret = mbedtls_ecdsa_verify(&ctx->grp, hash.data(), hash.size(), &ctx->Q,
-                               &bn_r, &bn_s);
-    mbedtls_mpi_free(&bn_r);
-    mbedtls_mpi_free(&bn_s);
+                               &bnR, &bnS);
+    mbedtls_mpi_free(&bnR);
+    mbedtls_mpi_free(&bnS);
 
     return ret;
 #endif

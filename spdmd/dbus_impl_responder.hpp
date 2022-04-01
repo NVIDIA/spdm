@@ -22,13 +22,13 @@ namespace dbus_api
 
 class Responder;
 
-class MCTP_TransportClass : public spdmcpp::MCTP_TransportClass
+class MctpTransportClass : public spdmcpp::MctpTransportClass
 {
   public:
-    MCTP_TransportClass(uint8_t eid, Responder& resp) :
-        spdmcpp::MCTP_TransportClass(eid), responder(resp)
+    MctpTransportClass(uint8_t eid, Responder& resp) :
+        spdmcpp::MctpTransportClass(eid), responder(resp)
     {}
-    virtual ~MCTP_TransportClass()
+    virtual ~MctpTransportClass()
     {
         if (time)
         {
@@ -38,9 +38,9 @@ class MCTP_TransportClass : public spdmcpp::MCTP_TransportClass
     }
 
     virtual spdmcpp::RetStat
-        setup_timeout(spdmcpp::timeout_ms_t timeout) override;
+        setupTimeout(spdmcpp::timeout_ms_t timeout) override;
 
-    virtual bool clear_timeout() override;
+    virtual bool clearTimeout() override;
 
   protected:
     static constexpr sdeventplus::ClockId clockId =
@@ -72,7 +72,7 @@ class Responder : public ResponderIntf
      *  @param[in] path - Path to attach at.
      */
     Responder(SpdmdAppContext& appCtx, const std::string& path, uint8_t eid,
-              const std::string& inventory_path);
+              const std::string& inventoryPath);
 
     ~Responder();
 
@@ -96,12 +96,12 @@ class Responder : public ResponderIntf
     SpdmdAppContext& appContext;
 
     spdmcpp::ConnectionClass Connection;
-    MCTP_TransportClass Transport;
+    MctpTransportClass Transport;
 
     void updateLastUpdateTime();
     void syncSlotsInfo();
 
-    friend MCTP_TransportClass;
+    friend MctpTransportClass;
 };
 
 } // namespace dbus_api

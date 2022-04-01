@@ -5,16 +5,16 @@
 
 #ifdef SPDMCPP_PACKET_HPP
 
-struct packet_version_number // TODO bitfields are ill-defined endianness-wise
-                             // iirc!?
+struct PacketVersionNumber // TODO bitfields are ill-defined endianness-wise
+                           // iirc!?
 {
     uint16_t Alpha : 4;
     uint16_t UpdateVersionNumber : 4;
     uint16_t MinorVersion : 4;
     uint16_t MajorVersion : 4;
 
-    static constexpr bool size_is_constant = true;
-    packet_version_number()
+    static constexpr bool sizeIsConstant = true;
+    PacketVersionNumber()
     {
         MajorVersion = 0;
         MinorVersion = 0;
@@ -50,14 +50,14 @@ struct packet_version_number // TODO bitfields are ill-defined endianness-wise
         log.print(">");
     }
 
-    bool operator==(const packet_version_number& other) const
+    bool operator==(const PacketVersionNumber& other) const
     {
         return memcmp(this, &other, sizeof(other)) == 0;
     }
 };
 
-inline void endian_host_spdm_copy(const packet_version_number& src,
-                                  packet_version_number& dst)
+inline void endianHostSpdmCopy(const PacketVersionNumber& src,
+                               PacketVersionNumber& dst)
 {
     dst = src; // TODO surely wrong
 }

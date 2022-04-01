@@ -8,7 +8,7 @@ namespace spdmd
 {
 namespace description
 {
-const string NAME = "SPDM deamon for Open BMC";
-const string VERSION = "0.1.0.0";
+const string name = "SPDM deamon for Open BMC";
+const string version = "0.1.0.0";
 } // namespace description
 } // namespace spdmd
