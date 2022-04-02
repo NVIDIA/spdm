@@ -134,10 +134,12 @@ class ConnectionClass
      * DSP0274_1.1.1 page 56 */
     static constexpr SlotIdx slotNum = 8;
 
-    ConnectionClass(ContextClass* context) : Context(context), Log(std::cout)
-    {}
-    ~ConnectionClass()
-    {}
+    /** @brief Main constructor
+     *  @param[in] context - Context containing various common configuration and
+     * information
+     */
+    ConnectionClass(ContextClass* context);
+    ~ConnectionClass() = default;
 
     /** @brief Registers a TransportClass for handling the connection (e.g. with
      * standard mtcp-demux-daemon the instance handles encapsulating with the
@@ -207,6 +209,9 @@ class ConnectionClass
     RetStat refreshMeasurements(SlotIdx slotidx, const nonce_array_32& nonce,
                                 const std::bitset<256>& measurementIndices);
 
+    /** @brief Resets all connection information to a state equivalent to just
+     * after constructing ConnectionClass
+     */
     void resetConnection();
 
     /** @brief Gets the Certificate Slot Index that was used during the current

@@ -23,18 +23,14 @@
 namespace spdmcpp
 {
 
+ConnectionClass::ConnectionClass(ContextClass* context) :
+    Context(context), Log(std::cout)
+{}
+
 RetStat ConnectionClass::initConnection()
 {
-    SPDMCPP_LOG_TRACE_FUNC(Log);
-    // HashM1M2.setup(HashEnum::SHA_384);
-    CertificateSlotIdx = 0;
-    fillRandom(MeasurementNonce);
-    MeasurementIndices.reset();
-    MeasurementIndices.set(255);
-
-    auto rs = tryGetVersion();
-    SPDMCPP_LOG_TRACE_RS(Log, rs);
-    return rs;
+    resetConnection();
+    return refreshMeasurements(0); // TODO this should be param/config based!
 }
 
 RetStat ConnectionClass::refreshMeasurements(SlotIdx slotidx)
@@ -98,7 +94,13 @@ void ConnectionClass::resetConnection()
     Algorithms = PacketAlgorithmsResponseVar();
     packetDecodeInfo = PacketDecodeInfo();
     SupportedVersions.clear();
+
     DMTFMeasurements.clear();
+    MeasurementsHash.clear();
+    MeasurementsSignature.clear();
+    memset(MeasurementNonce, 0, sizeof(MeasurementNonce));
+    MeasurementIndices.reset();
+
     for (auto& s : Slots)
     {
         s.clear();
@@ -1019,7 +1021,10 @@ RetStat ConnectionClass::handleTimeout()
 
 void ConnectionClass::clearTimeout()
 {
-    Transport->clearTimeout();
+    if (Transport)
+    {
+        Transport->clearTimeout();
+    }
     SendTimeout = 0;
     SendRetry = 0;
 }
