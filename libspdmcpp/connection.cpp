@@ -548,16 +548,9 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
             // cert.size() - off);
             if (ret)
             {
-                Log.iprint("mbedtls_x509_crt_parse_der ret = ");
-                Log.print(ret);
-                Log.print(" = '");
-                // Log.print(mbedtls_high_level_strerr(ret));
-                char errMsg[128];
-                mbedtls_strerror(ret, errMsg, sizeof(errMsg));
-                Log.print((const char*)errMsg);
-                Log.println('\'');
+                mbedtlsPrintErrorLine(Log, "mbedtls_x509_crt_parse_der()", ret);
             }
-            assert(ret == 0);
+            assert(ret == 0);//TODO proper error handling!!!
 
             slot.MCertificates.push_back(c);
 
@@ -762,17 +755,7 @@ RetStat ConnectionClass::handleRecv<PacketChallengeAuthResponseVar>()
             }
             else
             {
-                Log.iprint("mbedtls_ecdsa_verify ret = ");
-                Log.print(ret);
-                Log.print(" = '");
-                char errMsg[128];
-                mbedtls_strerror(ret, errMsg, sizeof(errMsg));
-                Log.print((const char*)errMsg);
-                Log.print("'	'");
-                // if (const char* msg = mbedtls_low_level_strerr(ret)) {
-                //	Log.print(msg);
-                // }
-                Log.println('\'');
+                mbedtlsPrintErrorLine(Log, "mbedtls_ecdsa_verify()", ret);
                 return RetStat::ERROR_AUTHENTICATION_FAILED;
             }
         }
@@ -908,17 +891,7 @@ RetStat ConnectionClass::handleRecv<PacketMeasurementsResponseVar>()
         }
         else
         {
-            Log.iprint("mbedtls_ecdsa_verify ret = ");
-            Log.print(ret);
-            Log.print(" = '");
-            char errMsg[128];
-            mbedtls_strerror(ret, errMsg, sizeof(errMsg));
-            Log.print((const char*)errMsg);
-            Log.print("'	'");
-            // if (const char* msg = mbedtls_low_level_strerr(ret)) {
-            //	Log.print(msg);
-            // }
-            Log.println('\'');
+            mbedtlsPrintErrorLine(Log, "mbedtls_ecdsa_verify()", ret);
             return RetStat::ERROR_MEASUREMENT_SIGNATURE_VERIFIY_FAILED;
         }
     }

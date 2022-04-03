@@ -2,10 +2,13 @@
 #pragma once
 
 #include "flag.hpp"
+#include "log.hpp"
 
 #include <mbedtls/ecdh.h>
+#include <mbedtls/ecdsa.h>
+#include <mbedtls/error.h>
+#include <mbedtls/pem.h>
 #include <mbedtls/pk.h>
-#include <mbedtls/x509.h>
 #include <mbedtls/x509_crt.h>
 
 #include <cassert>
@@ -17,6 +20,26 @@
 
 namespace spdmcpp
 {
+
+inline void mbedtlsPrintErrorString(LogClass& log, int error)
+{
+    std::array<char, 128> str;
+    mbedtls_strerror(error, str.data(), str.size());
+    log.print(str.data());
+}
+inline void mbedtlsPrintErrorLine(LogClass& log, const char* prefix, int error)
+{
+    std::array<char, 128> str;
+    mbedtls_strerror(error, str.data(), str.size());
+    log.iprint(prefix);
+    log.print(" = ");
+    log.print(error);
+    log.print(" = '");
+    log.print(str.data());
+    log.println('\'');
+}
+
+
 inline int verifySignature(mbedtls_x509_crt* cert,
                            const std::vector<uint8_t>& signature,
                            const std::vector<uint8_t>& hash)
