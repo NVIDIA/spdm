@@ -143,6 +143,14 @@ inline void packetEncodeBasic(const std::vector<uint8_t>& src,
 {
     packetEncodeBasic(src.data(), src.size(), buf, start);
 }
+
+template <size_t N>
+inline void packetEncodeBasic(const std::array<uint8_t, N>& src,
+                              std::vector<uint8_t>& buf, size_t& start)
+{
+    packetEncodeBasic(src.data(), src.size(), buf, start);
+}
+
 template <size_t N>
 inline void packetEncodeBasic(const uint8_t (&src)[N],
                               std::vector<uint8_t>& buf, size_t& start)

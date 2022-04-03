@@ -12,6 +12,7 @@
 #include <cstring>
 #include <iostream>
 #include <limits>
+#include <span>
 #include <vector>
 
 #define SPDMCPP_PACKET_HPP // this is necessary to avoid issues with clang-tidy
@@ -67,12 +68,31 @@ namespace spdmcpp
     } while (false)
 
 template <typename T, size_t N>
-constexpr size_t sizeofArray(const T (&array)[N])
+constexpr size_t sizeofArray(const T (&/*array*/)[N])
 {
-    return sizeof(array);
+    return N;
 }
 
-typedef uint8_t nonce_array_32[32];
+template <typename T, size_t N>
+constexpr size_t sizeofArray(const std::array<T, N>& /*array*/)
+{
+    return N;
+}
+
+template <typename T, size_t N>
+constexpr bool isEqual(const T (&array0)[N], const T (&array1)[N])
+{
+    return std::equal(std::begin(array0), std::end(array0), std::begin(array1));
+}
+
+template <typename T, size_t N>
+constexpr bool isEqual(const std::array<T, N>& array0,
+                       const std::array<T, N>& array1)
+{
+    return std::equal(std::begin(array0), std::end(array0), std::begin(array1));
+}
+
+using nonce_array_32 = std::array<uint8_t, 32>;
 
 struct PacketDecodeInfo
 {
@@ -109,6 +129,9 @@ struct PacketDecodeInfo
 #include "internal/request/packet_get_measurements_request.hpp"
 #include "internal/request/packet_get_version_request.hpp"
 #include "internal/request/packet_negotiate_algorithms_request.hpp"
+
+// separator for clang-format ordering
+
 #include "internal/response/packet_algorithms_response.hpp"
 #include "internal/response/packet_capabilities_response.hpp"
 #include "internal/response/packet_certificate_response.hpp"

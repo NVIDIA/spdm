@@ -102,8 +102,9 @@ void Responder::syncSlotsInfo()
 
     {
         const nonce_array_32& arr = Connection.getMeasurementNonce();
-        std::vector<uint8_t> nonc(sizeof(arr));
-        memcpy(nonc.data(), arr, nonc.size());
+        std::vector<uint8_t> nonc;
+        nonc.reserve(arr.size());
+        nonc.insert(nonc.end(), arr.begin(), arr.end());
         nonce(nonc);
     }
     certificate(certs);

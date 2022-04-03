@@ -46,7 +46,7 @@ RetStat ConnectionClass::refreshMeasurements(SlotIdx slotidx,
                                              const nonce_array_32& nonce)
 {
     CertificateSlotIdx = slotidx;
-    memcpy(MeasurementNonce, nonce, sizeof(MeasurementNonce));
+    MeasurementNonce = nonce;
     MeasurementIndices.reset();
     MeasurementIndices.set(255);
     return refreshMeasurementsInternal();
@@ -64,7 +64,7 @@ RetStat ConnectionClass::refreshMeasurements(
     const std::bitset<256>& measurementIndices)
 {
     CertificateSlotIdx = slotidx;
-    memcpy(MeasurementNonce, nonce, sizeof(MeasurementNonce));
+    MeasurementNonce = nonce;
     MeasurementIndices = measurementIndices;
     return refreshMeasurementsInternal();
 }
@@ -99,7 +99,7 @@ void ConnectionClass::resetConnection()
     DMTFMeasurements.clear();
     MeasurementsHash.clear();
     MeasurementsSignature.clear();
-    memset(MeasurementNonce, 0, sizeof(MeasurementNonce));
+    MeasurementNonce.fill(0);
     MeasurementIndices.reset();
 
     for (auto& s : Slots)
@@ -819,7 +819,7 @@ RetStat ConnectionClass::tryGetMeasurements(uint8_t idx)
         request.Min.Header.Param1 = packetDecodeInfo.GetMeasurementsParam1 =
             0x1;
         request.setNonce();
-        memcpy(request.Nonce, MeasurementNonce, sizeof(request.Nonce));
+        request.Nonce = MeasurementNonce;
         request.SlotIDParam = CertificateSlotIdx;
     }
     else

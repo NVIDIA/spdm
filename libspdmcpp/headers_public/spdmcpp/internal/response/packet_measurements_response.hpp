@@ -97,7 +97,7 @@ struct PacketMeasurementsResponseVar // TODO all variable packets don't need
         {
             return false;
         }
-        if (memcmp(Nonce, other.Nonce, sizeof(Nonce)))
+        if (!isEqual(Nonce, other.Nonce))
         {
             return false;
         }
@@ -120,8 +120,7 @@ struct PacketMeasurementsResponseVar // TODO all variable packets don't need
     {
         SPDMCPP_LOG_INDENT(log);
         SPDMCPP_LOG_printMl(log, Min);
-        log.iprint("Nonce[32]: ");
-        log.println(Nonce, sizeofArray(Nonce));
+        SPDMCPP_LOG_iexprln(log, Nonce);
 
         SPDMCPP_LOG_iexprln(log, MeasurementBlockVector.size());
         for (size_t i = 0; i < MeasurementBlockVector.size(); ++i)

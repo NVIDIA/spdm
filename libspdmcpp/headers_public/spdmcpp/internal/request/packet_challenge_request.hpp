@@ -18,8 +18,7 @@ struct PacketChallengeRequest
     {
         SPDMCPP_LOG_INDENT(log);
         SPDMCPP_LOG_printMl(log, Header);
-        log.iprint("Nonce[32]: ");
-        log.println(Nonce, sizeofArray(Nonce));
+        SPDMCPP_LOG_iexprln(log, Nonce);
     }
 };
 
@@ -27,7 +26,7 @@ inline void endianHostSpdmCopy(const PacketChallengeRequest& src,
                                PacketChallengeRequest& dst)
 {
     endianHostSpdmCopy(src.Header, dst.Header);
-    memcpy(dst.Nonce, src.Nonce, sizeof(dst.Nonce));
+    dst.Nonce = src.Nonce;
 }
 
 #endif

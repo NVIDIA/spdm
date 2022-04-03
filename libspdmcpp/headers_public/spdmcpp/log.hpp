@@ -134,6 +134,12 @@ class LogClass
         ostr.setf(oldf);
     }
 
+    template <typename T, size_t N>
+    void print(const std::array<T, N>& array)
+    {
+        print(array.data(), array.size());
+    }
+
     void endl()
     {
         getOstream() << std::endl;

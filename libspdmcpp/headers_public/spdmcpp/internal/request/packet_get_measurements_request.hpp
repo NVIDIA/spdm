@@ -81,7 +81,8 @@ struct PacketGetMeasurementsRequestVar
         {
             return false;
         }
-        if (memcmp(Nonce, other.Nonce, sizeof(Nonce)))
+
+        if (!isEqual(Nonce, other.Nonce))
         {
             return false;
         }
@@ -96,8 +97,7 @@ struct PacketGetMeasurementsRequestVar
     {
         SPDMCPP_LOG_INDENT(log);
         SPDMCPP_LOG_printMl(log, Min);
-        log.iprint("Nonce[32]: ");
-        log.println(Nonce, sizeofArray(Nonce));
+        SPDMCPP_LOG_iexprln(log, Nonce);
         SPDMCPP_LOG_iexprln(log, SlotIDParam);
     }
 };
