@@ -4,6 +4,7 @@
 #include "assert.hpp"
 #include "flag.hpp"
 #include "log.hpp"
+#include "hash.hpp"
 
 #include <mbedtls/ecdh.h>
 #include <mbedtls/ecdsa.h>
@@ -39,7 +40,6 @@ inline void mbedtlsPrintErrorLine(LogClass& log, const char* prefix, int error)
     log.println('\'');
 }
 
-
 inline int verifySignature(mbedtls_x509_crt* cert,
                            const std::vector<uint8_t>& signature,
                            const std::vector<uint8_t>& hash)
@@ -63,38 +63,45 @@ inline int verifySignature(mbedtls_x509_crt* cert,
     {
         SPDMCPP_ASSERT(false);
     }
-    mbedtls_ecdh_context* ctx = new mbedtls_ecdh_context;
-    memset(ctx, 0, sizeof(*ctx));
-    mbedtls_ecdh_init(ctx);
+    mbedtls_ecdh_context ctx;
+    mbedtls_ecdh_init(&ctx);
 
-    int ret = mbedtls_ecdh_get_params(ctx, mbedtls_pk_ec(cert->pk),
+    int ret = mbedtls_ecdh_get_params(&ctx, mbedtls_pk_ec(cert->pk),
                                       MBEDTLS_ECDH_OURS);
     if (ret != 0)
     {
-        mbedtls_ecdh_free(ctx);
-        delete ctx;
+        mbedtls_ecdh_free(&ctx);
         SPDMCPP_ASSERT(false);
+        return ret;
     }
 
     size_t halfSize = 0;
 
-    switch (ctx->grp.id)
+    switch (ctx.grp.id)
     {
         case MBEDTLS_ECP_DP_SECP256R1:
+        case MBEDTLS_ECP_DP_SECP256K1:
+        case MBEDTLS_ECP_DP_BP256R1:
             halfSize = 32;
             break;
         case MBEDTLS_ECP_DP_SECP384R1:
+        case MBEDTLS_ECP_DP_BP384R1:
             halfSize = 48;
             break;
         case MBEDTLS_ECP_DP_SECP521R1:
+        case MBEDTLS_ECP_DP_BP512R1:
             halfSize = 66;
             break;
         default:
             SPDMCPP_ASSERT(false);
+            mbedtls_ecdh_free(&ctx);
+            return -1;
     }
     if (signature.size() != halfSize * 2)
     {
         SPDMCPP_ASSERT(false);
+        mbedtls_ecdh_free(&ctx);
+        return -1;
     }
 
     mbedtls_mpi bnR, bnS;
@@ -107,6 +114,8 @@ inline int verifySignature(mbedtls_x509_crt* cert,
         mbedtls_mpi_free(&bnR);
         mbedtls_mpi_free(&bnS);
         SPDMCPP_ASSERT(false);
+        mbedtls_ecdh_free(&ctx);
+        return ret;
     }
     ret = mbedtls_mpi_read_binary(&bnS, signature.data() + halfSize, halfSize);
     if (ret != 0)
@@ -114,13 +123,17 @@ inline int verifySignature(mbedtls_x509_crt* cert,
         mbedtls_mpi_free(&bnR);
         mbedtls_mpi_free(&bnS);
         SPDMCPP_ASSERT(false);
+        mbedtls_ecdh_free(&ctx);
+        return ret;
     }
-    ret = mbedtls_ecdsa_verify(&ctx->grp, hash.data(), hash.size(), &ctx->Q,
+    ret = mbedtls_ecdsa_verify(&ctx.grp, hash.data(), hash.size(), &ctx.Q,
                                &bnR, &bnS);
     mbedtls_mpi_free(&bnR);
     mbedtls_mpi_free(&bnS);
 
+    mbedtls_ecdh_free(&ctx);
     return ret;
 #endif
 }
+
 } // namespace spdmcpp
