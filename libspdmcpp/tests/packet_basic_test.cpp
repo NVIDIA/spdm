@@ -1,4 +1,6 @@
 
+#include "test_helpers.hpp"
+
 #include <spdmcpp/helpers.hpp>
 #include <spdmcpp/packet.hpp>
 

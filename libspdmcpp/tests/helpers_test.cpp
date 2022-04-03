@@ -1,3 +1,6 @@
+
+#include "test_helpers.hpp"
+
 #include <spdmcpp/common.hpp>
 #include <spdmcpp/helpers.hpp>
 

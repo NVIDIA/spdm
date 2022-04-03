@@ -1,5 +1,4 @@
 
-#include <spdmcpp/common.hpp>
 
 #include <array>
 #include <cstring>
