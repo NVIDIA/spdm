@@ -17,7 +17,7 @@
 
 using namespace spdmcpp;
 
-uint8_t refBuf[] = {
+std::array<uint8_t, 512> refBuf = {
     0xc7, 0x9b, 0x3d, 0xdc, 0xd3, 0xe4, 0xf7, 0x2e, 0xf9, 0xc2, 0x74, 0xc0,
     0x9c, 0x9b, 0xc6, 0xcb, 0xa4, 0x63, 0xb9, 0x57, 0x09, 0xa9, 0x4d, 0xe7,
     0x0f, 0xb8, 0xdb, 0x79, 0x60, 0x7f, 0xae, 0x72, 0x42, 0x88, 0x59, 0xfe,
@@ -82,7 +82,7 @@ uint8_t charToUint(char c)
 }
 
 template <size_t N>
-void stringToHash(uint8_t (&arr)[N], const char* str)
+void stringToHash(std::array<uint8_t, N>& arr, const char* str)
 {
     size_t len = strlen(str);
     ASSERT_EQ(len, 2 * N);
@@ -95,7 +95,7 @@ void stringToHash(uint8_t (&arr)[N], const char* str)
 
 TEST(Hash, SHA256)
 {
-    uint8_t refHash[32];
+    std::array<uint8_t, 32> refHash{};
     stringToHash(
         refHash,
         "33c452d940f6b206bc539bfe92b3151317fb70dfe2c17ecf59375c9f745d1102");
@@ -117,16 +117,16 @@ TEST(Hash, SHA256)
         HashEnum en = HashEnum::SHA_256;
         EXPECT_EQ(en, toHash(BaseHashAlgoFlags::TPM_ALG_SHA_256));
         EXPECT_EQ(en, toHash(MeasurementHashAlgoFlags::TPM_ALG_SHA_256));
-        HashClass::compute(hash, en, refBuf, sizeof(refBuf));
+        HashClass::compute(hash, en, refBuf.data(), refBuf.size());
     }
     // ASSERT_THAT(hash, ElementsAre(ref_hash));
-    EXPECT_EQ(hash.size(), sizeof(refHash));
-    EXPECT_EQ(memcmp(hash.data(), refHash, sizeof(refHash)), 0);
+    EXPECT_EQ(hash.size(), refHash.size());
+    EXPECT_EQ(memcmp(hash.data(), refHash.data(), refHash.size()), 0);
 }
 
 TEST(Hash, SHA384)
 {
-    uint8_t refHash[48];
+    std::array<uint8_t, 48> refHash{};
     stringToHash(
         refHash,
         "6625f7f39c1f107ae4344afd711dfde3e2045cc8c467f1a785e75ade18986e5f5db2d8e73b680051d92295e307915533");
@@ -136,17 +136,17 @@ TEST(Hash, SHA384)
         HashEnum en = HashEnum::SHA_384;
         EXPECT_EQ(en, toHash(BaseHashAlgoFlags::TPM_ALG_SHA_384));
         EXPECT_EQ(en, toHash(MeasurementHashAlgoFlags::TPM_ALG_SHA_384));
-        HashClass::compute(hash, en, refBuf, sizeof(refBuf));
+        HashClass::compute(hash, en, refBuf.data(), refBuf.size());
     }
 
     // ASSERT_THAT(hash, ElementsAre(ref_hash));
-    EXPECT_EQ(hash.size(), sizeof(refHash));
-    EXPECT_EQ(memcmp(hash.data(), refHash, sizeof(refHash)), 0);
+    EXPECT_EQ(hash.size(), refHash.size());
+    EXPECT_EQ(memcmp(hash.data(), refHash.data(), refHash.size()), 0);
 }
 
 TEST(Hash, SHA512)
 {
-    uint8_t refHash[64];
+    std::array<uint8_t, 64> refHash{};
     stringToHash(
         refHash,
         "64fff176528eba19be10b0122741796ebb753dc72cfe9259e95eff49cada7cab50e2cdb9b380e3334065d0d44493ec1d01ac0bbcf8bd64115554a41a33a12a57");
@@ -156,10 +156,10 @@ TEST(Hash, SHA512)
         HashEnum en = HashEnum::SHA_512;
         EXPECT_EQ(en, toHash(BaseHashAlgoFlags::TPM_ALG_SHA_512));
         EXPECT_EQ(en, toHash(MeasurementHashAlgoFlags::TPM_ALG_SHA_512));
-        HashClass::compute(hash, en, refBuf, sizeof(refBuf));
+        HashClass::compute(hash, en, refBuf.data(), refBuf.size());
     }
 
     // ASSERT_THAT(hash, ElementsAre(ref_hash));
-    EXPECT_EQ(hash.size(), sizeof(refHash));
-    EXPECT_EQ(memcmp(hash.data(), refHash, sizeof(refHash)), 0);
+    EXPECT_EQ(hash.size(), refHash.size());
+    EXPECT_EQ(memcmp(hash.data(), refHash.data(), refHash.size()), 0);
 }

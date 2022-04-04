@@ -33,10 +33,5 @@ void fillRandom(std::array<uint8_t, N>& buf)
     fillRandom(buf.data(), buf.size());
 }
 
-template <size_t N>
-void fillRandom(uint8_t (&buf)[N])
-{
-    return fillRandom(buf, N);
-}
 
 } // namespace spdmcpp

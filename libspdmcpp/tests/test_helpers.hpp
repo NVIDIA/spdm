@@ -34,13 +34,6 @@ void fillPseudoRandom(std::array<uint8_t, N>& buf,
     fillPseudoRandom(buf.data(), buf.size(), seed);
 }
 
-template <size_t N>
-void fillPseudoRandom(uint8_t (&buf)[N],
-                      std::mt19937::result_type seed = mt19937DefaultSeed)
-{
-    fillPseudoRandom(buf, N, seed);
-}
-
 template <typename T>
 inline void
     fillPseudoRandomType(T& dst,

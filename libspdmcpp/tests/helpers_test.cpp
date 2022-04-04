@@ -13,7 +13,7 @@
 
 using namespace spdmcpp;
 
-uint8_t refBuf[] = {
+std::array<uint8_t, 512> refBuf = {
     0xc7, 0x9b, 0x3d, 0xdc, 0xd3, 0xe4, 0xf7, 0x2e, 0xf9, 0xc2, 0x74, 0xc0,
     0x9c, 0x9b, 0xc6, 0xcb, 0xa4, 0x63, 0xb9, 0x57, 0x09, 0xa9, 0x4d, 0xe7,
     0x0f, 0xb8, 0xdb, 0x79, 0x60, 0x7f, 0xae, 0x72, 0x42, 0x88, 0x59, 0xfe,
@@ -63,37 +63,29 @@ struct TestStruct
     char data0;
     uint32_t data1;
     int64_t data2;
-    uint8_t buf[126];
+    std::array<uint8_t, 126> buf;
     void* data3;
 };
 
-TEST(Helpers, fillPseudoRandom_array)
-{
-    uint8_t buf[sizeof(refBuf)];
-    fillPseudoRandom(buf);
-
-    EXPECT_EQ(memcmp(buf, refBuf, sizeof(buf)), 0);
-}
-
 TEST(Helpers, fillPseudoRandom_stdarray)
 {
-    std::array<uint8_t, sizeof(refBuf)> buf;
+    std::array<uint8_t, refBuf.size()> buf{};
     fillPseudoRandom(buf);
 
-    EXPECT_EQ(memcmp(buf.data(), refBuf, sizeof(buf)), 0);
+    EXPECT_EQ(memcmp(buf.data(), refBuf.data(), sizeof(buf)), 0);
 }
 
 TEST(Helpers, fillPseudoRandom_vector)
 {
     std::vector<uint8_t> buf;
-    buf.resize(sizeof(refBuf));
+    buf.resize(refBuf.size());
     fillPseudoRandom(buf);
 
     // LogClass log(std::cerr);
     // log.println(buf.data(), buf.size());
 
     EXPECT_EQ(buf.size(), 512u);
-    EXPECT_EQ(memcmp(buf.data(), refBuf, buf.size()), 0);
+    EXPECT_EQ(memcmp(buf.data(), refBuf.data(), buf.size()), 0);
 }
 
 TEST(Helpers, fillPseudoRandomType)
@@ -103,33 +95,13 @@ TEST(Helpers, fillPseudoRandomType)
     // LogClass log(std::cerr);
     // log.println(buf.data(), buf.size());
     EXPECT_GT(sizeof(str), 64u);
-    EXPECT_LT(sizeof(str), sizeof(refBuf));
-    EXPECT_EQ(memcmp(&str, refBuf, sizeof(str)), 0);
-}
-
-TEST(Helpers, fillRandom_array)
-{
-    uint8_t buf[sizeof(refBuf)];
-    memset(buf, 0, sizeof(buf));
-    fillRandom(buf);
-
-    size_t nonZero = 0;
-    for (auto& v : buf)
-    {
-        if (v)
-        {
-            ++nonZero;
-        }
-    }
-    EXPECT_GE(nonZero,
-              256u); // if more than half is zeros something's definitely broken
-    EXPECT_NE(memcmp(buf, refBuf, sizeof(buf)),
-              0); // shouldn't match pseudo-random data
+    EXPECT_LT(sizeof(str), refBuf.size());
+    EXPECT_EQ(memcmp(&str, refBuf.data(), sizeof(str)), 0);
 }
 
 TEST(Helpers, fillRandom_stdarray)
 {
-    std::array<uint8_t, sizeof(refBuf)> buf;
+    std::array<uint8_t, refBuf.size()> buf{};
     buf.fill(0);
     fillRandom(buf);
 
@@ -143,14 +115,14 @@ TEST(Helpers, fillRandom_stdarray)
     }
     EXPECT_GE(nonZero,
               256u); // if more than half is zeros something's definitely broken
-    EXPECT_NE(memcmp(buf.data(), refBuf, buf.size()),
+    EXPECT_NE(memcmp(buf.data(), refBuf.data(), buf.size()),
               0); // shouldn't match pseudo-random data
 }
 
 TEST(Helpers, fillRandom_vector)
 {
     std::vector<uint8_t> buf;
-    buf.resize(sizeof(refBuf));
+    buf.resize(refBuf.size());
     fillRandom(buf);
 
     size_t nonZero = 0;
@@ -165,6 +137,6 @@ TEST(Helpers, fillRandom_vector)
     EXPECT_EQ(buf.size(), 512u);
     EXPECT_GE(nonZero,
               256u); // if more than half is zeros something's definitely broken
-    EXPECT_NE(memcmp(buf.data(), refBuf, buf.size()),
+    EXPECT_NE(memcmp(buf.data(), refBuf.data(), buf.size()),
               0); // shouldn't match pseudo-random data
 }
