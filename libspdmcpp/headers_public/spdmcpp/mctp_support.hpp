@@ -104,12 +104,15 @@ class MctpIoClass : public IOClass
             return false;
         }
 
+        // NOLINTNEXTLINE cppcoreguidelines-avoid-c-arrays
         const char path[] = "\0mctp-mux";
         struct sockaddr_un addr
         {};
         addr.sun_family = AF_UNIX;
+        // NOLINTNEXTLINE cppcoreguidelines-pro-bounds-array-to-pointer-decay
         memcpy(addr.sun_path, path, sizeof(path) - 1);
-
+        
+        // NOLINTNEXTLINE cppcoreguidelines-pro-type-cstyle-cast
         if (::connect(Socket, (struct sockaddr*)&addr,
                       sizeof(path) + sizeof(addr.sun_family) - 1) == -1)
         {

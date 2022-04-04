@@ -14,6 +14,7 @@ struct ProgramOptions
 
     int parse(int argc, char** argv)
     {
+        // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays) TODO use CLI11
         static struct option longOptions[] = {
             {"verbose", required_argument, nullptr, 'v'},
             {"trans", required_argument, nullptr, 't'},
@@ -23,6 +24,7 @@ struct ProgramOptions
 
         for (;;)
         {
+            // NOLINTNEXTLINE cppcoreguidelines-pro-bounds-array-to-pointer-decay
             auto argflag = getopt_long(argc, argv, "v:", longOptions, nullptr);
 
             if (argflag == -1)
@@ -55,9 +57,11 @@ struct ProgramOptions
                     }
                     break;
                 case 'e':
+                    //NOLINTNEXTLINE(cert-err34-c) TODO use CLI11
                     EID = atoi(optarg);
                     break;
                 case 'p':
+                    //NOLINTNEXTLINE(cert-err34-c) TODO use CLI11
                     PortNumber = atoi(optarg);
                     break;
                 case 'v':
@@ -270,9 +274,12 @@ class EmulatorClient : public EmulatorBase
                 serverAddr.sin_family = AF_INET;
                 memcpy(&serverAddr.sin_addr.s_addr, &mIpAddress,
                        sizeof(struct in_addr));
+                // NOLINTNEXTLINE cppcoreguidelines-pro-bounds-array-to-pointer-decay
                 serverAddr.sin_port = htons(port);
+                // NOLINTNEXTLINE cppcoreguidelines-pro-bounds-array-to-pointer-decay
                 memset(serverAddr.sin_zero, 0, sizeof(serverAddr.sin_zero));
 
+                // NOLINTNEXTLINE cppcoreguidelines-pro-type-cstyle-cast
                 if (::connect(Socket, (struct sockaddr*)&serverAddr,
                               sizeof(serverAddr)) == -1)
                 {
@@ -296,12 +303,15 @@ class EmulatorClient : public EmulatorBase
                     return false;
                 }
 
+                // NOLINTNEXTLINE cppcoreguidelines-avoid-c-arrays
                 const char path[] = "\0mctp-mux";
                 struct sockaddr_un addr
                 {};
                 addr.sun_family = AF_UNIX;
+                // NOLINTNEXTLINE cppcoreguidelines-pro-bounds-array-to-pointer-decay
                 memcpy(addr.sun_path, path, sizeof(path) - 1);
 
+                // NOLINTNEXTLINE cppcoreguidelines-pro-type-cstyle-cast
                 if (::connect(Socket, (struct sockaddr*)&addr,
                               sizeof(path) + sizeof(addr.sun_family) - 1) == -1)
                 {
