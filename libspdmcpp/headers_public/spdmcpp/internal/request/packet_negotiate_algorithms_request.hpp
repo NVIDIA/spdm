@@ -9,8 +9,8 @@ struct PacketReqAlgStruct
 {
     AlgTypeEnum AlgType = AlgTypeEnum::UNKNOWN;
     uint8_t AlgCount = 0;
-    uint8_t AlgSupported[14] = {0}; // TODO is this really the limit?
-    uint32_t AlgExternal[15] = {0}; // TODO is this really is the limit?
+    std::array<uint8_t, 14> AlgSupported = {0}; // TODO is this really the limit?
+    std::array<uint32_t, 15> AlgExternal = {0}; // TODO is this really is the limit?
 
     // 		static constexpr bool sizeIsConstant = false;
     static PacketReqAlgStruct buildSupported2(AlgTypeEnum type, uint8_t algsup0,

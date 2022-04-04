@@ -9,7 +9,7 @@ struct PacketMeasurementsResponseMin
 {
     PacketMessageHeader Header = PacketMessageHeader(requestResponseCode);
     uint8_t NumberOfBlocks = 0;
-    uint8_t MeasurementRecordLength[3] = {0, 0, 0}; // wtf dmtf...
+    std::array<uint8_t, 3> MeasurementRecordLength = {0, 0, 0}; // wtf dmtf...
 
     static constexpr RequestResponseEnum requestResponseCode =
         RequestResponseEnum::RESPONSE_MEASUREMENTS;
@@ -37,9 +37,7 @@ struct PacketMeasurementsResponseMin
         SPDMCPP_LOG_INDENT(log);
         SPDMCPP_LOG_printMl(log, Header);
         SPDMCPP_LOG_iexprln(log, NumberOfBlocks);
-        log.iprint("MeasurementRecordLength[3]: ");
-        log.println(MeasurementRecordLength,
-                    sizeofArray(MeasurementRecordLength));
+        SPDMCPP_LOG_iexprln(log, MeasurementRecordLength);
     }
 
     bool operator==(const PacketMeasurementsResponseMin& other) const

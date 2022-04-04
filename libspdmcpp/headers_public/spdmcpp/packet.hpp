@@ -67,11 +67,6 @@ namespace spdmcpp
         (expr).printMl(log);                                                   \
     } while (false)
 
-template <typename T, size_t N>
-constexpr size_t sizeofArray(const T (&/*array*/)[N])
-{
-    return N;
-}
 
 template <typename T, size_t N>
 constexpr size_t sizeofArray(const std::array<T, N>& /*array*/)

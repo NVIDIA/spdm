@@ -151,13 +151,6 @@ inline void packetEncodeBasic(const std::array<uint8_t, N>& src,
     packetEncodeBasic(src.data(), src.size(), buf, start);
 }
 
-template <size_t N>
-inline void packetEncodeBasic(const uint8_t (&src)[N],
-                              std::vector<uint8_t>& buf, size_t& start)
-{
-    packetEncodeBasic(src, N, buf, start);
-}
-
 [[nodiscard]] inline RetStat packetDecodeBasic(uint8_t* dst, size_t size,
                                                const std::vector<uint8_t>& buf,
                                                size_t& start)
@@ -177,13 +170,6 @@ inline void packetEncodeBasic(const uint8_t (&src)[N],
                                                size_t& start)
 {
     return packetDecodeBasic(dst.data(), dst.size(), buf, start);
-}
-template <size_t N>
-[[nodiscard]] RetStat packetDecodeBasic(uint8_t (&dst)[N],
-                                        const std::vector<uint8_t>& buf,
-                                        size_t& start)
-{
-    return packetDecodeBasic(dst, N, buf, start);
 }
 
 #endif

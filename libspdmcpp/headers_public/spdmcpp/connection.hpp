@@ -550,7 +550,7 @@ class ConnectionClass
     /** @brief Buffers for storing the communication flow and computing M1/M2
      * and L1/L2 hashes
      */
-    std::vector<uint8_t> Bufs[static_cast<size_t>(BufEnum::NUM)];
+    std::array<std::vector<uint8_t>, static_cast<size_t>(BufEnum::NUM)> Bufs;
 
     /** @brief Low-level helper metheod
      */
