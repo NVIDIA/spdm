@@ -23,8 +23,10 @@ using namespace spdmcpp;
         {                                                                      \
             std::cerr << "Unexpected: " #rs " = " << get_cstr(rs)              \
                       << std::endl;                                            \
-            std::cerr << " in: " << __func__ << "() @ " << __FILE__ << " : "   \
-                      << std::dec << __LINE__ << std::endl;                    \
+            std::cerr << " in: "                                               \
+                      << __func__ /*NOLINT cppcoreguidelines-pro-bounds-array-to-pointer-decay*/ \
+                      << "() @ " << __FILE__ << " : " << std::dec << __LINE__  \
+                      << std::endl;                                            \
             return false;                                                      \
         }                                                                      \
     } while (false)

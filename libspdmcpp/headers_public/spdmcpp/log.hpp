@@ -283,32 +283,36 @@ class TraceHelper
 }; // class TraceHelper
 
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
-#define SPDMCPP_LOG_TRACE_FUNC(log)                                            \
-    if ((log).logLevel >= spdmcpp::LogClass::Level::Debug)                     \
-    {                                                                          \
-        spdmcpp::TraceHelper log_trace_helper_##__LINE__((log), __func__);     \
+#define SPDMCPP_LOG_TRACE_FUNC(log)                                               \
+    if ((log).logLevel >= spdmcpp::LogClass::Level::Debug)                        \
+    {                                                                             \
+        spdmcpp::TraceHelper log_trace_helper_##__LINE__(                         \
+            (log),                                                                \
+            (__func__)); /*NOLINT cppcoreguidelines-pro-bounds-array-to-pointer-decay*/ \
     }
 
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
-#define SPDMCPP_LOG_TRACE_BLOCK(log)                                           \
-    if ((log).logLevel >= spdmcpp::LogClass::Level::Debug)                     \
-    {                                                                          \
-        spdmcpp::TraceHelper log_trace_helper_##__LINE__((log), __func__,      \
-                                                         __FILE__, __LINE__);  \
+#define SPDMCPP_LOG_TRACE_BLOCK(log)                                             \
+    if ((log).logLevel >= spdmcpp::LogClass::Level::Debug)                       \
+    {                                                                            \
+        spdmcpp::TraceHelper log_trace_helper_##__LINE__(                        \
+            (log),                                                               \
+            (__func__), /*NOLINT cppcoreguidelines-pro-bounds-array-to-pointer-decay*/ \
+            __FILE__, __LINE__);                                                 \
     }
 
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
-#define SPDMCPP_LOG_TRACE_RS(log, rs)                                          \
-    if ((log).logLevel >= spdmcpp::LogClass::Level::Debug)                     \
-    {                                                                          \
-        (log).iprint(#rs " = ");                                               \
-        (log).print((rs));                                                     \
-        (log).print("; in: ");                                                 \
-        (log).print(__func__);                                                 \
-        (log).print("() @ ");                                                  \
-        (log).print(__FILE__);                                                 \
-        (log).print(" : ");                                                    \
-        (log).println(__LINE__);                                               \
+#define SPDMCPP_LOG_TRACE_RS(log, rs)                                            \
+    if ((log).logLevel >= spdmcpp::LogClass::Level::Debug)                       \
+    {                                                                            \
+        (log).iprint(#rs " = ");                                                 \
+        (log).print((rs));                                                       \
+        (log).print("; in: ");                                                   \
+        (log).print((__func__)); /*NOLINT cppcoreguidelines-pro-bounds-array-to-pointer-decay*/ \
+        (log).print("() @ ");                                                    \
+        (log).print(__FILE__);                                                   \
+        (log).print(" : ");                                                      \
+        (log).println(__LINE__);                                                 \
     }
 
 } // namespace spdmcpp
