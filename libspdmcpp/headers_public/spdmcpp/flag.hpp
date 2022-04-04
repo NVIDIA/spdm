@@ -48,21 +48,20 @@ std::string to_string_hex(T v)
 #define FLAG_VALUE(T, N, V) N = (V),
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define FLAG_END(T, UT)                                                        \
-    }                                                                          \
-    ;                                                                          \
-    inline T operator|(T lhs, T rhs)                                           \
+    };                                                                         \
+    inline T operator|(T lhs, T rhs) /* NOLINT(bugprone-macro-parentheses) */  \
     {                                                                          \
         return static_cast<T>(static_cast<UT>(lhs) | static_cast<UT>(rhs));    \
     }                                                                          \
-    inline T operator&(T lhs, T rhs)                                           \
+    inline T operator&(T lhs, T rhs) /* NOLINT(bugprone-macro-parentheses) */  \
     {                                                                          \
         return static_cast<T>(static_cast<UT>(lhs) & static_cast<UT>(rhs));    \
     }                                                                          \
-    inline T operator|=(T& lhs, T rhs)                                         \
+    inline T operator|=(T& lhs, T rhs) /* NOLINT(bugprone-macro-parentheses) */\
     {                                                                          \
         return lhs = lhs | rhs;                                                \
     }                                                                          \
-    inline T operator&=(T& lhs, T rhs)                                         \
+    inline T operator&=(T& lhs, T rhs) /* NOLINT(bugprone-macro-parentheses) */\
     {                                                                          \
         return lhs = lhs & rhs;                                                \
     }                                                                          \
