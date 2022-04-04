@@ -167,7 +167,7 @@ class HashClass
     }
 
   private:
-    mbedtls_md_context_t Ctx;
+    mbedtls_md_context_t Ctx{};
 };
 
 } // namespace spdmcpp

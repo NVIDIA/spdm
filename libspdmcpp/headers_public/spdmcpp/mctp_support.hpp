@@ -109,7 +109,8 @@ class MctpIoClass : public IOClass
         }
 
         const char path[] = "\0mctp-mux";
-        struct sockaddr_un addr;
+        struct sockaddr_un addr
+        {};
         addr.sun_family = AF_UNIX;
         memcpy(addr.sun_path, path, sizeof(path) - 1);
 

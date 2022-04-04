@@ -523,7 +523,7 @@ class ConnectionClass
     /** @brief Offset into ResponseBuffer where the actual spdm packet starts,
      * before the offset is the transport layer data
      */
-    size_t ResponseBufferSPDMOffset;
+    size_t ResponseBufferSPDMOffset = 0;
 
     ContextClass* Context = nullptr;
     TransportClass* Transport = nullptr;
@@ -610,7 +610,7 @@ class ConnectionClass
     /** @brief Storage for the nonce used during communication, it's  either the
      * value passed to refreshMeasurements, or a random value
      */
-    nonce_array_32 MeasurementNonce;
+    nonce_array_32 MeasurementNonce{};
 
     /** @brief A bitmask of the requested measurements as passed to
      * refreshMeasurements

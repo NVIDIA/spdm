@@ -23,13 +23,13 @@ namespace spdmcpp
 
 inline void mbedtlsPrintErrorString(LogClass& log, int error)
 {
-    std::array<char, 128> str;
+    std::array<char, 128> str{};
     mbedtls_strerror(error, str.data(), str.size());
     log.print(str.data());
 }
 inline void mbedtlsPrintErrorLine(LogClass& log, const char* prefix, int error)
 {
-    std::array<char, 128> str;
+    std::array<char, 128> str{};
     mbedtls_strerror(error, str.data(), str.size());
     log.iprint(prefix);
     log.print(" = ");

@@ -337,7 +337,8 @@ class EmulatorBase
     spdmcpp::TransportClass* Transport = nullptr;
 
     sdeventplus::Event Event;
-    sdeventplus::source::Time<sdeventplus::ClockId::Monotonic>* Timeout;
+    sdeventplus::source::Time<sdeventplus::ClockId::Monotonic>* Timeout =
+        nullptr;
 
     bool createSocket()
     {

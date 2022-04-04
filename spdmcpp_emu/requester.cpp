@@ -267,7 +267,8 @@ class EmulatorClient : public EmulatorBase
                     return false;
                 }
                 struct in_addr mIpAddress = {0x0100007F}; // TODO option?
-                struct sockaddr_in serverAddr;
+                struct sockaddr_in serverAddr
+                {};
                 serverAddr.sin_family = AF_INET;
                 memcpy(&serverAddr.sin_addr.s_addr, &mIpAddress,
                        sizeof(struct in_addr));
@@ -298,7 +299,8 @@ class EmulatorClient : public EmulatorBase
                 }
 
                 const char path[] = "\0mctp-mux";
-                struct sockaddr_un addr;
+                struct sockaddr_un addr
+                {};
                 addr.sun_family = AF_UNIX;
                 memcpy(addr.sun_path, path, sizeof(path) - 1);
 

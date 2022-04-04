@@ -53,7 +53,7 @@ template <typename T>
 inline T
     returnPseudoRandomType(std::mt19937::result_type seed = mt19937DefaultSeed)
 {
-    T dst;
+    T dst{};
     fillPseudoRandomType(dst, seed);
     return dst;
 }
