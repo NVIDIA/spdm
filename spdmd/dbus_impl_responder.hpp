@@ -32,7 +32,7 @@ class MctpTransportClass : public spdmcpp::MctpTransportClass
     MctpTransportClass(uint8_t eid, Responder& resp) :
         spdmcpp::MctpTransportClass(eid), responder(resp)
     {}
-    virtual ~MctpTransportClass()
+    ~MctpTransportClass() override
     {
         if (time)
         {
@@ -78,7 +78,7 @@ class Responder : public ResponderIntf
     Responder(SpdmdAppContext& appCtx, const std::string& path, uint8_t eid,
               const std::string& inventoryPath);
 
-    ~Responder();
+    ~Responder() override;
 
     void refresh(uint8_t slot, std::vector<uint8_t> nonc,
                  std::vector<uint8_t> measurementIndices,
