@@ -204,7 +204,7 @@ class EmulatorClient : public EmulatorBase
                 SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_PCI_DOE)
         {
             BufferType msg("Client Hello!");
-            SocketCommandEnum response;
+            auto response = SocketCommandEnum::SOCKET_SPDM_COMMAND_UNKOWN;
             BufferType recv;
             if (!sendMessageReceiveResponse(
                     SocketCommandEnum::SOCKET_SPDM_COMMAND_TEST, msg, response,

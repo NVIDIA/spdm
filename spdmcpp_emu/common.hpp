@@ -229,7 +229,7 @@ class EmulatorBase
     }
     bool readData(SocketCommandEnum& cmd)
     {
-        uint32_t data;
+        uint32_t data = 0;
         if (!readData32(&data))
         {
             return false;
@@ -253,7 +253,7 @@ class EmulatorBase
 
     bool receiveBuf(std::vector<uint8_t>& buf)
     {
-        uint32_t size;
+        uint32_t size = 0;
         if (!readData32(&size))
         {
             return false;
@@ -293,7 +293,7 @@ class EmulatorBase
             return false;
         }
         {
-            uint32_t transportType;
+            uint32_t transportType = 0;
             if (!readData32(&transportType))
             {
                 return false;

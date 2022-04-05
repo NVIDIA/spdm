@@ -24,7 +24,7 @@ spdmcpp::RetStat EMUIOClass::write(const std::vector<uint8_t>& buf,
 spdmcpp::RetStat EMUIOClass::read(std::vector<uint8_t>& buf,
                                   spdmcpp::timeout_us_t /*timeout*/)
 {
-    SocketCommandEnum response;
+    auto response = SocketCommandEnum::SOCKET_SPDM_COMMAND_UNKOWN;
     if (!Emulator.receivePlatformData(response, buf))
     {
         return spdmcpp::RetStat::ERROR_UNKNOWN;
