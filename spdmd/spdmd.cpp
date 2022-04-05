@@ -109,7 +109,9 @@ bool SpdmdApp::connectMCTP()
             // TODO just log warning and ignore message?!
             event.exit(1);
         }
-        resp->handleRecv(packetBuffer);
+        else {
+            resp->handleRecv(packetBuffer);
+        }
     };
 
     mctpEvent = new sdeventplus::source::IO(event, mctpIo.Socket, EPOLLIN,

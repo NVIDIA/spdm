@@ -36,7 +36,7 @@ struct PacketDigestsResponseVar
     PacketDigestsResponseMin Min;
 
     static constexpr uint8_t digestsNum = 8;
-    std::vector<uint8_t> Digests[digestsNum];
+    std::array<std::vector<uint8_t>, digestsNum> Digests;
 
     static constexpr RequestResponseEnum requestResponseCode =
         RequestResponseEnum::RESPONSE_DIGESTS;

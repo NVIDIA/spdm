@@ -4,12 +4,10 @@
 #include <sdeventplus/event.hpp>
 #include <spdmcpp/mctp_support.hpp>
 
-#define DEFAULT_SPDM_PLATFORM_PORT 2323
-
 struct ProgramOptions
 {
     bool Verbose = false;
-    uint16_t PortNumber = DEFAULT_SPDM_PLATFORM_PORT;
+    uint16_t PortNumber = 2323;
     SocketTransportTypeEnum TransportType =
         SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_MCTP;
     uint8_t EID = 0;

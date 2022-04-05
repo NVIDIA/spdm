@@ -537,10 +537,8 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
 
         do
         {
-#define SPDMCPP_MBEDTLS_VAR_CREATE(type, var)                                  \
-    type* var = reinterpret_cast<type*>(malloc(sizeof(type)));                 \
-    type##_init(var)
-            SPDMCPP_MBEDTLS_VAR_CREATE(mbedtls_x509_crt, c);
+            auto* c = new mbedtls_x509_crt;
+            mbedtls_x509_crt_init(c);
 
             int ret =
                 mbedtls_x509_crt_parse_der(c, &cert[off], cert.size() - off);

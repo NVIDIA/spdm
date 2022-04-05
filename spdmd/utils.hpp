@@ -2,7 +2,7 @@
 
 //#include "types.hpp"
 
-#include <stdint.h>
+#include <cstdint>
 #include <systemd/sd-bus.h>
 #include <unistd.h>
 
