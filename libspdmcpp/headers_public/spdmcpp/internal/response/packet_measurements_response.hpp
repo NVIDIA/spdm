@@ -195,7 +195,7 @@ struct PacketMeasurementsResponseVar // TODO all variable packets don't need
         }
         if (off != end)
         {
-            assert(false); // TODO remove
+            SPDMCPP_ASSERT(false); // TODO remove
             return RetStat::ERROR_UNKNOWN;
         }
     }

@@ -10,7 +10,7 @@ template <typename T>
 [[nodiscard]] RetStat packetDecodeBasic(T& p, const std::vector<uint8_t>& buf,
                                         size_t& start)
 {
-    assert(start <
+    SPDMCPP_ASSERT(start <
            buf.size()); // TODO need macros for various categories of asserts!!!
     if (start + sizeof(p) > buf.size())
     {
@@ -26,8 +26,8 @@ template <typename T>
 [[nodiscard]] RetStat
     packetDecodeInternal(T& p, const std::vector<uint8_t>& buf, size_t& start)
 {
-    static_assert(T::sizeIsConstant);
-    assert(start <
+    SPDMCPP_STATIC_ASSERT(T::sizeIsConstant);
+    SPDMCPP_ASSERT(start <
            buf.size()); // TODO need macros for various categories of asserts!!!
     if (start + sizeof(p) > buf.size())
     {
@@ -80,7 +80,7 @@ void packetEncodeBasic(const T& p, uint8_t* buf)
 template <typename T>
 void packetEncodeBasic(const T& p, std::vector<uint8_t>& buf, size_t& start)
 {
-    static_assert(std::is_integral<T>::value || std::is_enum<T>::value);
+    SPDMCPP_STATIC_ASSERT(std::is_integral<T>::value || std::is_enum<T>::value);
     if (buf.size() < start + sizeof(p))
     {
         buf.resize(start + sizeof(p));
@@ -92,7 +92,7 @@ template <typename T>
 [[nodiscard]] RetStat
     packetEncodeInternal(const T& p, std::vector<uint8_t>& buf, size_t& start)
 {
-    static_assert(T::sizeIsConstant);
+    SPDMCPP_STATIC_ASSERT(T::sizeIsConstant);
     if (buf.size() < start + sizeof(p))
     {
         buf.resize(start + sizeof(p));
@@ -155,7 +155,7 @@ inline void packetEncodeBasic(const std::array<uint8_t, N>& src,
                                                const std::vector<uint8_t>& buf,
                                                size_t& start)
 {
-    //	assert(start < buf.size());//TODO need macros for various categories of
+    //	SPDMCPP_ASSERT(start < buf.size());//TODO need macros for various categories of
     // asserts!!!
     if (start + size > buf.size())
     {

@@ -31,7 +31,7 @@ RetStat ConnectionClass::sendRequest(const T& packet, BufEnum bufidx)
             RequestResponseEnum::REQUEST_GET_MEASUREMENTS ||
         T::requestResponseCode == RequestResponseEnum::RESPONSE_MEASUREMENTS)
     {
-        // assert(bufidx == BufEnum::NUM);
+        // SPDMCPP_ASSERT(bufidx == BufEnum::NUM);
         // size_t off = lay.getEndOffset();
         // HashL1L2.update(&buf[off], buf.size() - off);
     }
@@ -88,8 +88,8 @@ RetStat ConnectionClass::asyncResponse()
     Log.iprint("asyncResponse(");
     Log.print(typeid(T).name());
     Log.println("):");
-    assert(WaitingForResponse == RequestResponseEnum::INVALID);
-    static_assert(isResponse(T::requestResponseCode));
+    SPDMCPP_ASSERT(WaitingForResponse == RequestResponseEnum::INVALID);
+    SPDMCPP_STATIC_ASSERT(isResponse(T::requestResponseCode));
     WaitingForResponse = T::requestResponseCode;
     return RetStat::OK;
 }

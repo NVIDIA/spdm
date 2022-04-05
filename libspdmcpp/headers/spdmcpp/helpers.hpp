@@ -2,7 +2,6 @@
 #pragma once
 
 #include <array>
-#include <cassert>
 #include <cstdint>
 #include <cstring>
 #include <limits>
@@ -11,6 +10,7 @@
 
 namespace spdmcpp
 {
+
 inline void fillRandom(uint8_t* buf, size_t len)
 {
     std::random_device rd;

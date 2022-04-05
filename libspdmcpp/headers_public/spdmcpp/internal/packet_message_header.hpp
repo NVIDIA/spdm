@@ -50,14 +50,14 @@ struct PacketMessageHeader
     packetMessageHeaderGetVersion(const uint8_t* buf)
 {
     auto& p = *reinterpret_cast<const PacketMessageHeader*>(buf);
-    static_assert(sizeof(p.requestResponseCode) == 1);
+    SPDMCPP_STATIC_ASSERT(sizeof(p.requestResponseCode) == 1);
     return p.MessageVersion;
 }
 [[nodiscard]] inline RequestResponseEnum
     packetMessageHeaderGetRequestresponsecode(const uint8_t* buf)
 {
     auto& p = *reinterpret_cast<const PacketMessageHeader*>(buf);
-    static_assert(sizeof(p.requestResponseCode) == 1);
+    SPDMCPP_STATIC_ASSERT(sizeof(p.requestResponseCode) == 1);
     return p.requestResponseCode;
 }
 inline void
@@ -65,7 +65,7 @@ inline void
                                               RequestResponseEnum rrcode)
 {
     auto& p = *reinterpret_cast<PacketMessageHeader*>(buf);
-    static_assert(sizeof(p.requestResponseCode) == 1);
+    SPDMCPP_STATIC_ASSERT(sizeof(p.requestResponseCode) == 1);
     p.requestResponseCode = rrcode;
 }
 /*	inline void endian_swap(packet_message_header& p)//TODO decide, likely not

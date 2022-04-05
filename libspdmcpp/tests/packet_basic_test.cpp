@@ -1,6 +1,7 @@
 
 #include "test_helpers.hpp"
 
+#include <spdmcpp/assert.hpp>
 #include <spdmcpp/helpers.hpp>
 #include <spdmcpp/packet.hpp>
 
@@ -49,7 +50,7 @@ inline void
     fillPseudoRandomPacket(T& p,
                            std::mt19937::result_type seed = mt19937DefaultSeed)
 {
-    static_assert(T::sizeIsConstant);
+    SPDMCPP_STATIC_ASSERT(T::sizeIsConstant);
     fillPseudoRandomType(p, seed);
     packetMessageHeaderSetRequestresponsecode(reinterpret_cast<uint8_t*>(&p),
                                               T::requestResponseCode);
@@ -67,7 +68,7 @@ inline T returnPseudorandomPacket(
 template <class T>
 bool packetPseudorandomDecodeEncodeBasic()
 {
-    static_assert(T::sizeIsConstant);
+    SPDMCPP_STATIC_ASSERT(T::sizeIsConstant);
     std::vector<uint8_t> src, dst;
     src.resize(sizeof(T));
     fillPseudoRandom(src);
@@ -105,7 +106,7 @@ template <class T>
 bool packetPseudorandomDecodeEncode()
 {
     LogClass log(std::cerr);
-    static_assert(T::sizeIsConstant);
+    SPDMCPP_STATIC_ASSERT(T::sizeIsConstant);
     std::vector<uint8_t> src, dst;
     src.resize(sizeof(T));
     fillPseudoRandom(src);
@@ -122,7 +123,7 @@ bool packetPseudorandomDecodeEncode()
         size_t off = 0;
         auto rs = packetDecode(packet, src, off);
         SPDMCPP_TEST_ASSERT_RS(rs, RetStat::OK);
-        assert(off == src.size());
+        SPDMCPP_ASSERT(off == src.size());
     }
     packet.printMl(log);
     {

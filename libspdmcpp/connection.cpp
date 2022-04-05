@@ -72,12 +72,12 @@ RetStat ConnectionClass::refreshMeasurementsInternal()
 {
     if (MeasurementIndices[255])
     {
-        assert(MeasurementIndices.count() == 1);
+        SPDMCPP_ASSERT(MeasurementIndices.count() == 1);
     }
     else
     {
-        assert(!MeasurementIndices[0]);
-        assert(!MeasurementIndices[255]);
+        SPDMCPP_ASSERT(!MeasurementIndices[0]);
+        SPDMCPP_ASSERT(!MeasurementIndices[255]);
     }
     auto rs = tryGetVersion();
     SPDMCPP_LOG_TRACE_RS(Log, rs);
@@ -172,7 +172,7 @@ bool ConnectionClass::getCertificatesPEM(
         int ret = mbedtls_pem_write_buffer(
             "", "", (const unsigned char*)cert->raw.p, cert->raw.len,
             (unsigned char*)str.data() + off, size, &size);
-        assert(ret == 0); // TODO make it robust
+        SPDMCPP_ASSERT(ret == 0); // TODO make it robust
         str.resize(off + size);
         return true;
     }
@@ -183,7 +183,7 @@ bool ConnectionClass::getCertificatesPEM(
 RetStat ConnectionClass::tryGetVersion()
 {
     SPDMCPP_LOG_TRACE_FUNC(Log);
-    // assert(MessageVersion == MessageVersionEnum::UNKNOWN);
+    // SPDMCPP_ASSERT(MessageVersion == MessageVersionEnum::UNKNOWN);
 
     for (auto& b : Bufs)
     {
@@ -228,8 +228,8 @@ RetStat ConnectionClass::handleRecv<PacketVersionResponseVar>()
 RetStat ConnectionClass::chooseVersion()
 {
     SPDMCPP_LOG_TRACE_FUNC(Log);
-    assert(hasInfo(ConnectionInfoEnum::SUPPORTED_VERSIONS));
-    // assert(MessageVersion == MessageVersionEnum::UNKNOWN);
+    SPDMCPP_ASSERT(hasInfo(ConnectionInfoEnum::SUPPORTED_VERSIONS));
+    // SPDMCPP_ASSERT(MessageVersion == MessageVersionEnum::UNKNOWN);
 
     std::vector<MessageVersionEnum> vers; // TODO is using just the enum fine or
                                           // do we need more detailed info?!
@@ -266,7 +266,7 @@ RetStat ConnectionClass::chooseVersion()
 RetStat ConnectionClass::tryGetCapabilities()
 {
     SPDMCPP_LOG_TRACE_FUNC(Log);
-    assert(hasInfo(ConnectionInfoEnum::CHOOSEN_VERSION));
+    SPDMCPP_ASSERT(hasInfo(ConnectionInfoEnum::CHOOSEN_VERSION));
 
     RetStat rs = RetStat::ERROR_UNKNOWN;
     if (MessageVersion == MessageVersionEnum::SPDM_1_0)
@@ -326,8 +326,8 @@ RetStat ConnectionClass::handleRecv<PacketCapabilitiesResponse>()
 RetStat ConnectionClass::tryNegotiateAlgorithms()
 {
     SPDMCPP_LOG_TRACE_FUNC(Log);
-    assert(hasInfo(ConnectionInfoEnum::CHOOSEN_VERSION));
-    assert(hasInfo(ConnectionInfoEnum::CAPABILITIES));
+    SPDMCPP_ASSERT(hasInfo(ConnectionInfoEnum::CHOOSEN_VERSION));
+    SPDMCPP_ASSERT(hasInfo(ConnectionInfoEnum::CAPABILITIES));
 
     PacketNegotiateAlgorithmsRequestVar request;
     request.Min.Header.MessageVersion = MessageVersion;
@@ -391,8 +391,8 @@ RetStat ConnectionClass::handleRecv<PacketAlgorithmsResponseVar>()
 RetStat ConnectionClass::tryGetDigest()
 {
     SPDMCPP_LOG_TRACE_FUNC(Log);
-    assert(hasInfo(ConnectionInfoEnum::CHOOSEN_VERSION));
-    assert(hasInfo(ConnectionInfoEnum::ALGORITHMS));
+    SPDMCPP_ASSERT(hasInfo(ConnectionInfoEnum::CHOOSEN_VERSION));
+    SPDMCPP_ASSERT(hasInfo(ConnectionInfoEnum::ALGORITHMS));
 
     PacketGetDigestsRequest request;
     request.Header.MessageVersion = MessageVersion;
@@ -453,10 +453,10 @@ RetStat ConnectionClass::handleRecv<PacketDigestsResponseVar>()
 RetStat ConnectionClass::tryGetCertificateChunk(SlotIdx slotidx)
 {
     SPDMCPP_LOG_TRACE_FUNC(Log);
-    assert(hasInfo(ConnectionInfoEnum::CHOOSEN_VERSION));
-    assert(hasInfo(ConnectionInfoEnum::ALGORITHMS));
+    SPDMCPP_ASSERT(hasInfo(ConnectionInfoEnum::CHOOSEN_VERSION));
+    SPDMCPP_ASSERT(hasInfo(ConnectionInfoEnum::ALGORITHMS));
 
-    assert(MessageVersion != MessageVersionEnum::UNKNOWN);
+    SPDMCPP_ASSERT(MessageVersion != MessageVersionEnum::UNKNOWN);
     if (slotidx >= slotNum)
     {
         return RetStat::ERROR_UNKNOWN;
@@ -523,7 +523,7 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
         rs = packetDecodeInternal(certChain, cert, off);
         SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
 
-        assert(certChain.Length == cert.size());
+        SPDMCPP_ASSERT(certChain.Length == cert.size());
         std::vector<uint8_t> rootCertHash;
         {
             rootCertHash.resize(getHashSize(Algorithms.Min.BaseHashAlgo));
@@ -548,7 +548,7 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
             {
                 mbedtlsPrintErrorLine(Log, "mbedtls_x509_crt_parse_der()", ret);
             }
-            assert(ret == 0);//TODO proper error handling!!!
+            SPDMCPP_ASSERT(ret == 0); // TODO proper error handling!!!
 
             slot.MCertificates.push_back(c);
 
@@ -559,7 +559,7 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
                 ret = mbedtls_asn1_get_tag(
                     &p, cert.data() + cert.size(), &asn1Len,
                     MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE);
-                assert(ret == 0);
+                SPDMCPP_ASSERT(ret == 0);
                 asn1Len += (p - s);
             }
 
@@ -570,7 +570,7 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
                 int ret = mbedtls_md(
                     mbedtls_md_info_from_type(toMbedtls(getSignatureHash())),
                     cert.data() + off, asn1Len, hash.data());
-                assert(ret == 0);
+                SPDMCPP_ASSERT(ret == 0);
                 Log.iprint("computed root certificate hash = ");
                 Log.println(hash.data(), hash.size());
 
@@ -590,7 +590,7 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
                 info.resize(4096);
                 int ret =
                     mbedtls_x509_crt_info(info.data(), info.size(), "", c);
-                assert(ret >= 0);
+                SPDMCPP_ASSERT(ret >= 0);
                 info.resize(ret);
                 Log.print(info);
             }
@@ -619,7 +619,7 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
                 info.resize(4096);
                 ret = mbedtls_x509_crt_verify_info(info.data(), info.size(), "",
                                                    rflags);
-                assert(ret >= 0);
+                SPDMCPP_ASSERT(ret >= 0);
                 info.resize(ret);
                 Log.print(info);
                 return RetStat::ERROR_CERTIFICATE_CHAIN_VERIFIY_FAILED;
@@ -652,10 +652,10 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
                 info.resize(4096);
                 ret = mbedtls_x509_crt_verify_info(info.data(), info.size(), "",
                                                    rflags);
-                assert(ret >= 0);
+                SPDMCPP_ASSERT(ret >= 0);
                 info.resize(ret);
                 Log.print(info);
-                assert(false);
+                SPDMCPP_ASSERT(false);
             }
         }
 #endif
@@ -670,15 +670,15 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
 RetStat ConnectionClass::tryGetCertificate(SlotIdx idx)
 {
     SPDMCPP_LOG_TRACE_FUNC(Log);
-    assert(hasInfo(ConnectionInfoEnum::CHOOSEN_VERSION));
-    assert(hasInfo(ConnectionInfoEnum::ALGORITHMS));
+    SPDMCPP_ASSERT(hasInfo(ConnectionInfoEnum::CHOOSEN_VERSION));
+    SPDMCPP_ASSERT(hasInfo(ConnectionInfoEnum::ALGORITHMS));
 
     if (idx >= slotNum)
     {
         return RetStat::ERROR_UNKNOWN;
     }
     std::vector<uint8_t>& cert = Slots[idx].Certificates;
-    // assert(cert.empty());
+    // SPDMCPP_ASSERT(cert.empty());
     cert.clear();
 
     auto rs = tryGetCertificateChunk(idx);
@@ -689,7 +689,7 @@ RetStat ConnectionClass::tryGetCertificate(SlotIdx idx)
 RetStat ConnectionClass::tryChallenge()
 {
     SPDMCPP_LOG_TRACE_FUNC(Log);
-    assert(MessageVersion != MessageVersionEnum::UNKNOWN);
+    SPDMCPP_ASSERT(MessageVersion != MessageVersionEnum::UNKNOWN);
 
     PacketChallengeRequest request;
     request.Header.MessageVersion = MessageVersion;
@@ -766,7 +766,7 @@ RetStat ConnectionClass::handleRecv<PacketChallengeAuthResponseVar>()
 RetStat ConnectionClass::tryGetMeasurements()
 {
     SPDMCPP_LOG_TRACE_FUNC(Log);
-    assert(MessageVersion != MessageVersionEnum::UNKNOWN);
+    SPDMCPP_ASSERT(MessageVersion != MessageVersionEnum::UNKNOWN);
 
     // SlotClass& slot = Slots[CertificateSlotIdx];
 
@@ -790,7 +790,7 @@ RetStat ConnectionClass::tryGetMeasurements()
 RetStat ConnectionClass::tryGetMeasurements(uint8_t idx)
 {
     SPDMCPP_LOG_TRACE_FUNC(Log);
-    assert(MessageVersion != MessageVersionEnum::UNKNOWN);
+    SPDMCPP_ASSERT(MessageVersion != MessageVersionEnum::UNKNOWN);
 
     PacketGetMeasurementsRequestVar request;
     request.Min.Header.MessageVersion = MessageVersion;
@@ -897,7 +897,7 @@ RetStat ConnectionClass::handleRecv<PacketMeasurementsResponseVar>()
     {
         appendRecvToBuf(BufEnum::L);
 
-        assert(MeasurementIndices.any());
+        SPDMCPP_ASSERT(MeasurementIndices.any());
         uint8_t idx = getFirstMeasurementIndex();
         MeasurementIndices.reset(idx);
         return tryGetMeasurements(idx);

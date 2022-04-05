@@ -31,6 +31,7 @@
 #include <sdeventplus/source/io.hpp>
 #include <sdeventplus/source/time.hpp>
 
+#include <spdmcpp/assert.hpp>
 #include <spdmcpp/common.hpp>
 #include <spdmcpp/context.hpp>
 #include <spdmcpp/connection.hpp>
@@ -151,7 +152,7 @@ class EmulatorBase : public spdmcpp::NonCopyable
     ~EmulatorBase()
     {
         closeSocketIfCreated();
-        assert(!Context);
+        SPDMCPP_ASSERT(!Context);
     }
 
     // TODO rename for clearer layer separation and meaning ! and depend more on
@@ -293,7 +294,7 @@ class EmulatorBase : public spdmcpp::NonCopyable
             {
                 return false;
             }
-            assert(static_cast<SocketTransportTypeEnum>(transportType) ==
+            SPDMCPP_ASSERT(static_cast<SocketTransportTypeEnum>(transportType) ==
                    TransportType);
         }
         if (!receiveBuf(recv))
@@ -337,7 +338,7 @@ class EmulatorBase : public spdmcpp::NonCopyable
 
     bool createSocket()
     {
-        assert(Socket == -1);
+        SPDMCPP_ASSERT(Socket == -1);
         Socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
         if (Socket == -1)
         {
@@ -348,7 +349,7 @@ class EmulatorBase : public spdmcpp::NonCopyable
     }
     void closeSocket()
     {
-        assert(Socket != -1);
+        SPDMCPP_ASSERT(Socket != -1);
         close(Socket);
         Socket = -1;
     }

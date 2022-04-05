@@ -9,8 +9,6 @@
 #include <chrono>
 #include <iostream>
 
-// #include <cassert>
-
 using namespace sdbusplus::xyz::openbmc_project::Common::Error;
 using namespace spdmcpp;
 
@@ -152,7 +150,7 @@ spdmcpp::RetStat Responder::handleRecv(std::vector<uint8_t>& buf)
                 status(SPDMStatus::Error_Other);
                 appContext.reportError("SPDM other error fail");
         }
-        assert(!Connection.isWaitingForResponse());
+        SPDMCPP_ASSERT(!Connection.isWaitingForResponse());
         return rs;
     }
 
@@ -288,7 +286,7 @@ void Responder::updateLastUpdateTime()
 spdmcpp::RetStat MctpTransportClass::setupTimeout(spdmcpp::timeout_ms_t timeout)
 {
     sdeventplus::Event& event = responder.appContext.event;
-    assert(!time);
+    SPDMCPP_ASSERT(!time);
     // TODO !!! verify we're not leaking anything !!!
     auto timeCb = [this](
                       sdeventplus::source::Time<clockId>& /*source*/,

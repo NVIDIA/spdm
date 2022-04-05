@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include "assert.hpp"
 #include "common.hpp"
 
 #include <arpa/inet.h>
@@ -10,7 +11,6 @@
 #include <unistd.h>
 
 #include <array>
-#include <cassert>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -34,7 +34,7 @@ class MctpTransportClass : public TransportClass
 
     void setEid(uint8_t eid)
     {
-        assert(EID == 0);
+        SPDMCPP_ASSERT(EID == 0);
         EID = eid;
     }
 

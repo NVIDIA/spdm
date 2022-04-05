@@ -71,7 +71,7 @@ struct PacketGetMeasurementsRequestVar
                 size += sizeof(SlotIDParam);
             }
         }
-        assert(size <= std::numeric_limits<uint16_t>::max());
+        SPDMCPP_ASSERT(size <= std::numeric_limits<uint16_t>::max());
         return static_cast<uint16_t>(size);
     }
 

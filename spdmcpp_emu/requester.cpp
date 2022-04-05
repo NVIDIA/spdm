@@ -109,7 +109,7 @@ class EmulatorClient : public EmulatorBase
     {
         TransportType = opt.TransportType;
 
-        assert(!Transport);
+        SPDMCPP_ASSERT(!Transport);
         switch (TransportType)
         {
             case SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_MCTP:
@@ -117,7 +117,7 @@ class EmulatorClient : public EmulatorBase
                 Transport = new spdmcpp::EmuMctpTransportClass;
                 break;
             case SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_PCI_DOE:
-                assert(false);
+                SPDMCPP_ASSERT(false);
                 //	spdm_registerTransport_layer_func(spdm_context,
                 // spdm_transport_pci_doe_encode_message,
                 // spdm_transport_pci_doe_decode_message);
@@ -131,7 +131,7 @@ class EmulatorClient : public EmulatorBase
                 Transport = new spdmcpp::MctpTransportClass(opt.EID);
                 break;
             default:
-                assert(false);
+                SPDMCPP_ASSERT(false);
                 deleteSpdmcpp();
                 return false;
         }
@@ -210,7 +210,7 @@ class EmulatorClient : public EmulatorBase
             {
                 return false;
             }
-            assert(response == SocketCommandEnum::SOCKET_SPDM_COMMAND_TEST);
+            SPDMCPP_ASSERT(response == SocketCommandEnum::SOCKET_SPDM_COMMAND_TEST);
             std::cout<< "Got back: " << recv.data() << std::endl;
         }
 #if 1
@@ -329,7 +329,7 @@ class EmulatorClient : public EmulatorBase
                 break;
             }
             default:
-                assert(false);
+                SPDMCPP_ASSERT(false);
                 return false;
         }
         return true;

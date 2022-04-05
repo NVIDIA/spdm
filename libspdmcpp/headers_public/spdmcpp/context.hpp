@@ -1,10 +1,10 @@
 
 #pragma once
 
+#include "assert.hpp"
 #include "common.hpp"
 
 #include <array>
-#include <cassert>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -26,12 +26,12 @@ class ContextClass
 
     void registerIo(IOClass* io)
     {
-        assert(!IO);
+        SPDMCPP_ASSERT(!IO);
         IO = io;
     }
     void unregisterIo(IOClass* io)
     {
-        assert(IO == io);
+        SPDMCPP_ASSERT(IO == io);
         IO = nullptr;
     }
 

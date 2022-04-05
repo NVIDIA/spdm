@@ -3,7 +3,6 @@
 
 #include "enum.hpp"
 
-#include <cassert>
 #include <cstdint>
 #include <cstring>
 #include <limits>

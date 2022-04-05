@@ -88,7 +88,7 @@ struct PacketAlgorithmsResponseVar
         {
             size += iter.getSize();
         }
-        assert(size <= std::numeric_limits<uint16_t>::max());
+        SPDMCPP_ASSERT(size <= std::numeric_limits<uint16_t>::max());
         return static_cast<uint16_t>(size);
     }
     RetStat finalize()

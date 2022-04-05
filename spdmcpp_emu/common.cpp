@@ -26,7 +26,7 @@ spdmcpp::RetStat EMUIOClass::read(std::vector<uint8_t>& buf,
     {
         return spdmcpp::RetStat::ERROR_UNKNOWN;
     }
-    assert(response == SocketCommandEnum::SOCKET_SPDM_COMMAND_NORMAL);
+    SPDMCPP_ASSERT(response == SocketCommandEnum::SOCKET_SPDM_COMMAND_NORMAL);
     return spdmcpp::RetStat::OK;
 }
 spdmcpp::RetStat EMUIOClass::setupTimeout(spdmcpp::timeout_us_t timeout)
@@ -41,7 +41,7 @@ spdmcpp::RetStat EMUIOClass::setupTimeout(spdmcpp::timeout_us_t timeout)
 	auto callback = [this](sdeventplus::source::Time<cid>& /*source*/, sdeventplus::source::Time<cid>::TimePoint /*time*/)
 	{
 		std::cerr << "DemuxIOClass::setupTimeout callback" << std::endl;
-// 		assert(false);
+// 		SPDMCPP_ASSERT(false);
 	};
 	
 	std::cerr << "DemuxIOClass::setupTimeout queue" << std::endl;

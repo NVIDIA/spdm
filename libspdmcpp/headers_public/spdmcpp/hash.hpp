@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include "assert.hpp"
 #include "common.hpp"
 #include "enum.hpp"
 #include "flag.hpp"
@@ -8,7 +9,6 @@
 #include <mbedtls/md.h>
 
 #include <array>
-#include <cassert>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -21,7 +21,7 @@ namespace spdmcpp
 
 inline HashEnum toHash(BaseHashAlgoFlags flags)
 {
-    assert(countBits(static_cast<std::underlying_type_t<BaseHashAlgoFlags>>(
+    SPDMCPP_ASSERT(countBits(static_cast<std::underlying_type_t<BaseHashAlgoFlags>>(
                flags)) <= 1);
     switch (flags)
     {
@@ -44,7 +44,7 @@ inline HashEnum toHash(BaseHashAlgoFlags flags)
 
 inline HashEnum toHash(MeasurementHashAlgoFlags flags)
 {
-    assert(
+    SPDMCPP_ASSERT(
         countBits(static_cast<std::underlying_type_t<MeasurementHashAlgoFlags>>(
             flags)) <= 1);
     switch (flags)
@@ -100,10 +100,10 @@ class HashClass
                         const std::vector<uint8_t>& buf, size_t off = 0,
                         size_t len = std::numeric_limits<size_t>::max())
     {
-        assert(off <= buf.size());
+        SPDMCPP_ASSERT(off <= buf.size());
         if (len != std::numeric_limits<size_t>::max())
         {
-            assert(off + len <= buf.size());
+            SPDMCPP_ASSERT(off + len <= buf.size());
         }
         compute(hash, algo, buf.data() + off, std::min(buf.size() - off, len));
     }
@@ -125,9 +125,9 @@ class HashClass
         mbedtls_md_init(&Ctx);
         int ret = mbedtls_md_setup(
             &Ctx, Ctx.md_info, 0); // TODO md_info may be considered private?!
-        assert(ret == 0);          // TODO failure possible?
+        SPDMCPP_ASSERT(ret == 0);          // TODO failure possible?
         ret = mbedtls_md_clone(&Ctx, &other.Ctx);
-        assert(ret == 0); // TODO failure possible?
+        SPDMCPP_ASSERT(ret == 0); // TODO failure possible?
     }
 
     HashClass(HashClass&&) = delete;
@@ -142,35 +142,35 @@ class HashClass
     {
         mbedtls_md_type_t type = toMbedtls(algo);
         int ret = mbedtls_md_setup(&Ctx, mbedtls_md_info_from_type(type), 0);
-        assert(ret == 0); // TODO failure possible?
+        SPDMCPP_ASSERT(ret == 0); // TODO failure possible?
         ret = mbedtls_md_starts(&Ctx);
-        assert(ret == 0); // TODO failure possible?
+        SPDMCPP_ASSERT(ret == 0); // TODO failure possible?
     }
 
     void update(const uint8_t* buf, size_t size)
     {
         int ret = mbedtls_md_update(&Ctx, buf, size);
-        assert(ret == 0); // TODO failure possible?
+        SPDMCPP_ASSERT(ret == 0); // TODO failure possible?
     }
     void update(const std::vector<uint8_t>& buf, size_t off = 0,
                 size_t len = std::numeric_limits<size_t>::max())
     {
-        assert(off < buf.size());
+        SPDMCPP_ASSERT(off < buf.size());
         len = std::min(len, buf.size() - off);
-        assert(off + len <= buf.size());
+        SPDMCPP_ASSERT(off + len <= buf.size());
         int ret = mbedtls_md_update(&Ctx, buf.data() + off, len);
-        assert(ret == 0); // TODO failure possible?
+        SPDMCPP_ASSERT(ret == 0); // TODO failure possible?
     }
 
     //	void hash_output(uint8_t* buf, size_t size)
 
     void hashFinish(uint8_t* buf, size_t size)
     {
-        assert(mbedtls_md_get_size(Ctx.md_info) == size);
+        SPDMCPP_ASSERT(mbedtls_md_get_size(Ctx.md_info) == size);
         int ret = mbedtls_md_finish(&Ctx, buf);
-        assert(ret == 0); // TODO failure possible?
+        SPDMCPP_ASSERT(ret == 0); // TODO failure possible?
         //	ret = mbedtls_md_starts(&Ctx);
-        //	assert(ret == 0);//TODO failure possible?
+        //	SPDMCPP_ASSERT(ret == 0);//TODO failure possible?
     }
     void hashFinish(std::vector<uint8_t>& buf)
     {

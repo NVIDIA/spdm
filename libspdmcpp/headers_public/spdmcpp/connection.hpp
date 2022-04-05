@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include "assert.hpp"
 #include "common.hpp"
 #include "context.hpp"
 #include "hash.hpp"
@@ -11,7 +12,6 @@
 
 #include <array>
 #include <bitset>
-#include <cassert>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -151,7 +151,7 @@ class ConnectionClass : public NonCopyable
      */
     void registerTransport(TransportClass* transport)
     {
-        assert(!Transport);
+        SPDMCPP_ASSERT(!Transport);
         Transport = transport;
     }
 
@@ -160,7 +160,7 @@ class ConnectionClass : public NonCopyable
      */
     void unregisterTransport(TransportClass* transport)
     {
-        assert(Transport == transport);
+        SPDMCPP_ASSERT(Transport == transport);
         Transport = nullptr;
     }
 
@@ -239,7 +239,7 @@ class ConnectionClass : public NonCopyable
      */
     bool slothasInfo(SlotIdx slotidx, SlotInfoEnum info) const
     {
-        assert(slotidx < slotNum);
+        SPDMCPP_ASSERT(slotidx < slotNum);
         return !!(
             Slots[slotidx].GotInfo &
             (1 << static_cast<std::underlying_type_t<SlotInfoEnum>>(info)));
@@ -260,14 +260,14 @@ class ConnectionClass : public NonCopyable
      */
     HashEnum getSignatureHash() const
     {
-        assert(hasInfo(ConnectionInfoEnum::ALGORITHMS));
+        SPDMCPP_ASSERT(hasInfo(ConnectionInfoEnum::ALGORITHMS));
         return toHash(Algorithms.Min.BaseHashAlgo);
     }
     /** @brief The hash algorithm used for generating measurement digests
      */
     HashEnum getMeasurementHash() const
     {
-        assert(hasInfo(ConnectionInfoEnum::ALGORITHMS));
+        SPDMCPP_ASSERT(hasInfo(ConnectionInfoEnum::ALGORITHMS));
         return toHash(Algorithms.Min.MeasurementHashAlgo);
     }
 
@@ -275,7 +275,7 @@ class ConnectionClass : public NonCopyable
      */
     MessageVersionEnum getMessageVersion() const
     {
-        assert(hasInfo(ConnectionInfoEnum::CHOOSEN_VERSION));
+        SPDMCPP_ASSERT(hasInfo(ConnectionInfoEnum::CHOOSEN_VERSION));
         return MessageVersion;
     }
 
@@ -408,7 +408,7 @@ class ConnectionClass : public NonCopyable
         /** @brief Holder for the SlotInfoEnum bits
          */
         uint8_t GotInfo = 0;
-        static_assert(sizeof(GotInfo) * 8 >=
+        SPDMCPP_STATIC_ASSERT(sizeof(GotInfo) * 8 >=
                       static_cast<std::underlying_type_t<SlotInfoEnum>>(
                           SlotInfoEnum::NUM));
 
@@ -426,7 +426,7 @@ class ConnectionClass : public NonCopyable
          */
         mbedtls_x509_crt* getRootCert() const
         {
-            // assert(MCertificates.size() >= 2);
+            // SPDMCPP_ASSERT(MCertificates.size() >= 2);
             if (MCertificates.empty())
             {
                 return nullptr;
@@ -438,7 +438,7 @@ class ConnectionClass : public NonCopyable
          */
         mbedtls_x509_crt* getLeafCert() const
         {
-            // assert(MCertificates.size() >= 2);
+            // SPDMCPP_ASSERT(MCertificates.size() >= 2);
             if (MCertificates.empty())
             {
                 return nullptr;
@@ -632,7 +632,7 @@ class ConnectionClass : public NonCopyable
      * markInfo and hasInfo
      */
     uint8_t GotInfo = 0;
-    static_assert(sizeof(GotInfo) * 8 >=
+    SPDMCPP_STATIC_ASSERT(sizeof(GotInfo) * 8 >=
                   static_cast<std::underlying_type_t<ConnectionInfoEnum>>(
                       ConnectionInfoEnum::NUM));
 
@@ -650,7 +650,7 @@ class ConnectionClass : public NonCopyable
      */
     uint8_t getFirstMeasurementIndex() const
     {
-        assert(MeasurementIndices.any());
+        SPDMCPP_ASSERT(MeasurementIndices.any());
         for (uint8_t i = 0; i < MeasurementIndices.size(); ++i)
         {
             if (MeasurementIndices[i])

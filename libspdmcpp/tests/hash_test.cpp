@@ -77,7 +77,7 @@ uint8_t charToUint(char c)
         return static_cast<uint8_t>((c - 'A') + 10);
     }
     std::cerr << "char_to_uint() invalid character '" << c << "'\n";
-    assert(false);
+    SPDMCPP_ASSERT(false);
     return 0;
 }
 

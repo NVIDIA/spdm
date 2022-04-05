@@ -51,7 +51,7 @@ struct PacketReqAlgStruct
         size += sizeof(AlgCount);
         size += getFixedAlgCount() * sizeof(AlgSupported[0]);
         size += getExtAlgCount() * sizeof(AlgExternal[0]);
-        assert(size <= std::numeric_limits<uint16_t>::max());
+        SPDMCPP_ASSERT(size <= std::numeric_limits<uint16_t>::max());
         return static_cast<uint16_t>(size);
     }
 
@@ -214,7 +214,7 @@ struct PacketNegotiateAlgorithmsRequestVar
         {
             size += iter.getSize();
         }
-        assert(size <= std::numeric_limits<uint16_t>::max());
+        SPDMCPP_ASSERT(size <= std::numeric_limits<uint16_t>::max());
         return static_cast<uint16_t>(size);
     }
     RetStat finalize()

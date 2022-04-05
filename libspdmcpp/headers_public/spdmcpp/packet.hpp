@@ -1,12 +1,12 @@
 
 #pragma once
 
+#include "assert.hpp"
 #include "enum.hpp"
 #include "flag.hpp"
 #include "log.hpp"
 
 #include <array>
-#include <cassert>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>

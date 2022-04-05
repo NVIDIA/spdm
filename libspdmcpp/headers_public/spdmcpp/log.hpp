@@ -7,7 +7,6 @@
 #include "retstat.hpp"
 
 #include <array>
-#include <cassert>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>

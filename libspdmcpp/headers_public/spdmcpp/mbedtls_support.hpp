@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include "assert.hpp"
 #include "flag.hpp"
 #include "log.hpp"
 
@@ -11,7 +12,6 @@
 #include <mbedtls/pk.h>
 #include <mbedtls/x509_crt.h>
 
-#include <cassert>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -61,7 +61,7 @@ inline int verifySignature(mbedtls_x509_crt* cert,
 #else
     if (mbedtls_pk_get_type(&cert->pk) != MBEDTLS_PK_ECKEY)
     {
-        assert(false);
+        SPDMCPP_ASSERT(false);
     }
     mbedtls_ecdh_context* ctx = new mbedtls_ecdh_context;
     memset(ctx, 0, sizeof(*ctx));
@@ -73,7 +73,7 @@ inline int verifySignature(mbedtls_x509_crt* cert,
     {
         mbedtls_ecdh_free(ctx);
         delete ctx;
-        assert(false);
+        SPDMCPP_ASSERT(false);
     }
 
     size_t halfSize = 0;
@@ -90,11 +90,11 @@ inline int verifySignature(mbedtls_x509_crt* cert,
             halfSize = 66;
             break;
         default:
-            assert(false);
+            SPDMCPP_ASSERT(false);
     }
     if (signature.size() != halfSize * 2)
     {
-        assert(false);
+        SPDMCPP_ASSERT(false);
     }
 
     mbedtls_mpi bnR, bnS;
@@ -106,14 +106,14 @@ inline int verifySignature(mbedtls_x509_crt* cert,
     {
         mbedtls_mpi_free(&bnR);
         mbedtls_mpi_free(&bnS);
-        assert(false);
+        SPDMCPP_ASSERT(false);
     }
     ret = mbedtls_mpi_read_binary(&bnS, signature.data() + halfSize, halfSize);
     if (ret != 0)
     {
         mbedtls_mpi_free(&bnR);
         mbedtls_mpi_free(&bnS);
-        assert(false);
+        SPDMCPP_ASSERT(false);
     }
     ret = mbedtls_ecdsa_verify(&ctx->grp, hash.data(), hash.size(), &ctx->Q,
                                &bnR, &bnS);

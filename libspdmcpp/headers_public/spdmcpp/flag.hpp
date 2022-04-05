@@ -1,7 +1,7 @@
 
 #pragma once
 
-#include <cassert>
+#include "assert.hpp"
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -150,7 +150,7 @@ std::string to_string_hex(T v)
 
 inline uint16_t getHashSize(BaseHashAlgoFlags flags)
 {
-    assert(countBits(static_cast<std::underlying_type_t<BaseHashAlgoFlags>>(
+    SPDMCPP_ASSERT(countBits(static_cast<std::underlying_type_t<BaseHashAlgoFlags>>(
                flags)) <= 1);
     switch (flags)
     {
@@ -173,7 +173,7 @@ inline uint16_t getHashSize(BaseHashAlgoFlags flags)
 
 inline uint16_t getHashSize(MeasurementHashAlgoFlags flags)
 {
-    assert(
+    SPDMCPP_ASSERT(
         countBits(static_cast<std::underlying_type_t<MeasurementHashAlgoFlags>>(
             flags)) <= 1);
     switch (flags)
@@ -199,7 +199,7 @@ inline uint16_t getHashSize(MeasurementHashAlgoFlags flags)
 
 inline uint16_t getSignatureSize(BaseAsymAlgoFlags flags)
 {
-    assert(countBits(static_cast<std::underlying_type_t<BaseAsymAlgoFlags>>(
+    SPDMCPP_ASSERT(countBits(static_cast<std::underlying_type_t<BaseAsymAlgoFlags>>(
                flags)) <= 1);
     switch (flags)
     {

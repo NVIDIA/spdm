@@ -50,10 +50,10 @@ struct PacketMeasurementBlockVar
     {
         size_t size = 0;
         size += sizeof(Min);
-        assert(MeasurementVector.size() <=
+        SPDMCPP_ASSERT(MeasurementVector.size() <=
                std::numeric_limits<uint16_t>::max());
         size += MeasurementVector.size();
-        assert(size <= std::numeric_limits<uint32_t>::max());
+        SPDMCPP_ASSERT(size <= std::numeric_limits<uint32_t>::max());
         return static_cast<uint32_t>(size);
     }
     RetStat finalize()
