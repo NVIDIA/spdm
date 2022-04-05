@@ -155,14 +155,12 @@ class EmulatorBase : public spdmcpp::NonCopyable
         SPDMCPP_ASSERT(!Context);
     }
 
-    // TODO rename for clearer layer separation and meaning ! and depend more on
-    // function type overloading?
-    // TODO move functions to .cpp
     bool writeBytes(const uint8_t* buf, size_t size)
     {
         size_t sent = 0;
         while (sent < size)
         {
+            // NOLINTNEXTLINE cppcoreguidelines-pro-bounds-pointer-arithmetic
             ssize_t ret = send(Socket, (void*)(buf + sent), size - sent, 0);
             if (ret == -1)
             {
@@ -179,6 +177,7 @@ class EmulatorBase : public spdmcpp::NonCopyable
         size_t done = 0;
         while (done < size)
         {
+            // NOLINTNEXTLINE cppcoreguidelines-pro-bounds-pointer-arithmetic
             ssize_t result = recv(Socket, (void*)(buf + done), size - done, 0);
             if (result == -1)
             {
@@ -207,10 +206,12 @@ class EmulatorBase : public spdmcpp::NonCopyable
     bool writeData32(uint32_t data)
     {
         data = htonl(data);
+        // NOLINTNEXTLINE cppcoreguidelines-pro-type-cstyle-cast
         return writeBytes((uint8_t*)&data, sizeof(data));
     }
     bool readData32(uint32_t* data)
     {
+        // NOLINTNEXTLINE cppcoreguidelines-pro-type-cstyle-cast
         if (!readBytes((uint8_t*)data, sizeof(*data)))
         {
             return false;

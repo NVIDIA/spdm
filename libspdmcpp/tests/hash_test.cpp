@@ -88,7 +88,9 @@ void stringToHash(std::array<uint8_t, N>& arr, const char* str)
     ASSERT_EQ(len, 2 * N);
     for (size_t i = 0; i < N; ++i)
     {
+        // NOLINTNEXTLINE cppcoreguidelines-pro-bounds-pointer-arithmetic
         arr[i] = charToUint(str[2 * i + 1]);
+        // NOLINTNEXTLINE cppcoreguidelines-pro-bounds-pointer-arithmetic
         arr[i] |= charToUint(str[2 * i]) << 4;
     }
 }
