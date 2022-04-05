@@ -8,9 +8,6 @@
 EMUIOClass::EMUIOClass(EmulatorBase& emu) : Emulator(emu)
 {}
 
-EMUIOClass::~EMUIOClass()
-{}
-
 spdmcpp::RetStat EMUIOClass::write(const std::vector<uint8_t>& buf,
                                    spdmcpp::timeout_us_t /*timeout*/)
 {
@@ -55,9 +52,6 @@ spdmcpp::RetStat EMUIOClass::setupTimeout(spdmcpp::timeout_us_t timeout)
 }
 
 DemuxIOClass::DemuxIOClass(EmulatorBase& emu) : Emulator(emu)
-{}
-
-DemuxIOClass::~DemuxIOClass()
 {}
 
 spdmcpp::RetStat DemuxIOClass::write(const std::vector<uint8_t>& buf,

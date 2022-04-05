@@ -114,6 +114,14 @@ class HashClass
     }
     HashClass(const HashClass& other)
     {
+        *this = other;
+    }
+    HashClass& operator=(const HashClass& other)
+    {
+        if (this == &other)
+        {
+            return *this;
+        }
         mbedtls_md_init(&Ctx);
         int ret = mbedtls_md_setup(
             &Ctx, Ctx.md_info, 0); // TODO md_info may be considered private?!
@@ -121,6 +129,10 @@ class HashClass
         ret = mbedtls_md_clone(&Ctx, &other.Ctx);
         assert(ret == 0); // TODO failure possible?
     }
+
+    HashClass(HashClass&&) = delete;
+    HashClass& operator=(HashClass&&) = delete;
+
     ~HashClass()
     {
         mbedtls_md_free(&Ctx);

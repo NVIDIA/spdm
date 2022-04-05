@@ -26,6 +26,7 @@ class Responder;
  *  @brief Support class for transport through the mctp-demux-daemon with
  * timeouts handled by sdeventplus
  */
+//NOLINTNEXTLINE cppcoreguidelines-special-member-functions
 class MctpTransportClass : public spdmcpp::MctpTransportClass
 {
   public:

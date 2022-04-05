@@ -33,7 +33,24 @@ enum : timeout_ms_t
 class ConnectionClass;
 class ContextClass;
 
-class TransportClass
+/** @struct NonCopyable
+ *  @brief Helper class for deleting copy ops
+ *  @details We often don't needed/want these and clang-tidy complains about them
+ */
+struct NonCopyable
+{
+    NonCopyable() = default;
+    ~NonCopyable() = default;
+
+    NonCopyable(const NonCopyable& other) = delete;
+    NonCopyable& operator=(const NonCopyable&) = delete;
+
+    NonCopyable(NonCopyable&&) = delete;
+    NonCopyable& operator=(NonCopyable&&) = delete;
+};
+
+//NOLINTNEXTLINE cppcoreguidelines-special-member-functions
+class TransportClass : public NonCopyable
 {
   public:
     class LayerState
@@ -55,8 +72,7 @@ class TransportClass
         size_t Size = 0;
     };
 
-    virtual ~TransportClass()
-    {}
+    virtual ~TransportClass() = default;
 
     virtual RetStat encodePre(std::vector<uint8_t>& buf, LayerState& lay) = 0;
     virtual RetStat encodePost(std::vector<uint8_t>& buf, LayerState& lay) = 0;
@@ -89,10 +105,11 @@ class TransportClass
     }
 };
 
-class IOClass
+//NOLINTNEXTLINE cppcoreguidelines-special-member-functions
+class IOClass : NonCopyable
 {
   public:
-    virtual ~IOClass(){};
+    virtual ~IOClass() = default;
     virtual RetStat write(const std::vector<uint8_t>& buf,
                           timeout_us_t timeout = TIMEOUT_US_INFINITE) = 0;
     virtual RetStat read(std::vector<uint8_t>& buf,

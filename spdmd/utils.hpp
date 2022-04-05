@@ -79,6 +79,7 @@ using GetSubTreeResponse = std::vector<std::pair<ObjectPath, MapperServiceMap>>;
 /**
  * @brief The interface for DBusHandler
  */
+//NOLINTNEXTLINE cppcoreguidelines-special-member-functions
 class DBusHandlerInterface
 {
   public:

@@ -31,8 +31,6 @@ class MctpTransportClass : public TransportClass
   public:
     MctpTransportClass(uint8_t eid) : EID(eid)
     {}
-    virtual ~MctpTransportClass()
-    {}
 
     void setEid(uint8_t eid)
     {
@@ -95,8 +93,6 @@ class MctpIoClass : public IOClass
 {
   public:
     MctpIoClass(LogClass& log) : Log(log)
-    {}
-    ~MctpIoClass() override
     {}
 
     bool createSocket()

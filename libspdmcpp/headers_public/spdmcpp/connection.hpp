@@ -122,7 +122,8 @@ class TimingClass
  *           - "10.5 Responder identity authentication" page 52-58
  *           - "10.10 Firmware and other measurements" page 68-77
  */
-class ConnectionClass
+//NOLINTNEXTLINE cppcoreguidelines-special-member-functions
+class ConnectionClass : public NonCopyable
 {
     // TODO this has become extremely spaghetti (not enough time to do better,
     // and spdm spec is very stateful...),byl worth trying to refactor

@@ -41,9 +41,6 @@ class EmuMctpTransportClass :
     public TransportClass // for matching dmtf spdm emulator --trans MCTP
 {
   public:
-    virtual ~EmuMctpTransportClass()
-    {}
-
     virtual RetStat encodePre(std::vector<uint8_t>& /*buf*/, LayerState& lay)
     {
         setLayerSize(lay, sizeof(HeaderType));
@@ -92,8 +89,7 @@ enum class SocketTransportTypeEnum : uint32_t
 struct BufferType : public std::vector<uint8_t>
 {
     // TODO add custom helpers for appending, presetting headers, etc?
-    BufferType()
-    {}
+    BufferType() = default;
 
     BufferType(const char* str)
     {
@@ -110,7 +106,6 @@ class EMUIOClass : public spdmcpp::IOClass
   public:
     EMUIOClass(EmulatorBase& emu);
 
-    ~EMUIOClass() override;
     spdmcpp::RetStat write(
         const std::vector<uint8_t>& buf,
         spdmcpp::timeout_us_t timeout = spdmcpp::TIMEOUT_US_INFINITE) override;
@@ -129,7 +124,6 @@ class DemuxIOClass :
   public:
     DemuxIOClass(EmulatorBase& emu);
 
-    ~DemuxIOClass() override;
     spdmcpp::RetStat write(
         const std::vector<uint8_t>& buf,
         spdmcpp::timeout_us_t timeout = spdmcpp::TIMEOUT_US_INFINITE) override;
@@ -142,7 +136,8 @@ class DemuxIOClass :
     EmulatorBase& Emulator;
 };
 
-class EmulatorBase
+//NOLINTNEXTLINE cppcoreguidelines-special-member-functions
+class EmulatorBase : public spdmcpp::NonCopyable
 {
     friend EMUIOClass;
     friend DemuxIOClass;

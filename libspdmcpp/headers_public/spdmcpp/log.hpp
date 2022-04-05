@@ -220,6 +220,11 @@ class IndentHelper
         Log.unindent();
     }
 
+    IndentHelper(const IndentHelper&) = delete;
+    IndentHelper& operator=(const IndentHelper&) = delete;
+    IndentHelper(IndentHelper&&) = delete;
+    IndentHelper& operator=(IndentHelper&&) = delete;
+
   private:
     LogClass& Log;
 }; // class IndentHelper
@@ -258,6 +263,11 @@ class TraceHelper
         Log.iprint(Function);
         Log.println(" END");
     }
+
+    TraceHelper(const TraceHelper&) = delete;
+    TraceHelper& operator=(const TraceHelper&) = delete;
+    TraceHelper(TraceHelper&&) = delete;
+    TraceHelper& operator=(TraceHelper&&) = delete;
 
   private:
     LogClass& Log;
