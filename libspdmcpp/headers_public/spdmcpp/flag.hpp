@@ -204,17 +204,14 @@ inline uint16_t getSignatureSize(BaseAsymAlgoFlags flags)
     switch (flags)
     {
         case BaseAsymAlgoFlags::TPM_ALG_RSASSA_2048:
-            return 256;
         case BaseAsymAlgoFlags::TPM_ALG_RSAPSS_2048:
             return 256;
         case BaseAsymAlgoFlags::TPM_ALG_RSASSA_3072:
-            return 384;
         case BaseAsymAlgoFlags::TPM_ALG_RSAPSS_3072:
             return 384;
         case BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P256:
             return 64;
         case BaseAsymAlgoFlags::TPM_ALG_RSASSA_4096:
-            return 512;
         case BaseAsymAlgoFlags::TPM_ALG_RSAPSS_4096:
             return 512;
         case BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P384:

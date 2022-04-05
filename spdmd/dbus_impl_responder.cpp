@@ -173,8 +173,6 @@ spdmcpp::RetStat Responder::handleRecv(std::vector<uint8_t>& buf)
         switch (Connection.getMeasurementHash())
         {
             case HashEnum::NONE:
-                hashingAlgorithm(HashingAlgorithms::None);
-                break;
             case HashEnum::INVALID:
                 hashingAlgorithm(HashingAlgorithms::None);
                 break;
