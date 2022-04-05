@@ -25,6 +25,7 @@ inline void
     fillPseudoRandomType(T& dst,
                          std::mt19937::result_type seed = mt19937DefaultSeed)
 {
+    // NOLINTNEXTLINE cppcoreguidelines-pro-type-reinterpret-cast
     fillPseudoRandom(std::span(reinterpret_cast<uint8_t*>(&dst), sizeof(dst)),
                      seed);
 }
@@ -46,7 +47,7 @@ inline void loadFile(std::vector<uint8_t>& buf, const std::string& str)
 
     buf.resize(file.tellg());
     file.seekg(0, std::ios::beg);
-
+    // NOLINTNEXTLINE cppcoreguidelines-pro-type-reinterpret-cast
     file.read(reinterpret_cast<char*>(buf.data()), buf.size());
     file.close();
 }
@@ -60,6 +61,7 @@ inline void appendFile(std::vector<uint8_t>& buf, const std::string& str)
     size_t fileSize = file.tellg();
     buf.resize(off + fileSize);
     file.seekg(0, std::ios::beg);
+    // NOLINTNEXTLINE cppcoreguidelines-pro-type-reinterpret-cast
     file.read(reinterpret_cast<char*>(&buf[off]), fileSize);
     file.close();
 }

@@ -92,6 +92,7 @@ class TransportClass : public NonCopyable
     template <class T>
     static T& getHeaderRef(std::vector<uint8_t>& buf, LayerState& lay)
     {
+        // NOLINTNEXTLINE cppcoreguidelines-pro-type-reinterpret-cast
         return *reinterpret_cast<T*>(&buf[lay.getOffset()]);
     }
 
