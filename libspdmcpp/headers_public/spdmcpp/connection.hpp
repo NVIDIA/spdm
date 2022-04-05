@@ -651,7 +651,7 @@ class ConnectionClass : public NonCopyable
     uint8_t getFirstMeasurementIndex() const
     {
         SPDMCPP_ASSERT(MeasurementIndices.any());
-        for (uint8_t i = 0; i < MeasurementIndices.size(); ++i)
+        for (uint8_t i = 0; i < 255; ++i)
         {
             if (MeasurementIndices[i])
             {
