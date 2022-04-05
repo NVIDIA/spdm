@@ -40,31 +40,31 @@ class SpdmdAppContext
     {}
 
     /** @brief Report an error severity message to phosphor logging object */
-    bool reportError(string message)
+    bool reportError(const string& message)
     {
         return reportLog(Logging::server::Entry::Level::Error, message);
     }
 
     /** @brief Report a critical severity message to phosphor logging object */
-    bool reportCritical(string message)
+    bool reportCritical(const string& message)
     {
         return reportLog(Logging::server::Entry::Level::Critical, message);
     }
 
     /** @brief Report an alert severity message to phosphor logging object */
-    bool reportAlert(string message)
+    bool reportAlert(const string& message)
     {
         return reportLog(Logging::server::Entry::Level::Alert, message);
     }
 
     /** @brief Report a notice severity message to phosphor logging object */
-    bool reportNotice(string message)
+    bool reportNotice(const string& message)
     {
         return reportLog(Logging::server::Entry::Level::Notice, message);
     }
 
   private:
-    bool reportLog(Logging::server::Entry::Level severity, string message)
+    bool reportLog(Logging::server::Entry::Level severity, const string& message)
     {
         auto method = bus.new_method_call(
             "xyz.openbmc_project.Logging", "/xyz/openbmc_project/logging",
