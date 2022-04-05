@@ -42,10 +42,10 @@ class MctpTransportClass : public spdmcpp::MctpTransportClass
         }
     }
 
-    virtual spdmcpp::RetStat
+    spdmcpp::RetStat
         setupTimeout(spdmcpp::timeout_ms_t timeout) override;
 
-    virtual bool clearTimeout() override;
+    bool clearTimeout() override;
 
   protected:
     static constexpr sdeventplus::ClockId clockId =

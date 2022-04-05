@@ -38,13 +38,13 @@ class MctpTransportClass : public TransportClass
         EID = eid;
     }
 
-    virtual RetStat encodePre(std::vector<uint8_t>& /*buf*/,
+    RetStat encodePre(std::vector<uint8_t>& /*buf*/,
                               LayerState& lay) override
     {
         setLayerSize(lay, sizeof(HeaderType));
         return RetStat::OK;
     }
-    virtual RetStat encodePost(std::vector<uint8_t>& buf,
+    RetStat encodePost(std::vector<uint8_t>& buf,
                                LayerState& lay) override
     {
         auto& header = getHeaderRef<HeaderType>(buf, lay);
@@ -53,7 +53,7 @@ class MctpTransportClass : public TransportClass
         return RetStat::OK;
     }
 
-    virtual RetStat decode(std::vector<uint8_t>& buf, LayerState& lay) override
+    RetStat decode(std::vector<uint8_t>& buf, LayerState& lay) override
     {
         setLayerSize(lay, sizeof(HeaderType));
         auto& header = getHeaderRef<HeaderType>(buf, lay);

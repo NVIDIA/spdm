@@ -41,19 +41,19 @@ class EmuMctpTransportClass :
     public TransportClass // for matching dmtf spdm emulator --trans MCTP
 {
   public:
-    virtual RetStat encodePre(std::vector<uint8_t>& /*buf*/, LayerState& lay)
+    RetStat encodePre(std::vector<uint8_t>& /*buf*/, LayerState& lay) override
     {
         setLayerSize(lay, sizeof(HeaderType));
         return spdmcpp::RetStat::OK;
     }
-    virtual RetStat encodePost(std::vector<uint8_t>& buf, LayerState& lay)
+    RetStat encodePost(std::vector<uint8_t>& buf, LayerState& lay) override
     {
         auto& header = getHeaderRef<HeaderType>(buf, lay);
         header.MessageType = MCTPMessageTypeEnum::SPDM;
         return RetStat::OK;
     }
 
-    virtual RetStat decode(std::vector<uint8_t>& /*buf*/, LayerState& lay)
+    RetStat decode(std::vector<uint8_t>& /*buf*/, LayerState& lay) override
     {
         setLayerSize(lay, sizeof(HeaderType));
         return spdmcpp::RetStat::OK;
