@@ -92,10 +92,8 @@ class Responder : public ResponderIntf
     spdmcpp::RetStat handleRecv(std::vector<uint8_t>& buf);
 
   protected:
-    typedef std::vector<std::tuple<uint8_t, uint8_t, std::vector<uint8_t>>>
-        MeasurementsContainerType;
-    typedef std::vector<std::tuple<uint8_t, std::vector<uint8_t>>>
-        CertificatesContainerType;
+    using MeasurementsContainerType = std::vector<std::tuple<uint8_t, uint8_t, std::vector<uint8_t>>>;
+    using CertificatesContainerType = std::vector<std::tuple<uint8_t, std::vector<uint8_t>>>;
 
     SpdmdAppContext& appContext;
 

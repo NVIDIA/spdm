@@ -128,7 +128,7 @@ class ConnectionClass
     // and spdm spec is very stateful...),byl worth trying to refactor
   public:
     /** Type alias to distinguish Certificate Slot Indices */
-    typedef uint8_t SlotIdx;
+    using SlotIdx = uint8_t;
 
     /** Constant to define the maximum possible number of slots defined by
      * DSP0274_1.1.1 page 56 */
@@ -293,8 +293,8 @@ class ConnectionClass
      *  @details Contains all the GET_MEASUREMENTS requests and corresponding
      * MEASUREMENTS responses
      */
-    typedef std::map<uint8_t, PacketMeasurementFieldVar>
-        DMTFMeasurementsContainer;
+    using DMTFMeasurementsContainer =
+        std::map<uint8_t, PacketMeasurementFieldVar>;
     const DMTFMeasurementsContainer& getDMTFMeasurements() const
     {
         return DMTFMeasurements;

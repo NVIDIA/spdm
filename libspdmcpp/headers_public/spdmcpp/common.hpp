@@ -16,14 +16,14 @@
 
 namespace spdmcpp
 {
-typedef uint64_t timeout_us_t; /// in units of 1 micro second
+using timeout_us_t = uint64_t; /// in units of 1 micro second
 enum : timeout_us_t
 {
     TIMEOUT_US_INFINITE = std::numeric_limits<timeout_us_t>::max(),
     TIMEOUT_US_MAXIMUM = TIMEOUT_US_INFINITE - 1
 };
 
-typedef uint64_t timeout_ms_t; /// in units of 1 milli second
+using timeout_ms_t = uint64_t; /// in units of 1 milli second
 enum : timeout_ms_t
 {
     TIMEOUT_MS_INFINITE = std::numeric_limits<timeout_ms_t>::max(),

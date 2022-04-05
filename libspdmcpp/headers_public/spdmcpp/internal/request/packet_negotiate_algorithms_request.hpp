@@ -198,8 +198,7 @@ inline void endianHostSpdmCopy(const PacketNegotiateAlgorithmsRequestMin& src,
 
 struct PacketNegotiateAlgorithmsRequestVar
 {
-    typedef PacketNegotiateAlgorithmsRequestMin MinType;
-    MinType Min;
+    PacketNegotiateAlgorithmsRequestMin Min;
 
     std::vector<PacketReqAlgStruct> PacketReqAlgVector;
 

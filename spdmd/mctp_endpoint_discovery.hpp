@@ -7,8 +7,8 @@
 namespace spdmd
 {
 
-typedef uint8_t mctp_eid_t;
-typedef bool (*createResponder_t)(mctp_eid_t eid);
+using mctp_eid_t = uint8_t;
+using createResponder_t = bool (*)(mctp_eid_t);
 class SpdmdApp;
 
 class MctpDiscovery
