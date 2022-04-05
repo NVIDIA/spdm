@@ -52,6 +52,7 @@ inline void
 {
     SPDMCPP_STATIC_ASSERT(T::sizeIsConstant);
     fillPseudoRandomType(p, seed);
+    // NOLINTNEXTLINE cppcoreguidelines-pro-type-reinterpret-cast
     packetMessageHeaderSetRequestresponsecode(reinterpret_cast<uint8_t*>(&p),
                                               T::requestResponseCode);
 }

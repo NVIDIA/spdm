@@ -57,6 +57,7 @@ inline void
     packetMessageHeaderSetRequestresponsecode(uint8_t* buf,
                                               RequestResponseEnum rrcode)
 {
+    // NOLINTNEXTLINE cppcoreguidelines-pro-type-reinterpret-cast
     auto& p = *reinterpret_cast<PacketMessageHeader*>(buf);
     SPDMCPP_STATIC_ASSERT(sizeof(p.requestResponseCode) == 1);
     p.requestResponseCode = rrcode;

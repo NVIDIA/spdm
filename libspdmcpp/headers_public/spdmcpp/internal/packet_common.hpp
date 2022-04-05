@@ -16,6 +16,7 @@ template <typename T>
     {
         return RetStat::ERROR_BUFFER_TOO_SMALL;
     }
+    // NOLINTNEXTLINE cppcoreguidelines-pro-type-reinterpret-cast
     endianHostSpdmCopy(*reinterpret_cast<const T*>(&buf[start]), p);
     start += sizeof(T);
     return RetStat::OK;
@@ -33,6 +34,7 @@ template <typename T>
     {
         return RetStat::ERROR_BUFFER_TOO_SMALL;
     }
+    // NOLINTNEXTLINE cppcoreguidelines-pro-type-reinterpret-cast
     endianHostSpdmCopy(*reinterpret_cast<const T*>(&buf[start]), p);
     start += sizeof(T);
     return RetStat::OK;
@@ -75,6 +77,7 @@ template <typename T, typename... Targs>
 template <typename T>
 void packetEncodeBasic(const T& p, uint8_t* buf)
 {
+    // NOLINTNEXTLINE cppcoreguidelines-pro-type-reinterpret-cast
     endianHostSpdmCopy(p, *reinterpret_cast<T*>(buf));
 }
 template <typename T>

@@ -255,7 +255,7 @@ void Responder::refresh(uint8_t slot, std::vector<uint8_t> nonc,
 
     if (nonc.size() == 32)
     {
-        auto rs = Connection.refreshMeasurements(
+        auto rs = Connection.refreshMeasurements( // NOLINTNEXTLINE cppcoreguidelines-pro-type-reinterpret-cast
             slot, *reinterpret_cast<nonce_array_32*>(nonc.data()), meas);
         SPDMCPP_LOG_TRACE_RS(getLog(), rs);
     }
