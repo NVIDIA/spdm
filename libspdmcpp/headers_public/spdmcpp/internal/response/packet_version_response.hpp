@@ -97,10 +97,9 @@ struct PacketVersionResponseVar
         }
         p.VersionNumberEntries.resize(size);
     }
-    // p.VersionNumberEntries.resize(p.Min.VersionNumberEntryCount);
-    for (size_t i = 0; i < p.VersionNumberEntries.size(); ++i)
+    for (auto& iter : p.VersionNumberEntries)
     {
-        rs = packetDecodeInternal(p.VersionNumberEntries[i], buf, off);
+        rs = packetDecodeInternal(iter, buf, off);
         if (rs != RetStat::OK)
         {
             return rs;
@@ -123,9 +122,9 @@ struct PacketVersionResponseVar
         uint8_t size = p.VersionNumberEntries.size();
         packetEncodeBasic(size, buf, off);
     }
-    for (size_t i = 0; i < p.VersionNumberEntries.size(); ++i)
+    for (const auto& iter : p.VersionNumberEntries)
     {
-        rs = packetEncodeInternal(p.VersionNumberEntries[i], buf, off);
+        rs = packetEncodeInternal(iter, buf, off);
         if (rs != RetStat::OK)
         {
             return rs;

@@ -164,9 +164,9 @@ struct PacketAlgorithmsResponseVar
     }
 
     p.PacketReqAlgVector.resize(p.Min.Header.Param1);
-    for (size_t i = 0; i < p.PacketReqAlgVector.size(); ++i)
+    for (auto& iter : p.PacketReqAlgVector)
     {
-        rs = packetDecodeInternal(p.PacketReqAlgVector[i], buf, off);
+        rs = packetDecodeInternal(iter, buf, off);
         if (isError(rs))
         {
             return rs;
