@@ -157,18 +157,24 @@ int main(int argc, char** argv)
 {
     int returnCode = 0;
 
-    SpdmdApp spdmApp;
+    try {
+        SpdmdApp spdmApp;
+        spdmApp.setupCli(argc, argv);
 
-    spdmApp.setupCli(argc, argv);
+        spdmApp.connectDBus();
 
-    spdmApp.connectDBus();
+        if (spdmApp.connectMCTP())
+        {
+            std::unique_ptr<MctpDiscovery> mctpDiscoveryHandler =
+                std::make_unique<MctpDiscovery>(spdmApp);
 
-    if (spdmApp.connectMCTP())
+            returnCode = spdmApp.loop();
+        }
+    }
+    catch (const std::exception& e)
     {
-        std::unique_ptr<MctpDiscovery> mctpDiscoveryHandler =
-            std::make_unique<MctpDiscovery>(spdmApp);
-
-        returnCode = spdmApp.loop();
+        std::cerr << "exception reached main '" << e.what() << std::endl;
+        returnCode = -2;
     }
 
     return returnCode;
