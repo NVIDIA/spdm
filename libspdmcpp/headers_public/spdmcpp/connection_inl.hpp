@@ -71,7 +71,7 @@ RetStat ConnectionClass::interpretResponse(T& packet, Targs... fargs)
         {
             Log.iprint("wrong code is: ");
             Log.println(packetMessageHeaderGetRequestresponsecode(
-                &ResponseBuffer[lay.getEndOffset()]));
+                ResponseBuffer, lay.getEndOffset()));
         }
         return rs;
     }

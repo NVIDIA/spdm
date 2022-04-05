@@ -117,7 +117,7 @@ inline int verifySignature(mbedtls_x509_crt* cert,
         mbedtls_ecdh_free(&ctx);
         return ret;
     }
-    ret = mbedtls_mpi_read_binary(&bnS, signature.data() + halfSize, halfSize);
+    ret = mbedtls_mpi_read_binary(&bnS, &signature[halfSize], halfSize);
     if (ret != 0)
     {
         mbedtls_mpi_free(&bnR);

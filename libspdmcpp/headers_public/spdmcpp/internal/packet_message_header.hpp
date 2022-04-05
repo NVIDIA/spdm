@@ -46,19 +46,12 @@ struct PacketMessageHeader
 // TODO there's this magic template library for iterating over members... it'd
 // be really convenient to use it!!!
 
-[[nodiscard]] inline MessageVersionEnum
-    packetMessageHeaderGetVersion(const uint8_t* buf)
-{
-    auto& p = *reinterpret_cast<const PacketMessageHeader*>(buf);
-    SPDMCPP_STATIC_ASSERT(sizeof(p.requestResponseCode) == 1);
-    return p.MessageVersion;
-}
 [[nodiscard]] inline RequestResponseEnum
-    packetMessageHeaderGetRequestresponsecode(const uint8_t* buf)
+    packetMessageHeaderGetRequestresponsecode(const std::vector<uint8_t>& buf,
+                                              size_t off = 0)
 {
-    auto& p = *reinterpret_cast<const PacketMessageHeader*>(buf);
-    SPDMCPP_STATIC_ASSERT(sizeof(p.requestResponseCode) == 1);
-    return p.requestResponseCode;
+    return static_cast<RequestResponseEnum>(
+        buf[off + offsetof(PacketMessageHeader, requestResponseCode)]);
 }
 inline void
     packetMessageHeaderSetRequestresponsecode(uint8_t* buf,

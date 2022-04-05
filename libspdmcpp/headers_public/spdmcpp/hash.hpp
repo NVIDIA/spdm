@@ -105,7 +105,7 @@ class HashClass
         {
             SPDMCPP_ASSERT(off + len <= buf.size());
         }
-        compute(hash, algo, buf.data() + off, std::min(buf.size() - off, len));
+        compute(hash, algo, &buf[off], std::min(buf.size() - off, len));
     }
 
     HashClass()
@@ -158,7 +158,7 @@ class HashClass
         SPDMCPP_ASSERT(off < buf.size());
         len = std::min(len, buf.size() - off);
         SPDMCPP_ASSERT(off + len <= buf.size());
-        int ret = mbedtls_md_update(&Ctx, buf.data() + off, len);
+        int ret = mbedtls_md_update(&Ctx, &buf[off], len);
         SPDMCPP_ASSERT(ret == 0); // TODO failure possible?
     }
 

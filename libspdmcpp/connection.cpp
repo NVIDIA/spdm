@@ -125,29 +125,16 @@ bool ConnectionClass::getCertificatesDER(std::vector<uint8_t>& buf,
     }
 
     const SlotClass& slot = Slots[slotidx];
-#if 1
+    
     if (slot.CertificateOffset == 0 ||
         slot.CertificateOffset >= slot.Certificates.size())
     {
         return false;
     }
-    buf.resize(slot.Certificates.size() - slot.CertificateOffset);
-    memcpy(buf.data(), slot.Certificates.data() + slot.CertificateOffset,
-           buf.size());
+    auto src = std::span(slot.Certificates).subspan(slot.CertificateOffset);
+    buf.resize(src.size());
+    std::copy(src.begin(), src.end(), buf.begin());
     return true;
-#else
-    if (auto cert = slot.getLeafCert())
-    {
-        buf.resize(cert->raw.len);
-        memcpy(buf.data(), cert->raw.p, cert->raw.len);
-        /*size_t size = 0x1000;
-        buf.resize(size);
-        int ret = mbedtls_x509write_crt_der(cert, buf.data(), size, nullptr,
-        nullptr);	str.resize(off + cert->raw.len);*/
-        return true;
-    }
-    return false;
-#endif
 }
 
 #if 0
@@ -493,10 +480,10 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
     }
     //	if (request.Offset != cert.size()) {//TODO
     {
-        size_t off = cert.size();
+        auto off = cert.end() - cert.begin();
         cert.resize(off + resp.Min.PortionLength);
         std::copy(resp.CertificateVector.begin(), resp.CertificateVector.end(),
-                  cert.begin() + off); // TODO @Timon optimize?!
+                  std::next(cert.begin(), off));
     }
     if (resp.Min.RemainderLength)
     {
@@ -554,11 +541,11 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
 
             size_t asn1Len = 0;
             {
-                uint8_t* s = cert.data() + off;
+                uint8_t* s = &cert[off];
                 uint8_t* p = s;
-                ret = mbedtls_asn1_get_tag(
-                    &p, cert.data() + cert.size(), &asn1Len,
-                    MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE);
+                ret = mbedtls_asn1_get_tag(&p,
+                cert.data() + cert.size(), //NOLINT cppcoreguidelines-pro-bounds-pointer-arithmetic
+                    &asn1Len, MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE);
                 SPDMCPP_ASSERT(ret == 0);
                 asn1Len += (p - s);
             }
@@ -569,7 +556,7 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
                 hash.resize(getHashSize(Algorithms.Min.BaseHashAlgo));
                 int ret = mbedtls_md(
                     mbedtls_md_info_from_type(toMbedtls(getSignatureHash())),
-                    cert.data() + off, asn1Len, hash.data());
+                    &cert[off], asn1Len, hash.data());
                 SPDMCPP_ASSERT(ret == 0);
                 Log.iprint("computed root certificate hash = ");
                 Log.println(hash);
@@ -925,8 +912,14 @@ RetStat ConnectionClass::handleRecv()
             SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
         }
         ResponseBufferSPDMOffset = lay.getEndOffset();
+
+        if (ResponseBuffer.size() - ResponseBufferSPDMOffset <
+            sizeof(PacketMessageHeader))
+        {
+            return RetStat::ERROR_BUFFER_TOO_SMALL;
+        }
         code = packetMessageHeaderGetRequestresponsecode(
-            ResponseBuffer.data() + ResponseBufferSPDMOffset);
+            ResponseBuffer, ResponseBufferSPDMOffset);
     }
 
     if (code == RequestResponseEnum::RESPONSE_ERROR)

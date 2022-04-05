@@ -60,8 +60,8 @@ spdmcpp::RetStat DemuxIOClass::write(const std::vector<uint8_t>& buf,
     size_t sent = 0;
     while (sent < buf.size())
     {
-        ssize_t ret = send(Emulator.Socket, (void*)(buf.data() + sent),
-                           buf.size() - sent, 0);
+        ssize_t ret =
+            send(Emulator.Socket, (void*)&buf[sent], buf.size() - sent, 0);
         if (ret == -1)
         {
             std::cerr<< "Send error: " << errno << std::endl;

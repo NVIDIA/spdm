@@ -55,7 +55,7 @@ template <typename T, typename... Targs>
     {
         return RetStat::ERROR_BUFFER_TOO_SMALL;
     }
-    if (packetMessageHeaderGetRequestresponsecode(&buf[off]) !=
+    if (packetMessageHeaderGetRequestresponsecode(buf, off) !=
         T::requestResponseCode)
     {
         return RetStat::ERROR_WRONG_REQUEST_RESPONSE_CODE;
