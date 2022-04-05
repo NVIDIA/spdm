@@ -2,13 +2,13 @@
 
 //#include "types.hpp"
 
-#include <cstdint>
 #include <systemd/sd-bus.h>
 #include <unistd.h>
 
 #include <sdbusplus/server.hpp>
 #include <xyz/openbmc_project/Logging/Entry/server.hpp>
 
+#include <cstdint>
 #include <exception>
 #include <filesystem>
 #include <iostream>

@@ -5,7 +5,6 @@
 #include <err.h>
 #include <getopt.h>
 #include <poll.h>
-#include <stdlib.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/un.h>
@@ -15,6 +14,7 @@
 #include <sdeventplus/event.hpp>
 
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <iomanip>

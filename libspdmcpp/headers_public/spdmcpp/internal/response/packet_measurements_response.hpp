@@ -128,8 +128,8 @@ struct PacketMeasurementsResponseVar // TODO all variable packets don't need
             MeasurementBlockVector[i].printMl(log);
         }
 
-        SPDMCPP_LOG_idataln(log, OpaqueDataVector);
-        SPDMCPP_LOG_idataln(log, SignatureVector);
+        SPDMCPP_LOG_iexprln(log, OpaqueDataVector);
+        SPDMCPP_LOG_iexprln(log, SignatureVector);
     }
 };
 

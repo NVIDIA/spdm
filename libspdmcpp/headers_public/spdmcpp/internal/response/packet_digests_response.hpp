@@ -79,7 +79,7 @@ struct PacketDigestsResponseVar
         {
             log.iprint("Digests[" + std::to_string(i) +
                        "]: "); // TODO something more optimal
-            log.print(Digests[i].data(), Digests[i].size());
+            log.print(Digests[i]);
             log.endl();
         }
     }

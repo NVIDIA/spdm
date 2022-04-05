@@ -44,14 +44,6 @@ namespace spdmcpp
     } while (false)
 
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
-#define SPDMCPP_LOG_idataln(log, expr, ...)                                    \
-    do                                                                         \
-    {                                                                          \
-        (log).iprint(#expr ":\t");                                             \
-        (log).println((expr).data(), (expr.size())__VA_OPT__(, ) __VA_ARGS__); \
-    } while (false)
-
-// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define SPDMCPP_LOG_iflagsln(log, flags)                                       \
     do                                                                         \
     {                                                                          \

@@ -12,6 +12,7 @@
 #include <cstring>
 #include <limits>
 #include <ostream>
+#include <span>
 #include <vector>
 
 namespace spdmcpp
@@ -105,7 +106,8 @@ class LogClass
         getOstream() << value;
     }
 
-    void print(const uint8_t* arr, size_t num)
+    // void print(const uint8_t* arr, size_t num)
+    void print(std::span<const uint8_t, std::dynamic_extent> arr)
     {
         std::ostream& ostr = getOstream();
         std::ios_base::fmtflags oldf = ostr.flags();
@@ -115,28 +117,35 @@ class LogClass
         // 			ostr.width(8);
         // 			ostr << std::setw(8);
         ostr.fill('0');
-        for (size_t i = 0; i < num;)
+        for (size_t i = 0; i < arr.size();)
         {
             ostr.width(2);
-            ostr << (int)arr[i]; // TODO something more optimal
+            // NOLINTNEXTLINE cppcoreguidelines-pro-bounds-pointer-arithmetic
+            ostr << (int)arr[i];
             ++i;
-            /*	if (i % 16 == 0)
-                    ostr << "    ";
-                if (i % 8 == 0)
-                    ostr << "   ";
-                else if (i % 4 == 0)
-                    ostr << "  ";
-                else*/
+            /* longer spaces for easier counting?
+            if (i % 16 == 0)
+                ostr << "    ";
+            if (i % 8 == 0)
+                ostr << "   ";
+            else if (i % 4 == 0)
+                ostr << "  ";
+            else*/
             ostr << " ";
         }
         //	ostr << std::dec;
         ostr.setf(oldf);
     }
 
-    template <typename T, size_t N>
-    void print(const std::array<T, N>& array)
+    template <size_t N>
+    void print(const std::array<uint8_t, N>& array)
     {
-        print(array.data(), array.size());
+        print(std::span<const uint8_t, std::dynamic_extent>(array));
+    }
+
+    void print(const std::vector<uint8_t>& vec)
+    {
+        print(std::span(vec));
     }
 
     void endl()

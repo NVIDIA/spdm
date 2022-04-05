@@ -49,7 +49,7 @@ RetStat ConnectionClass::sendRequest(const T& packet, BufEnum bufidx)
     Log.iprint("Context->IO->write() buf.size() = ");
     Log.println(buf.size());
     Log.iprint("buf = ");
-    Log.println(buf.data(), buf.size());
+    Log.println(buf);
 
     rs = Context->IO->write(buf);
     return rs;

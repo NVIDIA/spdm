@@ -83,10 +83,10 @@ struct PacketChallengeAuthResponseVar
         SPDMCPP_LOG_INDENT(log);
         SPDMCPP_LOG_printMl(log, Min);
         SPDMCPP_LOG_iexprln(log, Nonce);
-        SPDMCPP_LOG_idataln(log, CertChainHashVector);
-        SPDMCPP_LOG_idataln(log, MeasurementSummaryHashVector);
-        SPDMCPP_LOG_idataln(log, OpaqueDataVector);
-        SPDMCPP_LOG_idataln(log, SignatureVector);
+        SPDMCPP_LOG_iexprln(log, CertChainHashVector);
+        SPDMCPP_LOG_iexprln(log, MeasurementSummaryHashVector);
+        SPDMCPP_LOG_iexprln(log, OpaqueDataVector);
+        SPDMCPP_LOG_iexprln(log, SignatureVector);
     }
 };
 

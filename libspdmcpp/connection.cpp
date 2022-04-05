@@ -510,7 +510,7 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
             std::vector<uint8_t> hash;
             HashClass::compute(hash, getSignatureHash(), cert);
             Log.iprint("computed certificate digest hash = ");
-            Log.println(hash.data(), hash.size());
+            Log.println(hash);
 
             if (!std::equal(hash.begin(), hash.end(), slot.Digest.begin()))
             {
@@ -530,7 +530,7 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
             rs = packetDecodeBasic(rootCertHash, cert, off);
             SPDMCPP_LOG_TRACE_RS(Log, rs);
             Log.iprint("provided root certificate hash = ");
-            Log.println(rootCertHash.data(), rootCertHash.size());
+            Log.println(rootCertHash);
         }
 
         slot.CertificateOffset = off;
@@ -572,7 +572,7 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
                     cert.data() + off, asn1Len, hash.data());
                 SPDMCPP_ASSERT(ret == 0);
                 Log.iprint("computed root certificate hash = ");
-                Log.println(hash.data(), hash.size());
+                Log.println(hash);
 
                 if (!std::equal(hash.begin(), hash.end(), rootCertHash.begin()))
                 {
@@ -731,14 +731,14 @@ RetStat ConnectionClass::handleRecv<PacketChallengeAuthResponseVar>()
             ha.hashFinish(hash);
         }
         Log.iprint("computed m2 hash = ");
-        Log.println(hash.data(), hash.size());
+        Log.println(hash);
 
         // HashM1M2.hashFinish(hash.data(), hash.size());
         // Log.iprint("computed m2 hash = ");
         // Log.println(hash.data(), hash.size());
 
         Log.iprint("resp.SignatureVector = ");
-        Log.println(resp.SignatureVector.data(), resp.SignatureVector.size());
+        Log.println(resp.SignatureVector);
         // resp.SignatureVector[10] = 'X';	//TODO TEST
 
         {
@@ -877,7 +877,7 @@ RetStat ConnectionClass::handleRecv<PacketMeasurementsResponseVar>()
         hashBuf(hash, getSignatureHash(), BufEnum::L);
 #endif
         Log.iprint("computed l2 hash = ");
-        Log.println(hash.data(), hash.size());
+        Log.println(hash);
 
         int ret = verifySignature(Slots[CertificateSlotIdx].getLeafCert(),
                                   resp.SignatureVector, hash);
@@ -914,9 +914,9 @@ RetStat ConnectionClass::handleRecv()
     Log.iprint("ResponseBuffer.size() = ");
     Log.println(ResponseBuffer.size());
     Log.iprint("ResponseBuffer = ");
-    Log.println(ResponseBuffer.data(), ResponseBuffer.size());
+    Log.println(ResponseBuffer);
 
-    RequestResponseEnum code;
+    RequestResponseEnum code = RequestResponseEnum::INVALID;
     {
         TransportClass::LayerState lay; // TODO double decode
         if (Transport)

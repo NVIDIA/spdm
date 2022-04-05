@@ -83,7 +83,7 @@ struct PacketMeasurementBlockVar
     {
         SPDMCPP_LOG_INDENT(log);
         SPDMCPP_LOG_printMl(log, Min);
-        SPDMCPP_LOG_idataln(log, MeasurementVector);
+        SPDMCPP_LOG_iexprln(log, MeasurementVector);
     }
 };
 

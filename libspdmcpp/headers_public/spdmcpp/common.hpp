@@ -11,6 +11,7 @@
 #include <cstring>
 #include <iostream>
 #include <limits>
+#include <span>
 #include <vector>
 
 namespace spdmcpp

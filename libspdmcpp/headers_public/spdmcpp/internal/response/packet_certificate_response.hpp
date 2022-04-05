@@ -73,7 +73,7 @@ struct PacketCertificateResponseVar
         if (!CertificateVector.empty())
         {
             {
-                SPDMCPP_LOG_idataln(log, CertificateVector);
+                SPDMCPP_LOG_iexprln(log, CertificateVector);
             }
         }
     }
