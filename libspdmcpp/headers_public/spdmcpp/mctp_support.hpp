@@ -163,7 +163,8 @@ inline RetStat MctpIoClass::write(const std::vector<uint8_t>& buf,
             send(Socket, (void*)(buf.data() + sent), buf.size() - sent, 0);
         if (ret == -1)
         {
-            printf("Send error - 0x%x\n", errno); // TODO CLEANUP
+            Log.iprint("Send error:");
+            Log.println(errno);
             return RetStat::ERROR_UNKNOWN;
         }
         sent += ret;
@@ -180,7 +181,8 @@ inline RetStat MctpIoClass::read(std::vector<uint8_t>& buf,
     if (result == -1)
     {
         buf.clear();
-        printf("Receive error - 0x%x\n", errno); // TODO CLEANUP
+        Log.iprint("Receive error:");
+        Log.println(errno);
         return RetStat::ERROR_UNKNOWN;
     }
     if (result == 0)

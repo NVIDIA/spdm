@@ -310,12 +310,12 @@ class EmulatorBase : public spdmcpp::NonCopyable
     {
         if (!sendPlatformData(command, send))
         {
-            printf("send_platform_data Error - %x\n", errno);
+            std::cerr<< "sendPlatformData error: " << errno << std::endl;
             return false;
         }
         if (!receivePlatformData(response, recv))
         {
-            printf("receive_platform_data Error - %x\n", errno);
+            std::cerr<< "receivePlatformData error: " << errno << std::endl;
             return false;
         }
         return true;
@@ -341,7 +341,7 @@ class EmulatorBase : public spdmcpp::NonCopyable
         Socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
         if (Socket == -1)
         {
-            printf("Create Socket Failed - %x\n", errno);
+            std::cerr<< "Create Socket error: " << errno << std::endl;
             return false;
         }
         return true;

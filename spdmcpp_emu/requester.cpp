@@ -213,7 +213,7 @@ class EmulatorClient : public EmulatorBase
                 return false;
             }
             assert(response == SocketCommandEnum::SOCKET_SPDM_COMMAND_TEST);
-            printf("Got back: '%s'\n", recv.data());
+            std::cout<< "Got back: " << recv.data() << std::endl;
         }
 #if 1
         auto rs = con.initConnection();
@@ -286,7 +286,7 @@ class EmulatorClient : public EmulatorBase
                     Socket = -1;
                     return false;
                 }
-                printf("connect success!\n");
+                std::cout << "Connect success!\n";
                 break;
             }
             case SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_MCTP_DEMUX:
@@ -294,7 +294,7 @@ class EmulatorClient : public EmulatorBase
                 Socket = socket(AF_UNIX, SOCK_SEQPACKET, 0);
                 if (Socket == -1)
                 {
-                    printf("Create Socket Failed - %x\n", errno);
+                    std::cerr<< "Create Socket error: " << errno << std::endl;
                     return false;
                 }
 
@@ -327,7 +327,7 @@ class EmulatorClient : public EmulatorBase
                         return false;
                     }
                 }
-                printf("connect success!\n");
+                std::cout << "Connect success!\n";
                 break;
             }
             default:
