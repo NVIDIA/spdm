@@ -26,12 +26,12 @@ struct PacketReqAlgStruct
 
     void setFixedAlgCount(uint8_t count)
     {
-        AlgCount &= 0xF0;
+        AlgCount &= ~0xF0; // mask out previous value
         AlgCount |= count << 4;
     }
     void setExtAlgCount(uint8_t count)
     {
-        AlgCount &= 0xF;
+        AlgCount &= ~0xF; // mask out previous value
         AlgCount |= count & 0xF;
     }
     uint8_t getFixedAlgCount() const
