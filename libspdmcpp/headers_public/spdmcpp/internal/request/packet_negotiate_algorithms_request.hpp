@@ -24,6 +24,15 @@ struct PacketReqAlgStruct
         return ret;
     }
 
+    static PacketReqAlgStruct buildReqBaseAsymAlg(BaseAsymAlgoFlags flags)
+    {
+        PacketReqAlgStruct ret;
+        ret.AlgType = AlgTypeEnum::ReqBaseAsymAlg;
+        ret.setFixedAlgCount(2);
+        ret.setReqBaseAsymAlg(flags);
+        return ret;
+    }
+
     void setFixedAlgCount(uint8_t count)
     {
         AlgCount &= ~0xF0; // mask out previous value
@@ -55,15 +64,38 @@ struct PacketReqAlgStruct
         return static_cast<uint16_t>(size);
     }
 
+    BaseAsymAlgoFlags getReqBaseAsymAlg() const
+    {
+        return static_cast<BaseAsymAlgoFlags>(
+            static_cast<uint16_t>(AlgSupported[0]) |
+            static_cast<uint16_t>(AlgSupported[1]) << 16);
+    }
+    void setReqBaseAsymAlg(BaseAsymAlgoFlags flags)
+    {
+        auto bits = static_cast<uint16_t>(flags);
+        AlgSupported[0] = bits;
+        AlgSupported[1] = (bits >> 16);
+    }
+
     void print(LogClass& log) const
     {
         log.print("<");
         SPDMCPP_LOG_expr(log, AlgType);
-        log.print("   ");
-        SPDMCPP_LOG_expr(log, AlgCount);
-        log.print("   ");
-        //	SPDMCPP_LOG_expr(log, AlgSupported);
-        // TODO support printing
+        log.print("   FixedAlgCount: ");
+        log.print(getFixedAlgCount());
+        log.print("   ExtAlgCount: ");
+        log.print(getExtAlgCount());
+
+        switch (AlgType)
+        {
+            case AlgTypeEnum::ReqBaseAsymAlg:
+                log.print("   ReqBaseAsymAlg: ");
+                log.print(get_debug_string(getReqBaseAsymAlg()));
+                break;
+            default:
+                log.print("   UNIMPLEMENTED");
+                break;
+        }
         log.print(">");
     }
 

@@ -330,23 +330,11 @@ RetStat ConnectionClass::tryNegotiateAlgorithms()
     // 		request.Flags = RequesterCapabilitiesFlags::CERT_CAP |
     // RequesterCapabilitiesFlags::CHAL_CAP;
 
-    /*
-    if (MessageVersion == MessageVersionEnum::SPDM_1_0) {
-
+    if (MessageVersion != MessageVersionEnum::SPDM_1_0)
+    {
+        request.PacketReqAlgVector.push_back(
+            PacketReqAlgStruct::buildReqBaseAsymAlg(request.Min.BaseAsymAlgo));
     }
-    else
-    {*/
-    // request.PacketReqAlgVector.push_back(PacketReqAlgStruct::buildSupported2(
-    // AlgTypeEnum::ReqBaseAsymAlg, 0x0F, 0x00));
-    /*request.PacketReqAlgVector.push_back(
-        PacketReqAlgStruct::buildSupported2(AlgTypeEnum::DHE, 0x1b, 0x00));
-    request.PacketReqAlgVector.push_back(PacketReqAlgStruct::buildSupported2(
-        AlgTypeEnum::AEADCipherSuite, 0x06, 0x00));
-    request.PacketReqAlgVector.push_back(PacketReqAlgStruct::buildSupported2(
-        AlgTypeEnum::ReqBaseAsymAlg, 0x0F, 0x00));
-    request.PacketReqAlgVector.push_back(PacketReqAlgStruct::buildSupported2(
-        AlgTypeEnum::KeySchedule, 0x01, 0x00));*/
-    // }
 
     request.finalize();
 
