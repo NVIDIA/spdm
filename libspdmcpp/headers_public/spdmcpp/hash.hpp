@@ -124,8 +124,8 @@ class HashClass
         }
         mbedtls_md_init(&Ctx);
         int ret = mbedtls_md_setup(
-            &Ctx, Ctx.md_info, 0); // TODO md_info may be considered private?!
-        SPDMCPP_ASSERT(ret == 0);          // TODO failure possible?
+            &Ctx, other.getInfo(), 0);
+        SPDMCPP_ASSERT(ret == 0);  // TODO failure possible?
         ret = mbedtls_md_clone(&Ctx, &other.Ctx);
         SPDMCPP_ASSERT(ret == 0); // TODO failure possible?
     }
@@ -140,8 +140,8 @@ class HashClass
 
     void setup(HashEnum algo)
     {
-        mbedtls_md_type_t type = toMbedtls(algo);
-        int ret = mbedtls_md_setup(&Ctx, mbedtls_md_info_from_type(type), 0);
+        algorithm = algo;
+        int ret = mbedtls_md_setup(&Ctx, getInfo(), 0);
         SPDMCPP_ASSERT(ret == 0); // TODO failure possible?
         ret = mbedtls_md_starts(&Ctx);
         SPDMCPP_ASSERT(ret == 0); // TODO failure possible?
@@ -166,7 +166,7 @@ class HashClass
 
     void hashFinish(uint8_t* buf, size_t size)
     {
-        SPDMCPP_ASSERT(mbedtls_md_get_size(Ctx.md_info) == size);
+        SPDMCPP_ASSERT(mbedtls_md_get_size(getInfo()) == size);
         int ret = mbedtls_md_finish(&Ctx, buf);
         SPDMCPP_ASSERT(ret == 0); // TODO failure possible?
         //	ret = mbedtls_md_starts(&Ctx);
@@ -174,12 +174,15 @@ class HashClass
     }
     void hashFinish(std::vector<uint8_t>& buf)
     {
-        buf.resize(mbedtls_md_get_size(Ctx.md_info));
+        buf.resize(mbedtls_md_get_size(getInfo()));
         hashFinish(buf.data(), buf.size());
     }
 
   private:
     mbedtls_md_context_t Ctx{};
+    HashEnum algorithm = HashEnum::NONE;
+
+    const mbedtls_md_info_t* getInfo() const { return mbedtls_md_info_from_type(toMbedtls(algorithm)); }
 };
 
 } // namespace spdmcpp

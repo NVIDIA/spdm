@@ -542,11 +542,7 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
             if (slot.MCertificates.size() == 1)
             {
                 std::vector<uint8_t> hash;
-                hash.resize(getHashSize(Algorithms.Min.BaseHashAlgo));
-                int ret = mbedtls_md(
-                    mbedtls_md_info_from_type(toMbedtls(getSignatureHash())),
-                    &cert[off], asn1Len, hash.data());
-                SPDMCPP_ASSERT(ret == 0);
+                HashClass::compute(hash, getSignatureHash(), cert, off, asn1Len);
                 Log.iprint("computed root certificate hash = ");
                 Log.println(hash);
 
