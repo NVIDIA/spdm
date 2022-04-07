@@ -105,6 +105,8 @@ class Responder : public ResponderIntf
     void updateLastUpdateTime();
     void syncSlotsInfo();
 
+    void handleError(spdmcpp::RetStat rs);
+
     friend MctpTransportClass;
 };
 
