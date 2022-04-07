@@ -20,7 +20,7 @@ add_project_arguments('-Werror', language: ['c', 'cpp'])
 add_project_arguments('-Wno-psabi', language: 'cpp')
 
 conf_data = configuration_data()
-conf_data.set_quoted('SPDMD_VERSION', meson.project_version())
+conf_data.set_quoted('SPDMD_VERSION', meson.project_version() + ' /* NOLINT cppcoreguidelines-macro-usage */')
 configure_file(
   output: 'config.h',
   configuration: conf_data
