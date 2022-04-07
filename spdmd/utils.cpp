@@ -60,7 +60,8 @@ void reportError(const char* errorMsg)
     try
     {
         static constexpr auto logObjPath = "/xyz/openbmc_project/logging";
-        static constexpr auto logInterface = "xyz.openbmc_project.Logging.Create";
+        static constexpr auto logInterface =
+            "xyz.openbmc_project.Logging.Create";
 
         auto service = DBusHandler().getService(logObjPath, logInterface);
         using namespace sdbusplus::xyz::openbmc_project::Logging::server;

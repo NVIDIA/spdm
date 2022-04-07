@@ -151,8 +151,9 @@ std::string to_string_hex(T v)
 
 inline uint16_t getHashSize(BaseHashAlgoFlags flags)
 {
-    SPDMCPP_ASSERT(countBits(static_cast<std::underlying_type_t<BaseHashAlgoFlags>>(
-               flags)) <= 1);
+    SPDMCPP_ASSERT(
+        countBits(static_cast<std::underlying_type_t<BaseHashAlgoFlags>>(
+            flags)) <= 1);
     switch (flags)
     {
         case BaseHashAlgoFlags::TPM_ALG_SHA_256:
@@ -200,8 +201,9 @@ inline uint16_t getHashSize(MeasurementHashAlgoFlags flags)
 
 inline uint16_t getSignatureSize(BaseAsymAlgoFlags flags)
 {
-    SPDMCPP_ASSERT(countBits(static_cast<std::underlying_type_t<BaseAsymAlgoFlags>>(
-               flags)) <= 1);
+    SPDMCPP_ASSERT(
+        countBits(static_cast<std::underlying_type_t<BaseAsymAlgoFlags>>(
+            flags)) <= 1);
     switch (flags)
     {
         case BaseAsymAlgoFlags::TPM_ALG_RSASSA_2048:
