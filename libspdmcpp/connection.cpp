@@ -322,7 +322,8 @@ RetStat ConnectionClass::tryNegotiateAlgorithms()
     // 		request.Min.BaseAsymAlgo = BaseAsymAlgoFlags::TPM_ALG_RSASSA_2048 |
     // BaseAsymAlgoFlags::TPM_ALG_RSAPSS_2048;
     request.Min.BaseAsymAlgo = BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P256 |
-                               BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P384;
+                               BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P384 |
+                               BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P521;
     request.Min.BaseHashAlgo = BaseHashAlgoFlags::TPM_ALG_SHA_256 |
                                BaseHashAlgoFlags::TPM_ALG_SHA_384 |
                                BaseHashAlgoFlags::TPM_ALG_SHA_512;
