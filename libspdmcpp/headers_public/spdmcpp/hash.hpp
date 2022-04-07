@@ -6,7 +6,7 @@
 #include "enum.hpp"
 #include "flag.hpp"
 
-#include <mbedtls/md.h>
+#include "mbedtls_support.hpp"
 
 #include <array>
 #include <cstdint>

@@ -1,7 +1,4 @@
 
-#include <mbedtls/x509.h>
-#include <mbedtls/x509_crt.h>
-
 #include <spdmcpp/common.hpp>
 #include <spdmcpp/context.hpp>
 

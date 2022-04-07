@@ -3,13 +3,13 @@
 
 #include "assert.hpp"
 #include "flag.hpp"
-#include "hash.hpp"
 #include "log.hpp"
 
 #include <mbedtls/ecdh.h>
 #include <mbedtls/ecdsa.h>
 #include <mbedtls/error.h>
 #include <mbedtls/pem.h>
+#include <mbedtls/md.h>
 #include <mbedtls/pk.h>
 #include <mbedtls/x509_crt.h>
 

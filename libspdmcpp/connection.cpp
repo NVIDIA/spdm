@@ -1,8 +1,4 @@
 
-#include <mbedtls/ecdh.h>
-#include <mbedtls/error.h>
-#include <mbedtls/pem.h>
-
 #include <spdmcpp/context.hpp>
 #include <spdmcpp/connection.hpp>
 #include <spdmcpp/connection_inl.hpp>
@@ -726,7 +722,7 @@ RetStat ConnectionClass::handleRecv<PacketChallengeAuthResponseVar>()
             }
             else
             {
-                mbedtlsPrintErrorLine(Log, "mbedtls_ecdsa_verify()", ret);
+                mbedtlsPrintErrorLine(Log, "verifySignature()", ret);
                 return RetStat::ERROR_AUTHENTICATION_FAILED;
             }
         }
@@ -858,7 +854,7 @@ RetStat ConnectionClass::handleRecv<PacketMeasurementsResponseVar>()
         }
         else
         {
-            mbedtlsPrintErrorLine(Log, "mbedtls_ecdsa_verify()", ret);
+            mbedtlsPrintErrorLine(Log, "verifySignature()", ret);
             return RetStat::ERROR_MEASUREMENT_SIGNATURE_VERIFIY_FAILED;
         }
     }
