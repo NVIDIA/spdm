@@ -255,7 +255,8 @@ RetStat ConnectionClass::tryGetCapabilities()
     SPDMCPP_LOG_TRACE_FUNC(Log);
     SPDMCPP_ASSERT(hasInfo(ConnectionInfoEnum::CHOOSEN_VERSION));
 
-    RetStat rs = RetStat::ERROR_UNKNOWN;
+    // NOLINTNEXTLINE cppcoreguidelines-init-variables
+    RetStat rs; // which conflicts with cppcheck redundantInitialization
     if (MessageVersion == MessageVersionEnum::SPDM_1_0)
     {
         PacketGetCapabilities10Request request;
@@ -884,7 +885,8 @@ RetStat ConnectionClass::handleRecv()
     Log.iprint("ResponseBuffer = ");
     Log.println(ResponseBuffer);
 
-    RequestResponseEnum code = RequestResponseEnum::INVALID;
+    // NOLINTNEXTLINE cppcoreguidelines-init-variables
+    RequestResponseEnum code; // which conflicts with cppcheck redundantInitialization
     {
         TransportClass::LayerState lay; // TODO double decode
         if (Transport)
