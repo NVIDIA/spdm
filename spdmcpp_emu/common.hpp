@@ -92,7 +92,7 @@ struct BufferType : public std::vector<uint8_t>
     // TODO add custom helpers for appending, presetting headers, etc?
     BufferType() = default;
 
-    BufferType(const char* str)
+    explicit BufferType(const char* str)
     {
         size_t s = strlen(str) + 1;
         resize(s);
@@ -105,7 +105,7 @@ class EmulatorBase;
 class EMUIOClass : public spdmcpp::IOClass
 {
   public:
-    EMUIOClass(EmulatorBase& emu);
+    explicit EMUIOClass(EmulatorBase& emu);
 
     spdmcpp::RetStat write(
         const std::vector<uint8_t>& buf,
@@ -123,7 +123,7 @@ class DemuxIOClass :
     public spdmcpp::IOClass // TODO decouple from EmulatorBase and generalize
 {
   public:
-    DemuxIOClass(EmulatorBase& emu);
+    explicit DemuxIOClass(EmulatorBase& emu);
 
     spdmcpp::RetStat write(
         const std::vector<uint8_t>& buf,
@@ -146,7 +146,7 @@ class EmulatorBase : public spdmcpp::NonCopyable
   public:
     EmulatorBase() : Event(sdeventplus::Event::get_default())
     {}
-    EmulatorBase(int socket) :
+    explicit EmulatorBase(int socket) :
         Socket(socket), Event(sdeventplus::Event::get_default())
     {}
     ~EmulatorBase()

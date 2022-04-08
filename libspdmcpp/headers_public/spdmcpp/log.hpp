@@ -39,7 +39,7 @@ class LogClass
         Debug = 7,
     };
 
-    LogClass(std::ostream& ostream) :
+    explicit LogClass(std::ostream& ostream) :
         logLevel(Level::Emergency), Stream(&ostream)
     {}
 
@@ -219,7 +219,7 @@ class IndentHelper
 {
   public:
     IndentHelper() = delete;
-    IndentHelper(LogClass& log) : Log(log)
+    explicit IndentHelper(LogClass& log) : Log(log)
     {
         Log.indent();
     }
