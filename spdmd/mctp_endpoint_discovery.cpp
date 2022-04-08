@@ -38,7 +38,7 @@ MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
         return;
     }
 
-    for (const auto& [objectPath, interfaces] : objects)
+    for ([[maybe_unused]] const auto& [objectPath, interfaces] : objects)
     {
         for (const auto& [intfName, properties] : interfaces)
         {
