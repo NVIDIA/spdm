@@ -21,9 +21,7 @@ namespace spdmcpp
 
 inline SignatureEnum toSignature(BaseAsymAlgoFlags flags)
 {
-    SPDMCPP_ASSERT(
-        countBits(static_cast<std::underlying_type_t<BaseAsymAlgoFlags>>(
-            flags)) <= 1);
+    SPDMCPP_ASSERT(countBits(flags) <= 1);
     switch (flags)
     {
         case BaseAsymAlgoFlags::TPM_ALG_RSASSA_2048:

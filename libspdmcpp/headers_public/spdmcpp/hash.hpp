@@ -5,7 +5,6 @@
 #include "common.hpp"
 #include "enum.hpp"
 #include "flag.hpp"
-
 #include "mbedtls_support.hpp"
 
 #include <array>
@@ -21,9 +20,7 @@ namespace spdmcpp
 
 inline HashEnum toHash(BaseHashAlgoFlags flags)
 {
-    SPDMCPP_ASSERT(
-        countBits(static_cast<std::underlying_type_t<BaseHashAlgoFlags>>(
-            flags)) <= 1);
+    SPDMCPP_ASSERT(countBits(flags) <= 1);
     switch (flags)
     {
         case BaseHashAlgoFlags::TPM_ALG_SHA_256:
@@ -45,9 +42,7 @@ inline HashEnum toHash(BaseHashAlgoFlags flags)
 
 inline HashEnum toHash(MeasurementHashAlgoFlags flags)
 {
-    SPDMCPP_ASSERT(
-        countBits(static_cast<std::underlying_type_t<MeasurementHashAlgoFlags>>(
-            flags)) <= 1);
+    SPDMCPP_ASSERT(countBits(flags) <= 1);
     switch (flags)
     {
         case MeasurementHashAlgoFlags::RAW_BIT_STREAM_ONLY:

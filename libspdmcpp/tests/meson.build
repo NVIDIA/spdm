@@ -2,6 +2,7 @@ tests = [
   'helpers_test',
   'hash_test',
   'packet_basic_test',
+  'connection_test',
 ]
 
 foreach t : tests

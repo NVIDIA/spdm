@@ -1,4 +1,5 @@
 
+#include <spdmcpp/assert.hpp>
 #include <spdmcpp/helpers.hpp>
 #include <spdmcpp/mbedtls_support.hpp>
 
@@ -61,4 +62,52 @@ inline void appendFile(std::vector<uint8_t>& buf, const std::string& str)
     // NOLINTNEXTLINE cppcoreguidelines-pro-type-reinterpret-cast
     file.read(reinterpret_cast<char*>(&buf[off]), fileSize);
     file.close();
+}
+
+inline int fRng(void* /*ctx*/, unsigned char* buf, size_t len)
+{
+    spdmcpp::fillRandom(std::span(buf, len));
+    return 0;
+}
+
+inline int computeSignature(mbedtls_pk_context* pkctx,
+                            std::vector<uint8_t>& signature,
+                            const std::vector<uint8_t>& message)
+{
+    if (mbedtls_pk_get_type(pkctx) != MBEDTLS_PK_ECKEY)
+    {
+        SPDMCPP_ASSERT(false);
+    }
+
+    mbedtls_ecp_keypair* ctx = mbedtls_pk_ec(*pkctx);
+
+    mbedtls_mpi sigR, sigS;
+    mbedtls_mpi_init(&sigR);
+    mbedtls_mpi_init(&sigS);
+
+    int ret = mbedtls_ecdsa_sign(&ctx->grp, &sigR, &sigS, &ctx->d,
+                                 message.data(), message.size(), fRng, nullptr);
+    if (ret)
+    {
+        mbedtls_mpi_free(&sigR);
+        mbedtls_mpi_free(&sigS);
+        return ret;
+    }
+    size_t halfSize = spdmcpp::getHalfSize(ctx);
+    signature.resize(halfSize * 2);
+    ret = mbedtls_mpi_write_binary(&sigR, signature.data(), halfSize);
+    SPDMCPP_ASSERT(!ret);
+    ret = mbedtls_mpi_write_binary(&sigS, &signature[halfSize], halfSize);
+    SPDMCPP_ASSERT(!ret);
+
+    mbedtls_mpi_free(&sigR);
+    mbedtls_mpi_free(&sigS);
+    return ret;
+}
+
+inline int computeSignature(mbedtls_x509_crt* cert,
+                            std::vector<uint8_t>& signature,
+                            const std::vector<uint8_t>& message)
+{
+    return computeSignature(&cert->pk, signature, message);
 }
