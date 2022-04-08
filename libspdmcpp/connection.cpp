@@ -808,9 +808,8 @@ RetStat ConnectionClass::handleRecv<PacketMeasurementsResponseVar>()
             else
             {
                 size_t off = 0;
-                auto rs =
-                    packetDecodeInternal(DMTFMeasurements[block.Min.Index],
-                                         block.MeasurementVector, off);
+                rs = packetDecodeInternal(DMTFMeasurements[block.Min.Index],
+                                          block.MeasurementVector, off);
                 SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
                 if (off != block.MeasurementVector.size())
                 {

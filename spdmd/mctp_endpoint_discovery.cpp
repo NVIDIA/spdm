@@ -96,9 +96,9 @@ size_t
                 eid = std::get<size_t>(
                     properties.at(mctpEndpointIntfPropertyEid));
             }
-            catch (const std::bad_variant_access& e)
+            catch (const std::bad_variant_access& e1)
             {
-                spdmApp.getLog().println(e.what());
+                spdmApp.getLog().println(e1.what());
             }
         }
         if (eid < 256)
