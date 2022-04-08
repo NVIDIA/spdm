@@ -55,13 +55,13 @@ GetSubTreeResponse
 
 void reportError(const char* errorMsg)
 {
-    static constexpr auto logObjPath = "/xyz/openbmc_project/logging";
-    static constexpr auto logInterface = "xyz.openbmc_project.Logging.Create";
-
     auto& bus = spdmd::utils::DBusHandler::getBus();
 
     try
     {
+        static constexpr auto logObjPath = "/xyz/openbmc_project/logging";
+        static constexpr auto logInterface = "xyz.openbmc_project.Logging.Create";
+
         auto service = DBusHandler().getService(logObjPath, logInterface);
         using namespace sdbusplus::xyz::openbmc_project::Logging::server;
         auto severity =
