@@ -158,8 +158,6 @@ inline void packetEncodeBasic(const std::array<uint8_t, N>& src,
                                                const std::vector<uint8_t>& buf,
                                                size_t& start)
 {
-    //	SPDMCPP_ASSERT(start < buf.size());//TODO need macros for various categories of
-    // asserts!!!
     if (start + size > buf.size())
     {
         return RetStat::ERROR_BUFFER_TOO_SMALL;

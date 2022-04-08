@@ -5,10 +5,7 @@
 #include "common.hpp"
 #include "context.hpp"
 #include "hash.hpp"
-
-#include <mbedtls/md.h>
-#include <mbedtls/x509.h>
-#include <mbedtls/x509_crt.h>
+#include "mbedtls_support.hpp"
 
 #include <array>
 #include <bitset>
