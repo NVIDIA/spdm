@@ -1,7 +1,6 @@
 tests = [
   'helpers_test',
   'hash_test',
-  'basic_test',
   'packet_basic_test',
 ]
 
