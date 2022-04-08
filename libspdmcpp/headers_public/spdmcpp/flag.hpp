@@ -94,7 +94,7 @@ std::string to_string_hex(T v)
     }
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define FLAG_END(T, UT)                                                        \
-    return ret + ")";                                                          \
+    return !first ? ret + ")" : "(0)";                                         \
     }
 
 #include "flag_defs.hpp"
@@ -120,7 +120,8 @@ std::string to_string_hex(T v)
     }
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define FLAG_END(T, UT)                                                        \
-    return ret + ")";                                                          \
+    return !first ? ret + ")"                                                  \
+                  : "(" + to_string_hex(static_cast<UT>(flags)) + " 0)";       \
     }
 
 #include "flag_defs.hpp"
