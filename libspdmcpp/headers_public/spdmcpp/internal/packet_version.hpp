@@ -14,7 +14,7 @@ struct PacketVersionNumber // TODO bitfields are ill-defined endianness-wise
     uint16_t MajorVersion : 4 = 0;
 
     static constexpr bool sizeIsConstant = true;
-    
+
     MessageVersionEnum getMessageVersion() const
     {
         switch (MajorVersion)

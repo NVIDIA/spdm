@@ -123,9 +123,8 @@ class HashClass
             return *this;
         }
         mbedtls_md_init(&Ctx);
-        int ret = mbedtls_md_setup(
-            &Ctx, other.getInfo(), 0);
-        SPDMCPP_ASSERT(ret == 0);  // TODO failure possible?
+        int ret = mbedtls_md_setup(&Ctx, other.getInfo(), 0);
+        SPDMCPP_ASSERT(ret == 0); // TODO failure possible?
         ret = mbedtls_md_clone(&Ctx, &other.Ctx);
         SPDMCPP_ASSERT(ret == 0); // TODO failure possible?
     }
@@ -182,7 +181,10 @@ class HashClass
     mbedtls_md_context_t Ctx{};
     HashEnum algorithm = HashEnum::NONE;
 
-    const mbedtls_md_info_t* getInfo() const { return mbedtls_md_info_from_type(toMbedtls(algorithm)); }
+    const mbedtls_md_info_t* getInfo() const
+    {
+        return mbedtls_md_info_from_type(toMbedtls(algorithm));
+    }
 };
 
 } // namespace spdmcpp

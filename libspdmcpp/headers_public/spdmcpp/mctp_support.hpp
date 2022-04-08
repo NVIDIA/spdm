@@ -38,14 +38,12 @@ class MctpTransportClass : public TransportClass
         EID = eid;
     }
 
-    RetStat encodePre(std::vector<uint8_t>& /*buf*/,
-                              LayerState& lay) override
+    RetStat encodePre(std::vector<uint8_t>& /*buf*/, LayerState& lay) override
     {
         setLayerSize(lay, sizeof(HeaderType));
         return RetStat::OK;
     }
-    RetStat encodePost(std::vector<uint8_t>& buf,
-                               LayerState& lay) override
+    RetStat encodePost(std::vector<uint8_t>& buf, LayerState& lay) override
     {
         auto& header = getHeaderRef<HeaderType>(buf, lay);
         header.eid = EID;
@@ -111,7 +109,7 @@ class MctpIoClass : public IOClass
         addr.sun_family = AF_UNIX;
         // NOLINTNEXTLINE cppcoreguidelines-pro-bounds-array-to-pointer-decay
         memcpy(addr.sun_path, path, sizeof(path) - 1);
-        
+
         // NOLINTNEXTLINE cppcoreguidelines-pro-type-cstyle-cast
         if (::connect(Socket, (struct sockaddr*)&addr,
                       sizeof(path) + sizeof(addr.sun_family) - 1) == -1)

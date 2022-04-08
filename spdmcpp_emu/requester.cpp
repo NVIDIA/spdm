@@ -57,11 +57,11 @@ struct ProgramOptions
                     }
                     break;
                 case 'e':
-                    //NOLINTNEXTLINE(cert-err34-c) TODO use CLI11
+                    // NOLINTNEXTLINE(cert-err34-c) TODO use CLI11
                     EID = atoi(optarg);
                     break;
                 case 'p':
-                    //NOLINTNEXTLINE(cert-err34-c) TODO use CLI11
+                    // NOLINTNEXTLINE(cert-err34-c) TODO use CLI11
                     PortNumber = atoi(optarg);
                     break;
                 case 'v':
@@ -214,8 +214,9 @@ class EmulatorClient : public EmulatorBase
             {
                 return false;
             }
-            SPDMCPP_ASSERT(response == SocketCommandEnum::SOCKET_SPDM_COMMAND_TEST);
-            std::cout<< "Got back: " << recv.data() << std::endl;
+            SPDMCPP_ASSERT(response ==
+                           SocketCommandEnum::SOCKET_SPDM_COMMAND_TEST);
+            std::cout << "Got back: " << recv.data() << std::endl;
         }
 #if 1
         auto rs = con.initConnection();
@@ -299,7 +300,7 @@ class EmulatorClient : public EmulatorBase
                 Socket = socket(AF_UNIX, SOCK_SEQPACKET, 0);
                 if (Socket == -1)
                 {
-                    std::cerr<< "Create Socket error: " << errno << std::endl;
+                    std::cerr << "Create Socket error: " << errno << std::endl;
                     return false;
                 }
 

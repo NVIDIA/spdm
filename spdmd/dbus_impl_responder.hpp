@@ -26,7 +26,7 @@ class Responder;
  *  @brief Support class for transport through the mctp-demux-daemon with
  * timeouts handled by sdeventplus
  */
-//NOLINTNEXTLINE cppcoreguidelines-special-member-functions
+// NOLINTNEXTLINE cppcoreguidelines-special-member-functions
 class MctpTransportClass : public spdmcpp::MctpTransportClass
 {
   public:
@@ -42,8 +42,7 @@ class MctpTransportClass : public spdmcpp::MctpTransportClass
         }
     }
 
-    spdmcpp::RetStat
-        setupTimeout(spdmcpp::timeout_ms_t timeout) override;
+    spdmcpp::RetStat setupTimeout(spdmcpp::timeout_ms_t timeout) override;
 
     bool clearTimeout() override;
 
@@ -93,8 +92,10 @@ class Responder : public ResponderIntf
     spdmcpp::RetStat handleRecv(std::vector<uint8_t>& buf);
 
   protected:
-    using MeasurementsContainerType = std::vector<std::tuple<uint8_t, uint8_t, std::vector<uint8_t>>>;
-    using CertificatesContainerType = std::vector<std::tuple<uint8_t, std::vector<uint8_t>>>;
+    using MeasurementsContainerType =
+        std::vector<std::tuple<uint8_t, uint8_t, std::vector<uint8_t>>>;
+    using CertificatesContainerType =
+        std::vector<std::tuple<uint8_t, std::vector<uint8_t>>>;
 
     SpdmdAppContext& appContext;
 

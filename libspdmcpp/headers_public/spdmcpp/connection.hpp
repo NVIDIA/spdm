@@ -122,7 +122,7 @@ class TimingClass
  *           - "10.5 Responder identity authentication" page 52-58
  *           - "10.10 Firmware and other measurements" page 68-77
  */
-//NOLINTNEXTLINE cppcoreguidelines-special-member-functions
+// NOLINTNEXTLINE cppcoreguidelines-special-member-functions
 class ConnectionClass : public NonCopyable
 {
     // TODO this has become extremely spaghetti (not enough time to do better,
@@ -409,8 +409,8 @@ class ConnectionClass : public NonCopyable
          */
         uint8_t GotInfo = 0;
         SPDMCPP_STATIC_ASSERT(sizeof(GotInfo) * 8 >=
-                      static_cast<std::underlying_type_t<SlotInfoEnum>>(
-                          SlotInfoEnum::NUM));
+                              static_cast<std::underlying_type_t<SlotInfoEnum>>(
+                                  SlotInfoEnum::NUM));
 
         /** @brief Mark the specified SlotInfoEnum as "available", to be later
          * queried by ConnectionClass::slotHasInfo()
@@ -632,9 +632,10 @@ class ConnectionClass : public NonCopyable
      * markInfo and hasInfo
      */
     uint8_t GotInfo = 0;
-    SPDMCPP_STATIC_ASSERT(sizeof(GotInfo) * 8 >=
-                  static_cast<std::underlying_type_t<ConnectionInfoEnum>>(
-                      ConnectionInfoEnum::NUM));
+    SPDMCPP_STATIC_ASSERT(
+        sizeof(GotInfo) * 8 >=
+        static_cast<std::underlying_type_t<ConnectionInfoEnum>>(
+            ConnectionInfoEnum::NUM));
 
     /** @brief Marks the given ConnectionInfoEnum as being received/available,
      * can be queried with hasInfo

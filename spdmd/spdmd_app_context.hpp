@@ -64,7 +64,8 @@ class SpdmdAppContext
     }
 
   private:
-    bool reportLog(Logging::server::Entry::Level severity, const string& message)
+    bool reportLog(Logging::server::Entry::Level severity,
+                   const string& message)
     {
         auto method = bus.new_method_call(
             "xyz.openbmc_project.Logging", "/xyz/openbmc_project/logging",

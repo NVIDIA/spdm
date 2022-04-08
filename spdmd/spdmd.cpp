@@ -109,7 +109,8 @@ bool SpdmdApp::connectMCTP()
             // TODO just log warning and ignore message?!
             event.exit(1);
         }
-        else {
+        else
+        {
             resp->handleRecv(packetBuffer);
         }
     };
@@ -157,7 +158,8 @@ int main(int argc, char** argv)
 {
     int returnCode = 0;
 
-    try {
+    try
+    {
         SpdmdApp spdmApp;
         spdmApp.setupCli(argc, argv);
 

@@ -64,7 +64,7 @@ spdmcpp::RetStat DemuxIOClass::write(const std::vector<uint8_t>& buf,
             send(Emulator.Socket, (void*)&buf[sent], buf.size() - sent, 0);
         if (ret == -1)
         {
-            std::cerr<< "Send error: " << errno << std::endl;
+            std::cerr << "Send error: " << errno << std::endl;
             return spdmcpp::RetStat::ERROR_UNKNOWN;
         }
         sent += ret;
@@ -79,7 +79,7 @@ spdmcpp::RetStat DemuxIOClass::read(std::vector<uint8_t>& buf,
     if (result == -1)
     {
         buf.clear();
-        std::cerr<< "Receive error: " << errno << std::endl;
+        std::cerr << "Receive error: " << errno << std::endl;
         return spdmcpp::RetStat::ERROR_UNKNOWN;
     }
     if (result == 0)

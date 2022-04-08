@@ -2,6 +2,7 @@
 #pragma once
 
 #include "assert.hpp"
+
 #include <cstdint>
 #include <cstdio>
 #include <cstring>

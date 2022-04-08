@@ -137,7 +137,7 @@ class DemuxIOClass :
     EmulatorBase& Emulator;
 };
 
-//NOLINTNEXTLINE cppcoreguidelines-special-member-functions
+// NOLINTNEXTLINE cppcoreguidelines-special-member-functions
 class EmulatorBase : public spdmcpp::NonCopyable
 {
     friend EMUIOClass;
@@ -295,8 +295,8 @@ class EmulatorBase : public spdmcpp::NonCopyable
             {
                 return false;
             }
-            SPDMCPP_ASSERT(static_cast<SocketTransportTypeEnum>(transportType) ==
-                   TransportType);
+            SPDMCPP_ASSERT(static_cast<SocketTransportTypeEnum>(
+                               transportType) == TransportType);
         }
         if (!receiveBuf(recv))
         {
@@ -312,12 +312,12 @@ class EmulatorBase : public spdmcpp::NonCopyable
     {
         if (!sendPlatformData(command, send))
         {
-            std::cerr<< "sendPlatformData error: " << errno << std::endl;
+            std::cerr << "sendPlatformData error: " << errno << std::endl;
             return false;
         }
         if (!receivePlatformData(response, recv))
         {
-            std::cerr<< "receivePlatformData error: " << errno << std::endl;
+            std::cerr << "receivePlatformData error: " << errno << std::endl;
             return false;
         }
         return true;
@@ -343,7 +343,7 @@ class EmulatorBase : public spdmcpp::NonCopyable
         Socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
         if (Socket == -1)
         {
-            std::cerr<< "Create Socket error: " << errno << std::endl;
+            std::cerr << "Create Socket error: " << errno << std::endl;
             return false;
         }
         return true;

@@ -59,7 +59,6 @@ namespace spdmcpp
         (expr).printMl(log);                                                   \
     } while (false)
 
-
 template <typename T, size_t N>
 constexpr bool isEqual(const std::array<T, N>& array0,
                        const std::array<T, N>& array1)

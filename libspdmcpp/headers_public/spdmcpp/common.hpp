@@ -35,7 +35,8 @@ class ContextClass;
 
 /** @struct NonCopyable
  *  @brief Helper class for deleting copy ops
- *  @details We often don't needed/want these and clang-tidy complains about them
+ *  @details We often don't needed/want these and clang-tidy complains about
+ * them
  */
 struct NonCopyable
 {
@@ -49,7 +50,7 @@ struct NonCopyable
     NonCopyable& operator=(NonCopyable&&) = delete;
 };
 
-//NOLINTNEXTLINE cppcoreguidelines-special-member-functions
+// NOLINTNEXTLINE cppcoreguidelines-special-member-functions
 class TransportClass : public NonCopyable
 {
   public:
@@ -106,7 +107,7 @@ class TransportClass : public NonCopyable
     }
 };
 
-//NOLINTNEXTLINE cppcoreguidelines-special-member-functions
+// NOLINTNEXTLINE cppcoreguidelines-special-member-functions
 class IOClass : NonCopyable
 {
   public:

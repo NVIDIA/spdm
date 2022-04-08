@@ -5,7 +5,6 @@
 #include <fstream>
 #include <iostream>
 
-
 constexpr std::mt19937::result_type mt19937DefaultSeed = 13;
 
 inline void
@@ -65,4 +64,3 @@ inline void appendFile(std::vector<uint8_t>& buf, const std::string& str)
     file.read(reinterpret_cast<char*>(&buf[off]), fileSize);
     file.close();
 }
-

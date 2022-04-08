@@ -125,7 +125,7 @@ bool ConnectionClass::getCertificatesDER(std::vector<uint8_t>& buf,
     }
 
     const SlotClass& slot = Slots[slotidx];
-    
+
     if (slot.CertificateOffset == 0 ||
         slot.CertificateOffset >= slot.Certificates.size())
     {
@@ -542,7 +542,8 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
             if (slot.MCertificates.size() == 1)
             {
                 std::vector<uint8_t> hash;
-                HashClass::compute(hash, getSignatureHash(), cert, off, asn1Len);
+                HashClass::compute(hash, getSignatureHash(), cert, off,
+                                   asn1Len);
                 Log.iprint("computed root certificate hash = ");
                 Log.println(hash);
 

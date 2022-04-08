@@ -3,8 +3,8 @@
 
 #include "assert.hpp"
 #include "flag.hpp"
-#include "log.hpp"
 #include "hash.hpp"
+#include "log.hpp"
 
 #include <mbedtls/ecdh.h>
 #include <mbedtls/ecdsa.h>
@@ -126,8 +126,8 @@ inline int verifySignature(mbedtls_x509_crt* cert,
         mbedtls_ecdh_free(&ctx);
         return ret;
     }
-    ret = mbedtls_ecdsa_verify(&ctx.grp, hash.data(), hash.size(), &ctx.Q,
-                               &bnR, &bnS);
+    ret = mbedtls_ecdsa_verify(&ctx.grp, hash.data(), hash.size(), &ctx.Q, &bnR,
+                               &bnS);
     mbedtls_mpi_free(&bnR);
     mbedtls_mpi_free(&bnS);
 
