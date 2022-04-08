@@ -97,6 +97,12 @@ TEST(Helpers, fillPseudoRandomType)
     EXPECT_GT(sizeof(str), 64u);
     EXPECT_LT(sizeof(str), refBuf.size());
     EXPECT_EQ(memcmp(&str, refBuf.data(), sizeof(str)), 0);
+
+    // workaround cppcheck unusedStructMember
+    str.data0 = 0;
+    str.data1 = 0;
+    str.data2 = 0;
+    str.data3 = nullptr;
 }
 
 TEST(Helpers, fillRandom_stdarray)
