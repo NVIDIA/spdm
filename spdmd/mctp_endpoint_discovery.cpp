@@ -40,11 +40,11 @@ MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
 
     for ([[maybe_unused]] const auto& [objectPath, interfaces] : objects)
     {
-        for (const auto& [intfName, properties] : interfaces)
+        for (const auto& intf : interfaces)
         {
-            if (intfName == mctpEndpointIntfName)
+            if (intf.first == mctpEndpointIntfName)
             {
-                size_t eid = getEid(properties);
+                size_t eid = getEid(intf.second);
                 if (eid < 256)
                 {
                     spdmApp.createResponder(
@@ -61,11 +61,11 @@ void MctpDiscovery::dicoverEndpoints(sdbusplus::message::message& msg)
     std::map<std::string, std::map<std::string, dbus::Value>> interfaces;
     msg.read(objPath, interfaces);
 
-    for (const auto& [intfName, properties] : interfaces)
+    for (const auto& intf : interfaces)
     {
-        if (intfName == mctpEndpointIntfName)
+        if (intf.first == mctpEndpointIntfName)
         {
-            size_t eid = getEid(properties);
+            size_t eid = getEid(intf.second);
             if (eid < 256)
             {
                 spdmApp.createResponder((mctp_eid_t)eid,
