@@ -195,8 +195,7 @@ bool packetEncodeDecode(const T& src, Targs... fargs)
     log.iprintln("dst:");
     dst.printMl(log);
     std::cerr << std::endl;
-    return src == dst; // TODO ?!
-    return true;
+    return src == dst;
 }
 
 template <class T, typename... Targs>
@@ -237,8 +236,7 @@ bool packetEncodeDecodeInternal(const T& src, Targs... fargs)
     log.iprintln("dst:");
     dst.printMl(log);
     std::cerr << std::endl;
-    return src == dst; // TODO ?!
-    return true;
+    return src == dst;
 }
 
 TEST(packet_pseudorandom_decode_encode, static_size)
