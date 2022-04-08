@@ -484,7 +484,7 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
     {
         {
             std::vector<uint8_t> hash;
-            HashClass::compute(hash, getSignatureHash(), cert);
+            HashClass::compute(hash, getSignatureHashEnum(), cert);
             Log.iprint("computed certificate digest hash = ");
             Log.println(hash);
 
@@ -542,8 +542,7 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
             if (slot.MCertificates.size() == 1)
             {
                 std::vector<uint8_t> hash;
-                HashClass::compute(hash, getSignatureHash(), cert, off,
-                                   asn1Len);
+                HashClass::compute(hash, getSignatureHashEnum(), cert, off, asn1Len);
                 Log.iprint("computed root certificate hash = ");
                 Log.println(hash);
 
@@ -692,7 +691,7 @@ RetStat ConnectionClass::handleRecv<PacketChallengeAuthResponseVar>()
         std::vector<uint8_t> hash;
         {
             HashClass ha;
-            ha.setup(getSignatureHash());
+            ha.setup(getSignatureHashEnum());
             // for (BufEnum::NUM)
             for (std::vector<uint8_t>& buf : Bufs)
             {
@@ -741,9 +740,6 @@ RetStat ConnectionClass::tryGetMeasurements()
     SPDMCPP_LOG_TRACE_FUNC(Log);
     SPDMCPP_ASSERT(MessageVersion != MessageVersionEnum::UNKNOWN);
 
-    // SlotClass& slot = Slots[CertificateSlotIdx];
-
-    // HashL1L2.setup(getSignatureHash());
     DMTFMeasurements.clear();
 
     if (MeasurementIndices[255])
@@ -847,7 +843,7 @@ RetStat ConnectionClass::handleRecv<PacketMeasurementsResponseVar>()
 #if 0
         HashL1L2.hashFinish(hash);
 #else
-        hashBuf(hash, getSignatureHash(), BufEnum::L);
+        hashBuf(hash, getSignatureHashEnum(), BufEnum::L);
 #endif
         Log.iprint("computed l2 hash = ");
         Log.println(hash);

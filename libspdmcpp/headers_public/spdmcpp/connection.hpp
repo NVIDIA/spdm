@@ -6,6 +6,7 @@
 #include "context.hpp"
 #include "hash.hpp"
 #include "mbedtls_support.hpp"
+#include "signature.hpp"
 
 #include <array>
 #include <bitset>
@@ -255,14 +256,21 @@ class ConnectionClass : public NonCopyable
 
     /** @brief The hash algorithm used for generating signatures
      */
-    HashEnum getSignatureHash() const
+    SignatureEnum getSignatureEnum() const
+    {
+        SPDMCPP_ASSERT(hasInfo(ConnectionInfoEnum::ALGORITHMS));
+        return toSignature(Algorithms.Min.BaseAsymAlgo);
+    }
+    /** @brief The hash algorithm used for generating signatures
+     */
+    HashEnum getSignatureHashEnum() const
     {
         SPDMCPP_ASSERT(hasInfo(ConnectionInfoEnum::ALGORITHMS));
         return toHash(Algorithms.Min.BaseHashAlgo);
     }
     /** @brief The hash algorithm used for generating measurement digests
      */
-    HashEnum getMeasurementHash() const
+    HashEnum getMeasurementHashEnum() const
     {
         SPDMCPP_ASSERT(hasInfo(ConnectionInfoEnum::ALGORITHMS));
         return toHash(Algorithms.Min.MeasurementHashAlgo);

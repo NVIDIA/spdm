@@ -170,12 +170,8 @@ spdmcpp::RetStat Responder::handleRecv(std::vector<uint8_t>& buf)
     }
     else if (Connection.hasInfo(ConnectionInfoEnum::ALGORITHMS))
     {
-        switch (Connection.getMeasurementHash())
+        switch (Connection.getMeasurementHashEnum())
         {
-            case HashEnum::NONE:
-            case HashEnum::INVALID:
-                hashingAlgorithm(HashingAlgorithms::None);
-                break;
             case HashEnum::SHA_256:
                 hashingAlgorithm(HashingAlgorithms::SHA_256);
                 break;
@@ -187,8 +183,30 @@ spdmcpp::RetStat Responder::handleRecv(std::vector<uint8_t>& buf)
                 break;
                 //	case HashEnum::SHA3_:
                 // hashingAlgorithm(HashingAlgorithms::SHA_);		break;
+            case HashEnum::NONE:
+            case HashEnum::INVALID:
             default:
-                hashingAlgorithm(HashingAlgorithms::OEM);
+                hashingAlgorithm(HashingAlgorithms::None);
+                break;
+        }
+        switch (Connection.getSignatureEnum())
+        {
+//NOLINTNEXTLINE cppcoreguidelines-macro-usage,-warnings-as-errors
+#define DTYPE(name) case SignatureEnum::name: signingAlgorithm(SigningAlgorithms::name); break;
+            DTYPE(RSASSA_2048)
+            DTYPE(RSAPSS_2048)
+            DTYPE(RSASSA_3072)
+            DTYPE(RSAPSS_3072)
+            DTYPE(RSASSA_4096)
+            DTYPE(RSAPSS_4096)
+            DTYPE(ECDSA_ECC_NIST_P256)
+            DTYPE(ECDSA_ECC_NIST_P384)
+            DTYPE(ECDSA_ECC_NIST_P521)
+#undef DTYPE
+            case SignatureEnum::NONE:
+            case SignatureEnum::INVALID:
+            default:
+                signingAlgorithm(SigningAlgorithms::None);
                 break;
         }
         status(SPDMStatus::GettingCertificates);
