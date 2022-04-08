@@ -105,14 +105,8 @@ TEST(Helpers, fillRandom_stdarray)
     buf.fill(0);
     fillRandom(buf);
 
-    size_t nonZero = 0;
-    for (auto& v : buf)
-    {
-        if (v)
-        {
-            ++nonZero;
-        }
-    }
+    size_t nonZero =
+        std::count_if(buf.begin(), buf.end(), [](auto v) { return !!v; });
     EXPECT_GE(nonZero,
               256u); // if more than half is zeros something's definitely broken
     EXPECT_NE(memcmp(buf.data(), refBuf.data(), buf.size()),
@@ -125,14 +119,8 @@ TEST(Helpers, fillRandom_vector)
     buf.resize(refBuf.size());
     fillRandom(buf);
 
-    size_t nonZero = 0;
-    for (auto& v : buf)
-    {
-        if (v)
-        {
-            ++nonZero;
-        }
-    }
+    size_t nonZero =
+        std::count_if(buf.begin(), buf.end(), [](auto v) { return !!v; });
 
     EXPECT_EQ(buf.size(), 512u);
     EXPECT_GE(nonZero,

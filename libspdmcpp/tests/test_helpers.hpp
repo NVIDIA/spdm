@@ -13,10 +13,8 @@ inline void
 {
     std::mt19937 gen(seed);
     std::uniform_int_distribution<uint8_t> distrib(1);
-    for (auto& b : buf)
-    {
-        b = distrib(gen);
-    }
+
+    std::generate(buf.begin(), buf.end(), [&]() { return distrib(gen); });
 }
 
 template <typename T>
