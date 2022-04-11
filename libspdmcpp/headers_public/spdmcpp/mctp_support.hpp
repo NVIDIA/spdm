@@ -54,7 +54,7 @@ class MctpTransportClass : public TransportClass
     RetStat decode(std::vector<uint8_t>& buf, LayerState& lay) override
     {
         setLayerSize(lay, sizeof(HeaderType));
-        auto& header = getHeaderRef<HeaderType>(buf, lay);
+        const auto& header = getHeaderRef<HeaderType>(buf, lay);
         if (header.type != MCTPMessageTypeEnum::SPDM)
         {
             return RetStat::ERROR_UNKNOWN;
@@ -66,7 +66,7 @@ class MctpTransportClass : public TransportClass
                            uint8_t& eid)
     {
         setLayerSize(lay, sizeof(HeaderType));
-        auto& header = getHeaderRef<HeaderType>(buf, lay);
+        const auto& header = getHeaderRef<HeaderType>(buf, lay);
         if (header.type != MCTPMessageTypeEnum::SPDM)
         {
             return RetStat::ERROR_UNKNOWN;
