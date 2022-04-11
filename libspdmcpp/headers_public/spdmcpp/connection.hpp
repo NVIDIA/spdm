@@ -469,6 +469,11 @@ class ConnectionClass : public NonCopyable
             }
             MCertificates.clear();
         }
+
+        ~SlotClass()
+        {
+            clear();
+        }
     };
 
     /** @brief This function interprets the response previously stored in
