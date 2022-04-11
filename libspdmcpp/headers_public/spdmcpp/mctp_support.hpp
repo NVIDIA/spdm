@@ -29,7 +29,7 @@ namespace spdmcpp
 class MctpTransportClass : public TransportClass
 {
   public:
-    MctpTransportClass(uint8_t eid) : EID(eid)
+    explicit MctpTransportClass(uint8_t eid) : EID(eid)
     {}
 
     void setEid(uint8_t eid)
@@ -90,7 +90,7 @@ class MctpTransportClass : public TransportClass
 class MctpIoClass : public IOClass
 {
   public:
-    MctpIoClass(LogClass& log) : Log(log)
+    explicit MctpIoClass(LogClass& log) : Log(log)
     {}
 
     bool createSocket()

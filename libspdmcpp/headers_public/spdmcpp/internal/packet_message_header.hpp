@@ -15,9 +15,9 @@ struct PacketMessageHeader
     static constexpr bool sizeIsConstant = true;
 
     PacketMessageHeader() = default;
-    PacketMessageHeader(RequestResponseEnum rr) : requestResponseCode(rr)
+    explicit PacketMessageHeader(RequestResponseEnum rr) : requestResponseCode(rr)
     {}
-    PacketMessageHeader(MessageVersionEnum v, RequestResponseEnum rr) :
+    explicit PacketMessageHeader(MessageVersionEnum v, RequestResponseEnum rr) :
         MessageVersion(v), requestResponseCode(rr)
     {}
 

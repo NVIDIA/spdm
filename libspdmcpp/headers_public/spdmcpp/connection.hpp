@@ -137,7 +137,7 @@ class ConnectionClass : public NonCopyable
      *  @param[in] context - Context containing various common configuration and
      * information
      */
-    ConnectionClass(ContextClass* context);
+    explicit ConnectionClass(ContextClass* context);
     ~ConnectionClass() = default;
 
     /** @brief Registers a TransportClass for handling the connection (e.g. with
