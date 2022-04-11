@@ -399,6 +399,7 @@ class ConnectionClass : public NonCopyable
      *  @brief Protected helper struct for storing the Certificate chains
      * received from the Responder
      */
+    // NOLINTNEXTLINE cppcoreguidelines-special-member-functions
     struct SlotClass
     {
         std::vector<uint8_t> Digest;
