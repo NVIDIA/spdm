@@ -124,10 +124,10 @@ class HashClass
             return *this;
         }
         mbedtls_md_init(&Ctx);
-        int ret = mbedtls_md_setup(&Ctx, other.getInfo(), 0);
-        SPDMCPP_ASSERT(ret == 0); // TODO failure possible?
-        ret = mbedtls_md_clone(&Ctx, &other.Ctx);
-        SPDMCPP_ASSERT(ret == 0); // TODO failure possible?
+        // TODO failure possible?
+        mbedtls_md_setup(&Ctx, other.getInfo(), 0);
+        // TODO failure possible?
+         mbedtls_md_clone(&Ctx, &other.Ctx);
     }
 
     HashClass(HashClass&&) = delete;
@@ -141,16 +141,16 @@ class HashClass
     void setup(HashEnum algo)
     {
         algorithm = algo;
-        int ret = mbedtls_md_setup(&Ctx, getInfo(), 0);
-        SPDMCPP_ASSERT(ret == 0); // TODO failure possible?
-        ret = mbedtls_md_starts(&Ctx);
-        SPDMCPP_ASSERT(ret == 0); // TODO failure possible?
+        // TODO failure possible?
+        mbedtls_md_setup(&Ctx, getInfo(), 0);
+        // TODO failure possible?
+        mbedtls_md_starts(&Ctx);
     }
 
     void update(const uint8_t* buf, size_t size)
     {
-        int ret = mbedtls_md_update(&Ctx, buf, size);
-        SPDMCPP_ASSERT(ret == 0); // TODO failure possible?
+        // TODO failure possible?
+        mbedtls_md_update(&Ctx, buf, size);
     }
     void update(const std::vector<uint8_t>& buf, size_t off = 0,
                 size_t len = std::numeric_limits<size_t>::max())
@@ -158,8 +158,8 @@ class HashClass
         SPDMCPP_ASSERT(off < buf.size());
         len = std::min(len, buf.size() - off);
         SPDMCPP_ASSERT(off + len <= buf.size());
-        int ret = mbedtls_md_update(&Ctx, &buf[off], len);
-        SPDMCPP_ASSERT(ret == 0); // TODO failure possible?
+        // TODO failure possible?
+        mbedtls_md_update(&Ctx, &buf[off], len);
     }
 
     //	void hash_output(uint8_t* buf, size_t size)
@@ -167,10 +167,8 @@ class HashClass
     void hashFinish(uint8_t* buf, size_t size)
     {
         SPDMCPP_ASSERT(mbedtls_md_get_size(getInfo()) == size);
-        int ret = mbedtls_md_finish(&Ctx, buf);
-        SPDMCPP_ASSERT(ret == 0); // TODO failure possible?
-        //	ret = mbedtls_md_starts(&Ctx);
-        //	SPDMCPP_ASSERT(ret == 0);//TODO failure possible?
+        // TODO failure possible?
+        mbedtls_md_finish(&Ctx, buf);
     }
     void hashFinish(std::vector<uint8_t>& buf)
     {
