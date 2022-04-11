@@ -80,8 +80,6 @@ class MctpTransportClass : public TransportClass
     {
         uint8_t eid;
         MCTPMessageTypeEnum type;
-
-        static constexpr bool sizeIsConstant = true;
     };
 
     uint8_t EID = 0;

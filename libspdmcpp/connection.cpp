@@ -351,8 +351,6 @@ RetStat ConnectionClass::handleRecv<PacketAlgorithmsResponseVar>()
 
     appendRecvToBuf(BufEnum::A);
 
-    packetDecodeInfo.MeasurementHashSize =
-        getHashSize(resp.Min.MeasurementHashAlgo);
     packetDecodeInfo.BaseHashSize = getHashSize(resp.Min.BaseHashAlgo);
     packetDecodeInfo.SignatureSize = getSignatureSize(resp.Min.BaseAsymAlgo);
 
@@ -775,7 +773,7 @@ RetStat ConnectionClass::tryGetMeasurements(uint8_t idx)
             0x0;
     }
 
-    request.Min.Header.Param2 = packetDecodeInfo.GetMeasurementsParam2 = idx;
+    request.Min.Header.Param2 = idx;
 
     auto rs = sendRequestSetupResponse(request, PacketMeasurementsResponseVar(),
                                        BufEnum::L, Timings.getT2());

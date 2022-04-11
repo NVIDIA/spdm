@@ -71,11 +71,9 @@ using nonce_array_32 = std::array<uint8_t, 32>;
 struct PacketDecodeInfo
 {
     uint16_t BaseHashSize = 0;
-    uint16_t MeasurementHashSize = 0;
     uint16_t SignatureSize = 0;
     uint8_t ChallengeParam2 = 0;
     uint8_t GetMeasurementsParam1 = 0;
-    uint8_t GetMeasurementsParam2 = 0;
 };
 
 #pragma pack(1)
