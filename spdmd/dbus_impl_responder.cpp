@@ -62,10 +62,7 @@ void Responder::syncSlotsInfo()
             std::vector<uint8_t> cert;
             if (Connection.getCertificatesDER(cert, idx))
             {
-                certs.resize(certs.size() + 1);
-
-                std::get<0>(certs.back()) = idx;
-                std::swap(cert, std::get<1>(certs.back()));
+                certs.emplace_back(std::tuple(idx, std::get<1>(certs.back())));
             }
         }
     }
