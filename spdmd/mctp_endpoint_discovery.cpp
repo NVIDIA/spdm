@@ -11,6 +11,8 @@
 namespace spdmd
 {
 
+constexpr size_t invalidEid = 256;
+
 const std::string inventoryDefaultPath = "/xyz/openbmc_project/inventory";
 
 MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
@@ -46,7 +48,7 @@ MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
             if (intf.first == mctpEndpointIntfName)
             {
                 size_t eid = getEid(intf.second);
-                if (eid < 256)
+                if (eid < invalidEid)
                 {
                     spdmApp.createResponder(
                         (mctp_eid_t)eid, getInventoryPath(getUUID(interfaces)));
@@ -67,7 +69,7 @@ void MctpDiscovery::newEndpointDiscovered(sdbusplus::message::message& msg)
         if (intf.first == mctpEndpointIntfName)
         {
             size_t eid = getEid(intf.second);
-            if (eid < 256)
+            if (eid < invalidEid)
             {
                 spdmApp.createResponder((mctp_eid_t)eid,
                                         getInventoryPath(getUUID(interfaces)));
@@ -79,49 +81,52 @@ void MctpDiscovery::newEndpointDiscovered(sdbusplus::message::message& msg)
 size_t
     MctpDiscovery::getEid(const std::map<std::string, dbus::Value>& properties)
 {
-    if (properties.contains(mctpEndpointIntfPropertyEid) &&
-        properties.contains(mctpEndpointIntfPropertySupportedMessageTypes))
+    if (!properties.contains(mctpEndpointIntfPropertyEid))
     {
-        size_t eid = 256;
-        /* Type of EID property depends on the system,
-         *  so checking of all possible types is mandatory */
+        return invalidEid;
+    }
+    if (!properties.contains(mctpEndpointIntfPropertySupportedMessageTypes))
+    {
+        return invalidEid;
+    }
+
+    size_t eid = invalidEid;
+    /* Type of EID property depends on the system,
+     *  so checking of all possible types is mandatory */
+    try
+    {
+        eid = std::get<uint32_t>(properties.at(mctpEndpointIntfPropertyEid));
+    }
+    catch (const std::bad_variant_access& e)
+    {
         try
         {
-            eid =
-                std::get<uint32_t>(properties.at(mctpEndpointIntfPropertyEid));
+            eid = std::get<size_t>(properties.at(mctpEndpointIntfPropertyEid));
         }
-        catch (const std::bad_variant_access& e)
+        catch (const std::bad_variant_access& e1)
         {
-            try
+            spdmApp.getLog().println(e1.what());
+        }
+    }
+    if (eid < invalidEid)
+    {
+        try
+        {
+            auto types = std::get<std::vector<uint8_t>>(
+                properties.at(mctpEndpointIntfPropertySupportedMessageTypes));
+            if (std::find(types.begin(), types.end(), mctpTypeSPDM) !=
+                types.end())
             {
-                eid = std::get<size_t>(
-                    properties.at(mctpEndpointIntfPropertyEid));
-            }
-            catch (const std::bad_variant_access& e1)
-            {
-                spdmApp.getLog().println(e1.what());
+                return eid;
             }
         }
-        if (eid < 256)
+        catch (const std::exception& e)
         {
-            try
-            {
-                auto types = std::get<std::vector<uint8_t>>(properties.at(
-                    mctpEndpointIntfPropertySupportedMessageTypes));
-                if (std::find(types.begin(), types.end(), mctpTypeSPDM) !=
-                    types.end())
-                {
-                    return eid;
-                }
-            }
-            catch (const std::exception& e)
-            {
-                spdmApp.getLog().print(e.what());
-            }
+            spdmApp.getLog().print(e.what());
         }
     }
 
-    return 256;
+    return invalidEid;
 }
 
 std::string MctpDiscovery::getUUID(const dbus::InterfaceMap& interfaces)
@@ -138,7 +143,7 @@ std::string MctpDiscovery::getUUID(const dbus::InterfaceMap& interfaces)
             }
         }
     }
-    return "";
+    return std::string();
 }
 
 std::string MctpDiscovery::getInventoryPath(const std::string& uuid)
@@ -162,7 +167,7 @@ std::string MctpDiscovery::getInventoryPath(const std::string& uuid)
             if (interfaces.contains(
                     "xyz.openbmc_project.Inventory.Item.SPDMResponder"))
             {
-                std::string id = getUUID(interfaces);
+                auto id = getUUID(interfaces);
                 if (id == uuid)
                 {
                     return inventoryDefaultPath + "/" + std::string(objectPath);
@@ -174,7 +179,7 @@ std::string MctpDiscovery::getInventoryPath(const std::string& uuid)
     {
         spdmApp.getLog().print(e.what());
     }
-    return inventoryDefaultPath + "/INVALID";
+    return std::string();
 }
 
 } // namespace spdmd
