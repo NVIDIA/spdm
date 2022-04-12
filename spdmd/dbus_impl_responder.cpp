@@ -21,7 +21,7 @@ namespace dbus_api
 
 Responder::Responder(SpdmdAppContext& appCtx, const std::string& path,
                      uint8_t eid, const std::string& inventoryPath) :
-    ResponderIntf(appCtx.bus, (path + "/" + std::to_string(eid)).c_str()),
+    ResponderIntf(appCtx.bus, (path + "/" + std::to_string(eid)).c_str(), true),
     appContext(appCtx), Connection(&appCtx.context), Transport(eid, *this)
 {
     {
@@ -42,6 +42,8 @@ Responder::Responder(SpdmdAppContext& appCtx, const std::string& path,
 
     auto rs = Connection.initConnection();
     SPDMCPP_LOG_TRACE_RS(getLog(), rs);
+
+    emit_object_added();
 }
 
 Responder::~Responder()
