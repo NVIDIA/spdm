@@ -35,7 +35,7 @@ class SpdmdApp : SpdmdAppContext
     /** @brief Setup CLI for SPDM daemon
      *
      */
-    int setupCli(int argc, char** argv);
+    void setupCli(int argc, char** argv);
 
     /** @brief Connect SPDM daemon to D-bus
      *
@@ -45,12 +45,12 @@ class SpdmdApp : SpdmdAppContext
     /** @brief Connect SPDM daemon to MCTP
      *
      */
-    bool connectMCTP();
+    void connectMCTP();
 
     /** @brief Create new Responder object
      *
      */
-    bool createResponder(uint8_t eid, const std::string& inventoryPath);
+    void createResponder(uint8_t eid, const std::string& inventoryPath);
 
     /** @brief Enter SPDM daemon into forever loop
      *

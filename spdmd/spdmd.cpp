@@ -30,7 +30,7 @@ SpdmdApp::~SpdmdApp()
     delete mctpEvent;
 }
 
-int SpdmdApp::setupCli(int argc, char** argv)
+void SpdmdApp::setupCli(int argc, char** argv)
 {
     CLI::App app{spdmd::description::name + ", version " +
                  spdmd::description::version};
@@ -39,7 +39,7 @@ int SpdmdApp::setupCli(int argc, char** argv)
         app.add_option("-v, --verbose", verbose, "Verbose log level (0-7)");
     optVerbosity->check(CLI::Range(0, 7));
 
-    CLI11_PARSE(app, argc, argv);
+    app.parse(argc, argv);
 
     if (verbose > spdmcpp::LogClass::Level::Emergency)
     {
@@ -49,8 +49,6 @@ int SpdmdApp::setupCli(int argc, char** argv)
                       (Logging::server::Entry::Level)verbose) +
                   "\n");
     }
-
-    return 0;
 }
 
 void SpdmdApp::connectDBus()
@@ -61,12 +59,12 @@ void SpdmdApp::connectDBus()
     bus.request_name(spdmDefaultService);
 }
 
-bool SpdmdApp::connectMCTP()
+void SpdmdApp::connectMCTP()
 {
     SPDMCPP_LOG_TRACE_FUNC(log);
     if (!mctpIo.createSocket())
     {
-        return false;
+        throw std::runtime_error("Couldn't create mctp socket");
     }
 
     context.registerIo(&mctpIo);
@@ -119,11 +117,9 @@ bool SpdmdApp::connectMCTP()
 
     mctpEvent = new sdeventplus::source::IO(event, mctpIo.Socket, EPOLLIN,
                                             std::move(callback));
-
-    return true;
 }
 
-bool SpdmdApp::createResponder(uint8_t eid, const std::string& inventoryPath)
+void SpdmdApp::createResponder(uint8_t eid, const std::string& inventoryPath)
 {
     SPDMCPP_LOG_TRACE_FUNC(log);
     if (eid >= responders.size())
@@ -133,10 +129,11 @@ bool SpdmdApp::createResponder(uint8_t eid, const std::string& inventoryPath)
 
     if (responders[eid])
     {
-        log.iprint("Error: responder for eid ");
-        log.print(eid);
-        log.println(" already exists!");
-        return false;
+        std::string msg("responder for EID" + to_string(eid) +
+                        " already exists!");
+        log.iprint("Error: ");
+        log.println(msg);
+        throw std::invalid_argument(msg);
     }
 
     string msg =
@@ -145,8 +142,6 @@ bool SpdmdApp::createResponder(uint8_t eid, const std::string& inventoryPath)
 
     responders[eid] =
         new dbus_api::Responder(*this, spdmRootObjectPath, eid, inventoryPath);
-
-    return true;
 }
 
 int SpdmdApp::loop()
@@ -167,13 +162,12 @@ int main(int argc, char** argv)
 
         spdmApp.connectDBus();
 
-        if (spdmApp.connectMCTP())
-        {
-            std::unique_ptr<MctpDiscovery> mctpDiscoveryHandler =
-                std::make_unique<MctpDiscovery>(spdmApp);
+        spdmApp.connectMCTP();
 
-            returnCode = spdmApp.loop();
-        }
+        std::unique_ptr<MctpDiscovery> mctpDiscoveryHandler =
+            std::make_unique<MctpDiscovery>(spdmApp);
+
+        returnCode = spdmApp.loop();
     }
     catch (const std::exception& e)
     {
