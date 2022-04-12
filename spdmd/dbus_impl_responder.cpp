@@ -95,7 +95,7 @@ void Responder::syncSlotsInfo()
         buf.insert(buf.end(), sig.begin(), sig.end());
 
         signedMeasurements(std::move(buf));
-        measurementsSignature(sig);
+        measurementsSignature(std::move(sig));
     }
 
     {
@@ -103,10 +103,10 @@ void Responder::syncSlotsInfo()
         std::vector<uint8_t> nonc;
         nonc.reserve(arr.size());
         nonc.insert(nonc.end(), arr.begin(), arr.end());
-        nonce(nonc);
+        nonce(std::move(nonc));
     }
-    certificate(certs);
-    measurements(meas);
+    certificate(std::move(certs));
+    measurements(std::move(meas));
     updateLastUpdateTime();
 }
 
