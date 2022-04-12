@@ -150,11 +150,11 @@ class EmulatorClient : public EmulatorBase
             return false;
         }
 
-        spdmcpp::ConnectionClass con(Context);
+        spdmcpp::ConnectionClass con(*Context);
 
         if (Transport)
         {
-            con.registerTransport(Transport);
+            con.registerTransport(*Transport);
         }
 
         auto callback = [this, &con](sdeventplus::source::IO& /*io*/,
@@ -248,7 +248,7 @@ class EmulatorClient : public EmulatorBase
 
         if (Transport)
         {
-            con.unregisterTransport(Transport);
+            con.unregisterTransport(*Transport);
             delete Transport;
             Transport = nullptr;
         }

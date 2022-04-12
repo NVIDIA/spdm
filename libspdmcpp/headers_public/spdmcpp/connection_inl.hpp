@@ -17,9 +17,9 @@ RetStat ConnectionClass::sendRequest(const T& packet, BufEnum bufidx)
     buf.clear();
     TransportClass::LayerState lay;
 
-    if (Transport)
+    if (transport)
     {
-        Transport->encodePre(buf, lay);
+        transport->encodePre(buf, lay);
     }
 
     auto rs = packetEncode(packet, buf, lay.getEndOffset());
@@ -41,9 +41,9 @@ RetStat ConnectionClass::sendRequest(const T& packet, BufEnum bufidx)
         appendToBuf(bufidx, &buf[off], buf.size() - off);
     }
 
-    if (Transport)
+    if (transport)
     {
-        Transport->encodePost(buf, lay);
+        transport->encodePost(buf, lay);
     }
 
     Log.iprint("Context->IO->write() buf.size() = ");
@@ -51,7 +51,7 @@ RetStat ConnectionClass::sendRequest(const T& packet, BufEnum bufidx)
     Log.iprint("buf = ");
     Log.println(buf);
 
-    rs = Context->IO->write(buf);
+    rs = context.IO->write(buf);
     return rs;
 }
 
@@ -59,9 +59,9 @@ template <typename T, typename... Targs>
 RetStat ConnectionClass::interpretResponse(T& packet, Targs... fargs)
 {
     TransportClass::LayerState lay; // TODO double decode
-    if (Transport)
+    if (transport)
     {
-        Transport->decode(ResponseBuffer, lay);
+        transport->decode(ResponseBuffer, lay);
     }
     size_t off = lay.getEndOffset();
     auto rs = packetDecode(packet, ResponseBuffer, off, fargs...);
@@ -113,7 +113,7 @@ RetStat ConnectionClass::sendRequestSetupResponse(const T& request,
     }
     if (timeout != TIMEOUT_MS_INFINITE)
     {
-        rs = Transport->setupTimeout(timeout);
+        rs = transport->setupTimeout(timeout);
         if (isError(rs))
         {
             return rs;

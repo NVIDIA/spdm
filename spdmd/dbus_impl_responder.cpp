@@ -22,7 +22,7 @@ namespace dbus_api
 Responder::Responder(SpdmdAppContext& appCtx, const std::string& path,
                      uint8_t eid, const std::string& inventoryPath) :
     ResponderIntf(appCtx.bus, (path + "/" + std::to_string(eid)).c_str(), true),
-    appContext(appCtx), connection(&appCtx.context), transport(eid, *this)
+    appContext(appCtx), connection(appCtx.context), transport(eid, *this)
 {
     {
         std::vector<std::tuple<std::string, std::string, std::string>> prop;
@@ -38,14 +38,14 @@ Responder::Responder(SpdmdAppContext& appCtx, const std::string& path,
 
         associations(std::move(prop));
     }
-    connection.registerTransport(&transport);
+    connection.registerTransport(transport);
 
     emit_object_added();
 }
 
 Responder::~Responder()
 {
-    connection.unregisterTransport(&transport);
+    connection.unregisterTransport(transport);
 }
 
 void Responder::syncSlotsInfo()

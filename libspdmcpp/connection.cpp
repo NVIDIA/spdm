@@ -20,8 +20,8 @@
 namespace spdmcpp
 {
 
-ConnectionClass::ConnectionClass(ContextClass* context) :
-    Context(context), Log(std::cout)
+ConnectionClass::ConnectionClass(const ContextClass& cont) :
+    context(cont), Log(std::cout)
 {
     resetConnection();
 }
@@ -222,7 +222,7 @@ RetStat ConnectionClass::chooseVersion()
     }
     std::sort(vers.begin(), vers.end(), std::greater());
 
-    for (auto ours : Context->getSupportedVersions())
+    for (auto ours : context.getSupportedVersions())
     {
         for (auto theirs : vers)
         {
@@ -886,9 +886,9 @@ RetStat ConnectionClass::handleRecv()
         code; // which conflicts with cppcheck redundantInitialization
     {
         TransportClass::LayerState lay; // TODO double decode
-        if (Transport)
+        if (transport)
         {
-            auto rs = Transport->decode(ResponseBuffer, lay);
+            auto rs = transport->decode(ResponseBuffer, lay);
             SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
         }
         ResponseBufferSPDMOffset = lay.getEndOffset();
@@ -955,10 +955,10 @@ RetStat ConnectionClass::handleTimeout()
     if (SendRetry)
     {
         --SendRetry;
-        auto rs = Context->IO->write(SendBuffer);
+        auto rs = context.IO->write(SendBuffer);
         SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
 
-        rs = Transport->setupTimeout(SendTimeout);
+        rs = transport->setupTimeout(SendTimeout);
         SPDMCPP_LOG_TRACE_RS(Log, rs);
         return rs;
     }
@@ -968,9 +968,9 @@ RetStat ConnectionClass::handleTimeout()
 
 void ConnectionClass::clearTimeout()
 {
-    if (Transport)
+    if (transport)
     {
-        Transport->clearTimeout();
+        transport->clearTimeout();
     }
     SendTimeout = 0;
     SendRetry = 0;

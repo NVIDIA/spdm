@@ -112,14 +112,14 @@ class ConnectionFixture
     ContextClass Context;
     ConnectionClass Connection;
 
-    ConnectionFixture() : Connection(&Context)
+    ConnectionFixture() : Connection(Context)
     {
         Context.registerIo(&IO);
-        Connection.registerTransport(&Trans);
+        Connection.registerTransport(Trans);
     }
     ~ConnectionFixture()
     {
-        Connection.unregisterTransport(&Trans);
+        Connection.unregisterTransport(Trans);
         Context.unregisterIo(&IO);
     }
 

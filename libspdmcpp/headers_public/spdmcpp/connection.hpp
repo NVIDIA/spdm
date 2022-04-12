@@ -139,7 +139,7 @@ class ConnectionClass : public NonCopyable
      *  @param[in] context - Context containing various common configuration and
      * information
      */
-    explicit ConnectionClass(ContextClass* context);
+    explicit ConnectionClass(const ContextClass& context);
     ~ConnectionClass() = default;
 
     /** @brief Registers a TransportClass for handling the connection (e.g. with
@@ -149,19 +149,19 @@ class ConnectionClass : public NonCopyable
      * ConnectionClass does not take ownership and will not deallocate the
      * object
      */
-    void registerTransport(TransportClass* transport)
+    void registerTransport(TransportClass& trans)
     {
-        SPDMCPP_ASSERT(!Transport);
-        Transport = transport;
+        SPDMCPP_ASSERT(!transport);
+        transport = &trans;
     }
 
     /** @brief Unregisters the TransportClass object, should be called before
      * destroying ConnectionClass
      */
-    void unregisterTransport(TransportClass* transport)
+    void unregisterTransport(TransportClass& trans)
     {
-        SPDMCPP_ASSERT(Transport == transport);
-        Transport = nullptr;
+        SPDMCPP_ASSERT(transport == &trans);
+        transport = nullptr;
     }
 
     /** @brief Function to redo the discovery, authentication, and measurement
@@ -535,8 +535,8 @@ class ConnectionClass : public NonCopyable
      */
     size_t ResponseBufferSPDMOffset = 0;
 
-    ContextClass* Context = nullptr;
-    TransportClass* Transport = nullptr;
+    const ContextClass& context;
+    TransportClass* transport = nullptr;
     mutable LogClass Log;
 
     /** @brief All versions reported by the Responder as being supported
