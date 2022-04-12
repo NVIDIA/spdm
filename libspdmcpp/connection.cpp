@@ -73,7 +73,6 @@ RetStat ConnectionClass::refreshMeasurementsInternal()
     else
     {
         SPDMCPP_ASSERT(!MeasurementIndices[0]);
-        SPDMCPP_ASSERT(!MeasurementIndices[255]);
     }
     auto rs = tryGetVersion();
     SPDMCPP_LOG_TRACE_RS(Log, rs);
@@ -438,8 +437,7 @@ RetStat ConnectionClass::tryGetCertificateChunk(SlotIdx slotidx)
     request.Header.MessageVersion = MessageVersion;
     request.Header.Param1 = slotidx;
     request.Offset = cert.size();
-    request.Length = 0xFFFF;
-    // 		request.Length = 0x400;
+    request.Length = std::numeric_limits<uint16_t>::max();
 
     auto rs = sendRequestSetupResponse(request, PacketCertificateResponseVar(),
                                        BufEnum::B, Timings.getT1());
@@ -740,15 +738,18 @@ RetStat ConnectionClass::tryGetMeasurements()
 
     if (MeasurementIndices[255])
     {
+        // this means we get all measurements at once
         MeasurementIndices.reset();
         return tryGetMeasurements(255);
     }
     if (MeasurementIndices.any())
     {
+        // this means we get some measurements one by one
         uint8_t idx = getFirstMeasurementIndex();
         MeasurementIndices.reset(idx);
         return tryGetMeasurements(idx);
     }
+    Log.iprintln("Warning: no measurements were requested?!");
     return RetStat::OK;
 }
 
@@ -762,6 +763,8 @@ RetStat ConnectionClass::tryGetMeasurements(uint8_t idx)
 
     if (MeasurementIndices.none())
     {
+        // means this is the last getMeasurements, so we set the nonce and
+        // request a signature
         request.Min.Header.Param1 = packetDecodeInfo.GetMeasurementsParam1 =
             0x1;
         request.setNonce();
@@ -770,6 +773,8 @@ RetStat ConnectionClass::tryGetMeasurements(uint8_t idx)
     }
     else
     {
+        // there will be more getMeasurements requests so we don't need a
+        // signature yet
         request.Min.Header.Param1 = packetDecodeInfo.GetMeasurementsParam1 =
             0x0;
     }

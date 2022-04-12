@@ -71,11 +71,20 @@ namespace spdmcpp
 #undef ENUM_VALUE
 #undef ENUM_END
 
+/** @brief helper to identify request codes
+ *  @param[in] code - spdm message code
+ *  @returns true if the code corresponds to a request, false otherwise
+ */
 constexpr inline bool isRequest(RequestResponseEnum code)
 {
     return code >= RequestResponseEnum::REQUEST_GET_DIGESTS &&
            code <= RequestResponseEnum::REQUEST_END_SESSION;
 }
+
+/** @brief helper to identify response codes
+ *  @param[in] code - spdm message code
+ *  @returns true if the code corresponds to a response, false otherwise
+ */
 constexpr inline bool isResponse(RequestResponseEnum code)
 {
     return code >= RequestResponseEnum::RESPONSE_DIGESTS &&

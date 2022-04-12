@@ -87,9 +87,11 @@ class TimingClass
 
     void setCTExponent(uint8_t ctexp)
     {
+        // the spdm specification defines timeouts in microseconds,
+        // we use milliseconds, so convert
         if (ctexp < 10) // 2^10 is < 1024 us, so < 1 ms
         {
-            CT = 1;
+            CT = 1; // so set to 1 ms
             return;
         }
         ctexp -= 10;
