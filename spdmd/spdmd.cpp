@@ -74,15 +74,12 @@ bool SpdmdApp::connectMCTP()
     auto callback = [this](sdeventplus::source::IO& /*io*/, int /*fd*/,
                            uint32_t revents) {
         SPDMCPP_LOG_TRACE_FUNC(log);
-        // 			spdmcpp::LogClass& log = Connection->getLog();
-        // 			log.iprintln("Event recv!");
 
         if (!(revents & EPOLLIN))
         {
             return;
         }
 
-        //	context.IO->read(packetBuffer);
         mctpIo.read(packetBuffer);
 
         uint8_t eid = 0;

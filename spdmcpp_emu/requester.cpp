@@ -218,30 +218,9 @@ class EmulatorClient : public EmulatorBase
                            SocketCommandEnum::SOCKET_SPDM_COMMAND_TEST);
             std::cout << "Got back: " << recv.data() << std::endl;
         }
-#if 1
+
         auto rs = con.refreshMeasurements(0);
         SPDMCPP_LOG_TRACE_RS(con.getLog(), rs);
-#else
-        auto cb_in = [&con](sdeventplus::source::IO& /*io*/, int fd,
-                            uint32_t revents) {
-            std::cerr << "cb_in\n";
-
-            if (!(revents & EPOLLIN))
-            {
-                return;
-            }
-            std::vector<uint8_t> buf;
-            buf.resize(1024);
-            // 			int returnCode = 0;
-            ssize_t peekedLength = read(fd, buf.data(), buf.size());
-            if (peekedLength > 0)
-            {
-                auto rs = con.initConnection();
-                SPDMCPP_LOG_TRACE_RS(con.getLog(), rs);
-            }
-        };
-        sdeventplus::source::IO io2(event, 0, EPOLLIN, std::move(cb_in));
-#endif
 
         std::cout << "press enter to continue...\n";
         Event.loop();

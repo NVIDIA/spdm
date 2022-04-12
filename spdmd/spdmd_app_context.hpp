@@ -45,18 +45,6 @@ class SpdmdAppContext
         return reportLog(Logging::server::Entry::Level::Error, message);
     }
 
-    /** @brief Report a critical severity message to phosphor logging object */
-    bool reportCritical(const string& message)
-    {
-        return reportLog(Logging::server::Entry::Level::Critical, message);
-    }
-
-    /** @brief Report an alert severity message to phosphor logging object */
-    bool reportAlert(const string& message)
-    {
-        return reportLog(Logging::server::Entry::Level::Alert, message);
-    }
-
     /** @brief Report a notice severity message to phosphor logging object */
     bool reportNotice(const string& message)
     {
