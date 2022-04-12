@@ -58,11 +58,11 @@ struct ProgramOptions
                     break;
                 case 'e':
                     // NOLINTNEXTLINE(cert-err34-c) TODO use CLI11
-                    EID = atoi(optarg);
+                    EID = std::stoi(optarg);
                     break;
                 case 'p':
                     // NOLINTNEXTLINE(cert-err34-c) TODO use CLI11
-                    PortNumber = atoi(optarg);
+                    PortNumber = std::stoi(optarg);
                     break;
                 case 'v':
                     switch (std::stoi(optarg))
