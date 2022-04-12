@@ -219,7 +219,7 @@ class EmulatorClient : public EmulatorBase
             std::cout << "Got back: " << recv.data() << std::endl;
         }
 #if 1
-        auto rs = con.initConnection();
+        auto rs = con.refreshMeasurements(0);
         SPDMCPP_LOG_TRACE_RS(con.getLog(), rs);
 #else
         auto cb_in = [&con](sdeventplus::source::IO& /*io*/, int fd,

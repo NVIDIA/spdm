@@ -207,7 +207,7 @@ void testConnectionFlow(BaseAsymAlgoFlags asymAlgo, BaseHashAlgoFlags hashAlgo)
 {
     ConnectionFixture fix;
 
-    fix.Connection.initConnection();
+    fix.Connection.refreshMeasurements(0);
 
     LogClass& log = fix.Connection.getLog();
     PacketAlgorithmsResponseVar algoResp;

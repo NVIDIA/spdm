@@ -22,12 +22,8 @@ namespace spdmcpp
 
 ConnectionClass::ConnectionClass(ContextClass* context) :
     Context(context), Log(std::cout)
-{}
-
-RetStat ConnectionClass::initConnection()
 {
     resetConnection();
-    return refreshMeasurements(0); // TODO this should be param/config based!
 }
 
 RetStat ConnectionClass::refreshMeasurements(SlotIdx slotidx)

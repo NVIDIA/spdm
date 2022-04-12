@@ -164,10 +164,6 @@ class ConnectionClass : public NonCopyable
         Transport = nullptr;
     }
 
-    /** @brief Begins the default communicatiion with the Responder
-     */
-    RetStat initConnection();
-
     /** @brief Function to redo the discovery, authentication, and measurement
      * flow
      *  @param[in] slotIdx - Certificate Slot Index to be used for

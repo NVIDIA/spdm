@@ -40,9 +40,6 @@ Responder::Responder(SpdmdAppContext& appCtx, const std::string& path,
     }
     connection.registerTransport(&transport);
 
-    auto rs = connection.initConnection();
-    SPDMCPP_LOG_TRACE_RS(getLog(), rs);
-
     emit_object_added();
 }
 
