@@ -22,7 +22,7 @@ namespace dbus_api
 Responder::Responder(SpdmdAppContext& appCtx, const std::string& path,
                      uint8_t eid, const std::string& inventoryPath) :
     ResponderIntf(appCtx.bus, (path + "/" + std::to_string(eid)).c_str(), true),
-    appContext(appCtx), Connection(&appCtx.context), Transport(eid, *this)
+    appContext(appCtx), connection(&appCtx.context), transport(eid, *this)
 {
     {
         std::vector<std::tuple<std::string, std::string, std::string>> prop;
@@ -38,9 +38,9 @@ Responder::Responder(SpdmdAppContext& appCtx, const std::string& path,
 
         associations(std::move(prop));
     }
-    Connection.registerTransport(&Transport);
+    connection.registerTransport(&transport);
 
-    auto rs = Connection.initConnection();
+    auto rs = connection.initConnection();
     SPDMCPP_LOG_TRACE_RS(getLog(), rs);
 
     emit_object_added();
@@ -48,7 +48,7 @@ Responder::Responder(SpdmdAppContext& appCtx, const std::string& path,
 
 Responder::~Responder()
 {
-    Connection.unregisterTransport(&Transport);
+    connection.unregisterTransport(&transport);
 }
 
 void Responder::syncSlotsInfo()
@@ -59,19 +59,19 @@ void Responder::syncSlotsInfo()
     for (ConnectionClass::SlotIdx idx = 0; idx < ConnectionClass::slotNum;
          ++idx)
     {
-        if (Connection.slothasInfo(idx, SlotInfoEnum::CERTIFICATES))
+        if (connection.slothasInfo(idx, SlotInfoEnum::CERTIFICATES))
         {
             std::vector<uint8_t> cert;
-            if (Connection.getCertificatesDER(cert, idx))
+            if (connection.getCertificatesDER(cert, idx))
             {
                 certs.emplace_back(std::tuple(idx, std::get<1>(certs.back())));
             }
         }
     }
-    if (Connection.hasInfo(ConnectionInfoEnum::MEASUREMENTS))
+    if (connection.hasInfo(ConnectionInfoEnum::MEASUREMENTS))
     {
         const ConnectionClass::DMTFMeasurementsContainer& src =
-            Connection.getDMTFMeasurements();
+            connection.getDMTFMeasurements();
         for (auto& field : src)
         {
             meas.resize(meas.size() + 1);
@@ -82,11 +82,11 @@ void Responder::syncSlotsInfo()
             std::get<2>(m) = std::vector<uint8_t>(field.second.ValueVector);
         }
     }
-    measurementsHash(Connection.getSignedMeasurementsHash());
+    measurementsHash(connection.getSignedMeasurementsHash());
     {
         const std::vector<uint8_t>& l2 =
-            Connection.getSignedMeasurementsBuffer();
-        const std::vector<uint8_t>& sig = Connection.getMeasurementsSignature();
+            connection.getSignedMeasurementsBuffer();
+        const std::vector<uint8_t>& sig = connection.getMeasurementsSignature();
 
         std::vector<uint8_t> buf;
         buf.reserve(l2.size() + sig.size());
@@ -98,7 +98,7 @@ void Responder::syncSlotsInfo()
     }
 
     {
-        const nonce_array_32& arr = Connection.getMeasurementNonce();
+        const nonce_array_32& arr = connection.getMeasurementNonce();
         std::vector<uint8_t> nonc;
         nonc.reserve(arr.size());
         nonc.insert(nonc.end(), arr.begin(), arr.end());
@@ -142,14 +142,14 @@ void Responder::handleError(spdmcpp::RetStat rs)
             status(SPDMStatus::Error_Other);
             appContext.reportError("SPDM other error fail");
     }
-    SPDMCPP_ASSERT(!Connection.isWaitingForResponse());
+    SPDMCPP_ASSERT(!connection.isWaitingForResponse());
 }
 
 spdmcpp::RetStat Responder::handleRecv(std::vector<uint8_t>& buf)
 {
-    std::swap(buf, Connection.getResponseBufferRef()); // TODO stupid workaround
+    std::swap(buf, connection.getResponseBufferRef()); // TODO stupid workaround
 
-    auto rs = Connection.handleRecv();
+    auto rs = connection.handleRecv();
 
     if (isError(rs))
     {
@@ -158,22 +158,22 @@ spdmcpp::RetStat Responder::handleRecv(std::vector<uint8_t>& buf)
     }
 
     ConnectionClass::SlotIdx slotidx =
-        Connection.getCurrentCertificateSlotIdx();
+        connection.getCurrentCertificateSlotIdx();
 
-    if (!Connection.isWaitingForResponse())
+    if (!connection.isWaitingForResponse())
     {
         syncSlotsInfo();
         updateLastUpdateTime();
         status(SPDMStatus::Success);
     }
-    else if (Connection.slothasInfo(slotidx, SlotInfoEnum::CERTIFICATES))
+    else if (connection.slothasInfo(slotidx, SlotInfoEnum::CERTIFICATES))
     {
         syncSlotsInfo();
         status(SPDMStatus::GettingMeasurements);
     }
-    else if (Connection.hasInfo(ConnectionInfoEnum::ALGORITHMS))
+    else if (connection.hasInfo(ConnectionInfoEnum::ALGORITHMS))
     {
-        switch (Connection.getMeasurementHashEnum())
+        switch (connection.getMeasurementHashEnum())
         {
             case HashEnum::SHA_256:
                 hashingAlgorithm(HashingAlgorithms::SHA_256);
@@ -192,7 +192,7 @@ spdmcpp::RetStat Responder::handleRecv(std::vector<uint8_t>& buf)
                 hashingAlgorithm(HashingAlgorithms::None);
                 break;
         }
-        switch (Connection.getSignatureEnum())
+        switch (connection.getSignatureEnum())
         {
 //NOLINTNEXTLINE cppcoreguidelines-macro-usage,-warnings-as-errors
 #define DTYPE(name) case SignatureEnum::name: signingAlgorithm(SigningAlgorithms::name); break;
@@ -214,9 +214,9 @@ spdmcpp::RetStat Responder::handleRecv(std::vector<uint8_t>& buf)
         }
         status(SPDMStatus::GettingCertificates);
     }
-    else if (Connection.hasInfo(ConnectionInfoEnum::CHOOSEN_VERSION))
+    else if (connection.hasInfo(ConnectionInfoEnum::CHOOSEN_VERSION))
     {
-        version(static_cast<uint8_t>(Connection.getMessageVersion()));
+        version(static_cast<uint8_t>(connection.getMessageVersion()));
         status(SPDMStatus::GettingCertificates);
     }
     return rs;
@@ -226,7 +226,7 @@ void Responder::refresh(uint8_t slot, std::vector<uint8_t> nonc,
                         std::vector<uint8_t> measurementIndices,
                         uint32_t sessionId)
 {
-    if (Connection.isWaitingForResponse())
+    if (connection.isWaitingForResponse())
     {
         // if we're busy processing ignore the refresh call
         // TODO arguably it'd be better to either cancel the current and perform
@@ -276,7 +276,7 @@ void Responder::refresh(uint8_t slot, std::vector<uint8_t> nonc,
 
     if (nonc.size() == 32)
     {
-        auto rs = Connection.refreshMeasurements( // NOLINTNEXTLINE cppcoreguidelines-pro-type-reinterpret-cast
+        auto rs = connection.refreshMeasurements( // NOLINTNEXTLINE cppcoreguidelines-pro-type-reinterpret-cast
             slot, *reinterpret_cast<nonce_array_32*>(nonc.data()), meas);
         SPDMCPP_LOG_TRACE_RS(getLog(), rs);
     }
@@ -287,7 +287,7 @@ void Responder::refresh(uint8_t slot, std::vector<uint8_t> nonc,
             getLog().iprint("WARNING - nonce has invalid size = ");
             getLog().println(nonc.size());
         }
-        auto rs = Connection.refreshMeasurements(slot, meas);
+        auto rs = connection.refreshMeasurements(slot, meas);
         SPDMCPP_LOG_TRACE_RS(getLog(), rs);
     }
 }
@@ -313,7 +313,7 @@ spdmcpp::RetStat MctpTransportClass::setupTimeout(spdmcpp::timeout_ms_t timeout)
         delete time; // TODO !!! is this safe? !!!
         time = nullptr;
 
-        auto rs = responder.Connection.handleTimeout();
+        auto rs = responder.connection.handleTimeout();
         if (rs == spdmcpp::RetStat::ERROR_TIMEOUT)
         {
             // no retry attempted, fail with timeout

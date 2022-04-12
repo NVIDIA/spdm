@@ -13,7 +13,7 @@ using namespace spdmd;
 using namespace sdbusplus;
 
 // Define the SPDM default dbus path location for objects.
-constexpr auto spdmDefaultPath = "/xyz/openbmc_project/SPDM";
+constexpr auto spdmRootObjectPath = "/xyz/openbmc_project/SPDM";
 constexpr auto spdmDefaultService = "xyz.openbmc_project.SPDM";
 
 namespace spdmd
@@ -56,7 +56,7 @@ int SpdmdApp::setupCli(int argc, char** argv)
 void SpdmdApp::connectDBus()
 {
     SPDMCPP_LOG_TRACE_FUNC(log);
-    sdbusplus::server::manager_t objManager(bus, spdmDefaultPath);
+    sdbusplus::server::manager_t objManager(bus, spdmRootObjectPath);
     bus.attach_event(event.get(), SD_EVENT_PRIORITY_NORMAL);
     bus.request_name(spdmDefaultService);
 }
@@ -147,7 +147,7 @@ bool SpdmdApp::createResponder(uint8_t eid, const std::string& inventoryPath)
     reportNotice(msg);
 
     responders[eid] =
-        new dbus_api::Responder(*this, spdmDefaultPath, eid, inventoryPath);
+        new dbus_api::Responder(*this, spdmRootObjectPath, eid, inventoryPath);
 
     return true;
 }

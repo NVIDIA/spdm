@@ -86,7 +86,7 @@ class Responder : public ResponderIntf
 
     spdmcpp::LogClass& getLog()
     {
-        return Connection.getLog();
+        return connection.getLog();
     }
 
     spdmcpp::RetStat handleRecv(std::vector<uint8_t>& buf);
@@ -99,8 +99,8 @@ class Responder : public ResponderIntf
 
     SpdmdAppContext& appContext;
 
-    spdmcpp::ConnectionClass Connection;
-    MctpTransportClass Transport;
+    spdmcpp::ConnectionClass connection;
+    MctpTransportClass transport;
 
     void updateLastUpdateTime();
     void syncSlotsInfo();
