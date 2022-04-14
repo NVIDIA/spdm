@@ -137,7 +137,8 @@ void Responder::handleError(spdmcpp::RetStat rs)
             break;
         default:
             status(SPDMStatus::Error_Other);
-            appContext.reportError("SPDM other error fail");
+            appContext.reportError(std::string("SPDM other error: ") +
+                                   get_cstr(rs));
     }
     SPDMCPP_ASSERT(!connection.isWaitingForResponse());
 }

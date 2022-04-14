@@ -294,7 +294,19 @@ RetStat ConnectionClass::handleRecv<PacketCapabilitiesResponse>()
     markInfo(ConnectionInfoEnum::CAPABILITIES);
     appendRecvToBuf(BufEnum::A);
 
-    // TODO verify more stuff here especially flags !!!
+    if (!(resp.Flags & ResponderCapabilitiesFlags::CERT_CAP))
+    {
+        return RetStat::ERROR_MISSING_CAPABILITY_CERT;
+    }
+    if (!(resp.Flags & ResponderCapabilitiesFlags::CHAL_CAP))
+    {
+        return RetStat::ERROR_MISSING_CAPABILITY_CHAL;
+    }
+    if (!(resp.Flags & ResponderCapabilitiesFlags::MEAS_CAP_10))
+    {
+        return RetStat::ERROR_MISSING_CAPABILITY_MEAS;
+    }
+
     Timings.setCTExponent(resp.CTExponent);
 
     rs = tryNegotiateAlgorithms();
