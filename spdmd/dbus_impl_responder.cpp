@@ -301,7 +301,7 @@ void Responder::updateLastUpdateTime()
 
 spdmcpp::RetStat MctpTransportClass::setupTimeout(spdmcpp::timeout_ms_t timeout)
 {
-    sdeventplus::Event& event = responder.appContext.event;
+    sdeventplus::Event& event = responder.getEvent();
     SPDMCPP_ASSERT(!time);
     // TODO !!! verify we're not leaking anything !!!
     auto timeCb = [this](
@@ -310,7 +310,7 @@ spdmcpp::RetStat MctpTransportClass::setupTimeout(spdmcpp::timeout_ms_t timeout)
         delete time; // TODO !!! is this safe? !!!
         time = nullptr;
 
-        auto rs = responder.connection.handleTimeout();
+        auto rs = responder.handleTimeout();
         if (rs == spdmcpp::RetStat::ERROR_TIMEOUT)
         {
             // no retry attempted, fail with timeout

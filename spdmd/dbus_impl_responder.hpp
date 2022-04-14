@@ -88,8 +88,16 @@ class Responder : public ResponderIntf
     {
         return connection.getLog();
     }
+    sdeventplus::Event& getEvent()
+    {
+        return appContext.event;
+    }
 
     spdmcpp::RetStat handleRecv(std::vector<uint8_t>& buf);
+    spdmcpp::RetStat handleTimeout()
+    {
+        return connection.handleTimeout();
+    }
 
   protected:
     using MeasurementsContainerType =
@@ -106,8 +114,6 @@ class Responder : public ResponderIntf
     void syncSlotsInfo();
 
     void handleError(spdmcpp::RetStat rs);
-
-    friend MctpTransportClass;
 };
 
 } // namespace dbus_api

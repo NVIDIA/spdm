@@ -955,7 +955,7 @@ RetStat ConnectionClass::handleTimeout()
     if (SendRetry)
     {
         --SendRetry;
-        auto rs = context.IO->write(SendBuffer);
+        auto rs = context.getIO().write(SendBuffer);
         SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
 
         rs = transport->setupTimeout(SendTimeout);

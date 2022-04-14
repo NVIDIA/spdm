@@ -20,7 +20,6 @@ namespace spdmcpp
 
 class ContextClass
 {
-    friend ConnectionClass; // TODO remove!!!
   public:
     ContextClass()
     {
@@ -44,6 +43,11 @@ class ContextClass
     const std::vector<MessageVersionEnum>& getSupportedVersions() const
     {
         return SupportedVersions;
+    }
+
+    IOClass& getIO() const
+    {
+        return *IO;
     }
 
   protected:
