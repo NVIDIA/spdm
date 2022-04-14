@@ -39,7 +39,7 @@ class MctpDiscovery
     /** @brief Used to watch for new MCTP endpoints */
     sdbusplus::bus::match_t mctpEndpointSignal;
 
-    void dicoverEndpoints(sdbusplus::message::message& msg);
+    void newEndpointDiscovered(sdbusplus::message::message& msg);
 
     /** @brief SPDM type of an MCTP message */
     static constexpr uint8_t mctpTypeSPDM = 5;

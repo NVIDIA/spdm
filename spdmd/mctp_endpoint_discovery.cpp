@@ -15,10 +15,11 @@ const std::string inventoryDefaultPath = "/xyz/openbmc_project/inventory";
 
 MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
     bus(spdmApp.getBus()), spdmApp(spdmApp),
-    mctpEndpointSignal(spdmApp.getBus(),
-                       sdbusplus::bus::match::rules::interfacesAdded(
-                           "/xyz/openbmc_project/mctp"),
-                       std::bind_front(&MctpDiscovery::dicoverEndpoints, this))
+    mctpEndpointSignal(
+        spdmApp.getBus(),
+        sdbusplus::bus::match::rules::interfacesAdded(
+            "/xyz/openbmc_project/mctp"),
+        std::bind_front(&MctpDiscovery::newEndpointDiscovered, this))
 {
     dbus::ObjectValueTree objects;
 
@@ -55,7 +56,7 @@ MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
     }
 }
 
-void MctpDiscovery::dicoverEndpoints(sdbusplus::message::message& msg)
+void MctpDiscovery::newEndpointDiscovered(sdbusplus::message::message& msg)
 {
     sdbusplus::message::object_path objPath;
     std::map<std::string, std::map<std::string, dbus::Value>> interfaces;
