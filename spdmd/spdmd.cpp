@@ -94,20 +94,25 @@ bool SpdmdApp::connectMCTP()
             SPDMCPP_LOG_TRACE_RS(log, rs);
             if (rs != spdmcpp::RetStat::OK)
             {
-                // TODO just log warning and ignore message?!
-                event.exit(1);
+                log.print("SpdmdApp::IO peekEid returned unexpected error: ");
+                log.println(rs);
+                return;
             }
         }
         if (eid >= responders.size())
         {
-            // TODO just log warning and ignore message?!
-            event.exit(1);
+            log.println("SpdmdApp::IO received message from EID=" +
+                        std::to_string(eid) +
+                        " outside of responder array size=" +
+                        std::to_string(responders.size()));
+            return;
         }
         auto resp = responders[eid];
         if (!resp)
         {
-            // TODO just log warning and ignore message?!
-            event.exit(1);
+            log.println("SpdmdApp::IO received message from EID=" +
+                        std::to_string(eid) +
+                        " while responder class is not created");
         }
         else
         {
