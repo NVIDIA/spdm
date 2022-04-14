@@ -102,28 +102,27 @@ struct BufferType : public std::vector<uint8_t>
 
 class EmulatorBase;
 
-class EMUIOClass : public spdmcpp::IOClass
+class EmulatorBaseIOClass : public spdmcpp::IOClass
 {
   public:
-    explicit EMUIOClass(EmulatorBase& emu);
+    explicit EmulatorBaseIOClass(EmulatorBase& emu);
 
-    spdmcpp::RetStat write(
-        const std::vector<uint8_t>& buf,
-        spdmcpp::timeout_us_t timeout = spdmcpp::TIMEOUT_US_INFINITE) override;
-    spdmcpp::RetStat read(
-        std::vector<uint8_t>& buf,
-        spdmcpp::timeout_us_t timeout = spdmcpp::TIMEOUT_US_INFINITE) override;
     spdmcpp::RetStat setupTimeout(spdmcpp::timeout_us_t timeout) override;
 
+  protected:
+    EmulatorBase& emulator;
+
   private:
-    EmulatorBase& Emulator;
+    static constexpr sdeventplus::ClockId cid = sdeventplus::ClockId::Monotonic;
+    sdeventplus::source::Time<sdeventplus::ClockId::Monotonic>* timeout =
+        nullptr;
 };
 
-class DemuxIOClass :
-    public spdmcpp::IOClass // TODO decouple from EmulatorBase and generalize
+class EMUIOClass : public EmulatorBaseIOClass
 {
   public:
-    explicit DemuxIOClass(EmulatorBase& emu);
+    explicit EMUIOClass(EmulatorBase& emu) : EmulatorBaseIOClass(emu)
+    {}
 
     spdmcpp::RetStat write(
         const std::vector<uint8_t>& buf,
@@ -131,23 +130,30 @@ class DemuxIOClass :
     spdmcpp::RetStat read(
         std::vector<uint8_t>& buf,
         spdmcpp::timeout_us_t timeout = spdmcpp::TIMEOUT_US_INFINITE) override;
-    spdmcpp::RetStat setupTimeout(spdmcpp::timeout_us_t timeout) override;
+};
 
-  private:
-    EmulatorBase& Emulator;
+class DemuxIOClass : public EmulatorBaseIOClass
+{
+  public:
+    explicit DemuxIOClass(EmulatorBase& emu) : EmulatorBaseIOClass(emu)
+    {}
+
+    spdmcpp::RetStat write(
+        const std::vector<uint8_t>& buf,
+        spdmcpp::timeout_us_t timeout = spdmcpp::TIMEOUT_US_INFINITE) override;
+    spdmcpp::RetStat read(
+        std::vector<uint8_t>& buf,
+        spdmcpp::timeout_us_t timeout = spdmcpp::TIMEOUT_US_INFINITE) override;
 };
 
 // NOLINTNEXTLINE cppcoreguidelines-special-member-functions
 class EmulatorBase : public spdmcpp::NonCopyable
 {
-    friend EMUIOClass;
-    friend DemuxIOClass;
-
   public:
-    EmulatorBase() : Event(sdeventplus::Event::get_default())
+    EmulatorBase() : event(sdeventplus::Event::get_default())
     {}
     explicit EmulatorBase(int socket) :
-        Socket(socket), Event(sdeventplus::Event::get_default())
+        event(sdeventplus::Event::get_default()), Socket(socket)
     {}
     ~EmulatorBase()
     {
@@ -323,19 +329,34 @@ class EmulatorBase : public spdmcpp::NonCopyable
         return true;
     }
 
+    spdmcpp::IOClass& getIO()
+    {
+        return *IO;
+    }
+    spdmcpp::TransportClass& getTransport()
+    {
+        return *Transport;
+    }
+    spdmcpp::ConnectionClass& getConnection()
+    {
+        return *connection;
+    }
+    int getSocket() const
+    {
+        return Socket;
+    }
+    sdeventplus::Event event;
+
   protected:
     int Socket = -1;
     spdmcpp::ContextClass* Context = nullptr;
+    spdmcpp::ConnectionClass* connection = nullptr;
 
     spdmcpp::IOClass* IO = nullptr;
 
     SocketTransportTypeEnum TransportType =
         SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_UNKNOWN;
     spdmcpp::TransportClass* Transport = nullptr;
-
-    sdeventplus::Event Event;
-    sdeventplus::source::Time<sdeventplus::ClockId::Monotonic>* Timeout =
-        nullptr;
 
     bool createSocket()
     {

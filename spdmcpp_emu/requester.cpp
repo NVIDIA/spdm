@@ -175,30 +175,11 @@ class EmulatorClient : public EmulatorBase
             (void)con.handleRecv();
             if (!con.isWaitingForResponse())
             {
-                Event.exit(0);
+                event.exit(0);
             }
         };
 
-        sdeventplus::source::IO io(Event, Socket, EPOLLIN, std::move(callback));
-
-        constexpr sdeventplus::ClockId cid = sdeventplus::ClockId::Monotonic;
-        auto timeCb =
-            [this, &con](sdeventplus::source::Time<cid>& /*source*/,
-                         sdeventplus::source::Time<cid>::TimePoint /*time*/) {
-                // 			std::cerr << "IOClass::setupTimeout callback" <<
-                // std::endl;
-                spdmcpp::RetStat rs = con.handleTimeout();
-                if (rs == spdmcpp::RetStat::ERROR_TIMEOUT)
-                {
-                    Event.exit(0);
-                }
-            };
-
-        // 		std::cerr << "IOClass::setupTimeout queue" << std::endl;
-        Timeout = new sdeventplus::source::Time<cid>(
-            Event, sdeventplus::Clock<cid>(Event).now(),
-            std::chrono::milliseconds{1}, std::move(timeCb));
-        Timeout->set_enabled(sdeventplus::source::Enabled::Off);
+        sdeventplus::source::IO io(event, Socket, EPOLLIN, std::move(callback));
 
         if (TransportType ==
                 SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_MCTP ||
@@ -223,7 +204,7 @@ class EmulatorClient : public EmulatorBase
         SPDMCPP_LOG_TRACE_RS(con.getLog(), rs);
 
         std::cout << "press enter to continue...\n";
-        Event.loop();
+        event.loop();
 
         if (Transport)
         {
