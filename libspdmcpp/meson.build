@@ -1,8 +1,6 @@
 
 common_sources = [
-	'common.cpp',
 	'connection.cpp',
-	'packet.cpp',
 ]
 
 common_headers_public = [
@@ -21,7 +19,6 @@ incdir = include_directories( 'headers_public', 'headers')
 libspdmcpp_requester = library('spdmcpp_requester',
 	[
 		common_sources,
-		'requester.cpp',
 	],
 	version : meson.project_version(),
 	soversion : meson.project_version(),
@@ -34,7 +31,6 @@ libspdmcpp_requester_dep = declare_dependency(link_with : libspdmcpp_requester, 
 libspdmcpp_responder = library('spdmcpp_responder',
 	[
 		common_sources,
-		'responder.cpp',
 	],
 	version : meson.project_version(),
 	soversion : meson.project_version(),

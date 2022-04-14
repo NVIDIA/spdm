@@ -1,2 +1,0 @@
-
-#include <spdmcpp/common.hpp>
