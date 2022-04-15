@@ -14,9 +14,6 @@
 
 namespace spdmcpp
 {
-// TODO implement warnings and global (maybe granular?) warning policies!?
-//  and/or error policies as well, although those would have to be much more
-//  specific I imagine...
 
 class ContextClass
 {
@@ -56,4 +53,5 @@ class ContextClass
     IOClass* IO = nullptr;
     uint32_t RetryTimes = 0;
 };
+
 } // namespace spdmcpp

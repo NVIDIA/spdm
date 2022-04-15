@@ -106,7 +106,6 @@ class LogClass
         getOstream() << value;
     }
 
-    // void print(const uint8_t* arr, size_t num)
     void print(std::span<const uint8_t, std::dynamic_extent> arr)
     {
         std::ostream& ostr = getOstream();

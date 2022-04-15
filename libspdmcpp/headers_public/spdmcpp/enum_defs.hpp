@@ -83,8 +83,7 @@ ENUM_END()
 // WARNING when changing REMEMBER to MODIFY isRequest and isResponse
 // accordingly!
 ENUM_START(RequestResponseEnum, uint8_t)
-ENUM_VALUE(RequestResponseEnum, INVALID,
-           0) // TODO actually reserved but kindof useful to abuse?
+ENUM_VALUE(RequestResponseEnum, INVALID, 0)
 /// SPDM request code (1.0)
 ENUM_VALUE(RequestResponseEnum, REQUEST_GET_DIGESTS, 0x81)
 ENUM_VALUE(RequestResponseEnum, REQUEST_GET_CERTIFICATE, 0x82)
@@ -130,8 +129,7 @@ ENUM_END()
 // accordingly!
 
 ENUM_START(AlgTypeEnum, uint8_t)
-ENUM_VALUE(AlgTypeEnum, UNKNOWN,
-           0) // TODO actually reserved but kindof useful to abuse?
+ENUM_VALUE(AlgTypeEnum, UNKNOWN, 0)
 ENUM_VALUE(AlgTypeEnum, DHE, 2)
 ENUM_VALUE(AlgTypeEnum, AEADCipherSuite, 3)
 ENUM_VALUE(AlgTypeEnum, ReqBaseAsymAlg, 4)

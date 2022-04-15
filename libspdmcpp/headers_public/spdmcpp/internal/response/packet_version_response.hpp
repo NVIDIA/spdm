@@ -48,8 +48,7 @@ struct PacketVersionResponseVar
 
     static constexpr RequestResponseEnum requestResponseCode =
         RequestResponseEnum::RESPONSE_VERSION;
-    static constexpr bool sizeIsConstant =
-        false; // TODO decide how we need/want to handle such packets
+    static constexpr bool sizeIsConstant = false;
 
     void printMl(LogClass& log) const
     {

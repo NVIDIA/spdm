@@ -113,6 +113,3 @@ class IOClass : NonCopyable
 };
 
 } // namespace spdmcpp
-
-// #include "connection.hpp"
-// #include "context.hpp"

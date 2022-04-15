@@ -44,8 +44,7 @@ struct PacketErrorResponseVar
 
     static constexpr RequestResponseEnum requestResponseCode =
         RequestResponseEnum::RESPONSE_ERROR;
-    static constexpr bool sizeIsConstant =
-        false; // TODO decide how we need/want to handle such packets
+    static constexpr bool sizeIsConstant = false;
 
     bool operator==(const PacketErrorResponseVar& other) const
     {

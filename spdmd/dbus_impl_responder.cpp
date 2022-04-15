@@ -144,7 +144,7 @@ void Responder::handleError(spdmcpp::RetStat rs)
 
 spdmcpp::RetStat Responder::handleRecv(std::vector<uint8_t>& buf)
 {
-    std::swap(buf, connection.getResponseBufferRef()); // TODO stupid workaround
+    std::swap(buf, connection.getResponseBufferRef());
 
     auto rs = connection.handleRecv();
 

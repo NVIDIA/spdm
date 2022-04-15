@@ -19,34 +19,6 @@ namespace spdmcpp
 /// SPDM packet endianness helpers
 ///
 
-// TODO directly specialize basic types and avoid templates
-/*	template <typename T>
-    inline void endian_swap(T& value)
-    {
-        uint8_t* p = reinterpret_cast<uint8_t*>(&value);
-        for (size_t i = 0; i < sizeof(value) / 2; ++i) {
-            std::swap(p[i], p[sizeof(value) - 1 - i]);
-        }
-    }
-    template <typename T>
-    inline T endian_read(T value)
-    {
-        uint8_t* p = reinterpret_cast<uint8_t*>(&value);
-        for (size_t i = 0; i < sizeof(value) / 2; ++i) {
-            std::swap(p[i], p[sizeof(value) - 1 - i]);
-        }
-        return value;
-    }*/
-/*	template <typename T>
-    inline void endian_copy(T src, T& dst)
-    {
-        const uint8_t* psrc = reinterpret_cast<const uint8_t*>(&src);
-        uint8_t* pdst = reinterpret_cast<uint8_t*>(&dst);
-        for (size_t i = 0; i < sizeof(T); ++i) {
-            pdst[i] = psrc[sizeof(T) - 1 - i];
-        }
-    }*/
-
 inline void endianCopy(uint8_t src, uint8_t& dst)
 {
     dst = src;

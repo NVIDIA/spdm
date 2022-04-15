@@ -24,8 +24,7 @@ struct PacketAlgorithmsResponseMin
 
     static constexpr RequestResponseEnum requestResponseCode =
         RequestResponseEnum::RESPONSE_ALGORITHMS;
-    static constexpr bool sizeIsConstant =
-        true; // TODO decide how we need/want to handle such packets
+    static constexpr bool sizeIsConstant = true;
 
     void printMl(LogClass& log) const
     {
@@ -77,8 +76,7 @@ struct PacketAlgorithmsResponseVar
 
     static constexpr RequestResponseEnum requestResponseCode =
         RequestResponseEnum::RESPONSE_ALGORITHMS;
-    static constexpr bool sizeIsConstant =
-        false; // TODO decide how we need/want to handle such packets
+    static constexpr bool sizeIsConstant = false;
 
     uint16_t getSize() const
     {

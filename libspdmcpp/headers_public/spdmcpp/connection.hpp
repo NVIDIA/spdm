@@ -20,10 +20,6 @@
 
 namespace spdmcpp
 {
-// TODO implement warnings and global (maybe granular?) warning policies!?
-//  and/or error policies as well, although those would have to be much more
-//  specific I imagine...
-
 /*
 class FlowClass
 {
@@ -126,7 +122,7 @@ class TimingClass
 class ConnectionClass : public NonCopyable
 {
     // TODO this has become extremely spaghetti (not enough time to do better,
-    // and spdm spec is very stateful...),byl worth trying to refactor
+    // and spdm spec is very stateful...), but it's worth trying to refactor
   public:
     /** Type alias to distinguish Certificate Slot Indices */
     using SlotIdx = uint8_t;
@@ -412,10 +408,20 @@ class ConnectionClass : public NonCopyable
     // NOLINTNEXTLINE cppcoreguidelines-special-member-functions
     struct SlotClass
     {
+        /** @brief SPDM digest of the certificate chain
+         */
         std::vector<uint8_t> Digest;
-        std::vector<uint8_t> Certificates; // TODO should unnecessary in the en
-        std::vector<mbedtls_x509_crt*>
-            MCertificates; // TODO should be abstracted in the end
+
+        /** @brief storage for the accumulated certificate_chain as defined in
+         * DSP0274_1.1.1 pages 54-55
+         */
+        std::vector<uint8_t> Certificates;
+
+        /** @brief SPDM parsed certificates decoded from the certificate_chain
+         * ordered root, intermediate, leaf
+         */
+        std::vector<mbedtls_x509_crt*> MCertificates;
+        // TODO mbedtls_x509_crt should be abstracted to CertificateClass
 
         /** @brief Offset into Certificates[] where the DER data starts
          */

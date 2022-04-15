@@ -56,7 +56,6 @@ enum class SocketTransportTypeEnum : uint32_t
 
 struct BufferType : public std::vector<uint8_t>
 {
-    // TODO add custom helpers for appending, presetting headers, etc?
     BufferType() = default;
 
     explicit BufferType(const char* str)

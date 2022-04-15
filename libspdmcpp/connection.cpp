@@ -225,13 +225,6 @@ RetStat ConnectionClass::verifyCertificateChain(const SlotClass& slot)
     {
         slot.MCertificates[i]->next = slot.MCertificates[i - 1];
         uint32_t rflags = 0;
-        // TODO shouldn't it be verified against something in the system?!
-        // 				int ret =
-        // mbedtls_x509_crt_verify(slot.getLeafCert(), slot.GetRootCert(),
-        // nullptr, "intel test ECP256 responder cert", &rflags, nullptr,
-        // nullptr); 				int ret =
-        // mbedtls_x509_crt_verify(slot.getLeafCert(), slot.GetRootCert(),
-        // nullptr, nullptr, &rflags, nullptr, nullptr);
         int ret = mbedtls_x509_crt_verify(slot.MCertificates[i - 1],
                                           slot.MCertificates[i], nullptr,
                                           nullptr, &rflags, nullptr, nullptr);
@@ -282,7 +275,6 @@ RetStat ConnectionClass::handleRecv<PacketVersionResponseVar>()
         return RetStat::ERROR_INVALID_HEADER_VERSION;
     }
 
-    // TODO a lot more checks?
     std::swap(SupportedVersions, resp.VersionNumberEntries);
     markInfo(ConnectionInfoEnum::SUPPORTED_VERSIONS);
 
@@ -303,10 +295,8 @@ RetStat ConnectionClass::chooseVersion()
 {
     SPDMCPP_LOG_TRACE_FUNC(Log);
     SPDMCPP_ASSERT(hasInfo(ConnectionInfoEnum::SUPPORTED_VERSIONS));
-    // SPDMCPP_ASSERT(MessageVersion == MessageVersionEnum::UNKNOWN);
 
-    std::vector<MessageVersionEnum> vers; // TODO is using just the enum fine or
-                                          // do we need more detailed info?!
+    std::vector<MessageVersionEnum> vers;
     vers.reserve(SupportedVersions.size());
     for (auto iter : SupportedVersions)
     {
@@ -357,22 +347,8 @@ RetStat ConnectionClass::tryGetCapabilities()
     {
         PacketGetCapabilitiesRequest request;
         request.Header.MessageVersion = MessageVersion;
-        // 			request.Flags = RequesterCapabilitiesFlags::CERT_CAP |
-        // RequesterCapabilitiesFlags::CHAL_CAP |
-        // RequesterCapabilitiesFlags::ENCRYPT_CAP |
-        // RequesterCapabilitiesFlags::MAC_CAP;
+
         request.Flags = RequesterCapabilitiesFlags::CHAL_CAP;
-        /*	request.Flags |= RequesterCapabilitiesFlags::ENCRYPT_CAP |
-        RequesterCapabilitiesFlags::MAC_CAP;
-        //	request.Flags |= RequesterCapabilitiesFlags::MUT_AUTH_CAP;
-            request.Flags |= RequesterCapabilitiesFlags::KEY_EX_CAP;
-            request.Flags |= RequesterCapabilitiesFlags::PSK_CAP_01;
-            request.Flags |= RequesterCapabilitiesFlags::ENCAP_CAP;
-            request.Flags |= RequesterCapabilitiesFlags::HBEAT_CAP;
-            request.Flags |= RequesterCapabilitiesFlags::KEY_UPD_CAP;
-            request.Flags |=
-        RequesterCapabilitiesFlags::HANDSHAKE_IN_THE_CLEAR_CAP;
-            */
 
         rs = sendRequestSetupResponse<PacketCapabilitiesResponse>(
             request, BufEnum::A, Timings.getT1());
@@ -416,16 +392,13 @@ RetStat ConnectionClass::tryNegotiateAlgorithms()
     PacketNegotiateAlgorithmsRequestVar request;
     request.Min.Header.MessageVersion = MessageVersion;
     request.Min.MeasurementSpecification = 1 << 0;
-    // 		request.Min.BaseAsymAlgo = BaseAsymAlgoFlags::TPM_ALG_RSASSA_2048 |
-    // BaseAsymAlgoFlags::TPM_ALG_RSAPSS_2048;
+
     request.Min.BaseAsymAlgo = BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P256 |
                                BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P384 |
                                BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P521;
     request.Min.BaseHashAlgo = BaseHashAlgoFlags::TPM_ALG_SHA_256 |
                                BaseHashAlgoFlags::TPM_ALG_SHA_384 |
                                BaseHashAlgoFlags::TPM_ALG_SHA_512;
-    // 		request.Flags = RequesterCapabilitiesFlags::CERT_CAP |
-    // RequesterCapabilitiesFlags::CHAL_CAP;
 
     if (MessageVersion != MessageVersionEnum::SPDM_1_0)
     {
@@ -502,7 +475,7 @@ RetStat ConnectionClass::handleRecv<PacketDigestsResponseVar>()
         {
             // clear slot data in case it is no longer valid
             Slots[i].clear();
-            // TODO this may not necessarily be the correct behaviour?
+            // TODO this may not necessarily be the correct/expected behaviour?
         }
     }
     markInfo(ConnectionInfoEnum::DIGESTS);
@@ -554,7 +527,7 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
 
     appendRecvToBuf(BufEnum::B);
 
-    SlotIdx idx = CertificateSlotIdx; // TODO WARNING
+    SlotIdx idx = CertificateSlotIdx;
     SlotClass& slot = Slots[idx];
     std::vector<uint8_t>& cert = slot.Certificates;
     if (cert.empty())
@@ -644,7 +617,7 @@ RetStat ConnectionClass::tryChallenge()
 
     PacketChallengeRequest request;
     request.Header.MessageVersion = MessageVersion;
-    request.Header.Param1 = CertificateSlotIdx; // TODO !!! DECIDE
+    request.Header.Param1 = CertificateSlotIdx;
     request.Header.Param2 = packetDecodeInfo.ChallengeParam2 = 0xFF;
     // 		request.Header.Param2 = packetDecodeInfo.ChallengeParam2 = 1;
     fillRandom(request.Nonce);
@@ -671,7 +644,7 @@ RetStat ConnectionClass::handleRecv<PacketChallengeAuthResponseVar>()
         {
             HashClass ha;
             ha.setup(getSignatureHashEnum());
-            // for (BufEnum::NUM)
+
             for (std::vector<uint8_t>& buf : Bufs)
             {
                 if (!buf.empty())
@@ -684,16 +657,10 @@ RetStat ConnectionClass::handleRecv<PacketChallengeAuthResponseVar>()
         Log.iprint("computed m2 hash = ");
         Log.println(hash);
 
-        // HashM1M2.hashFinish(hash.data(), hash.size());
-        // Log.iprint("computed m2 hash = ");
-        // Log.println(hash.data(), hash.size());
-
         Log.iprint("resp.SignatureVector = ");
         Log.println(resp.SignatureVector);
-        // resp.SignatureVector[10] = 'X';	//TODO TEST
 
         {
-            // TODO SlotIdx
             int ret = verifySignature(Slots[CertificateSlotIdx].getLeafCert(),
                                       resp.SignatureVector, hash);
             SPDMCPP_LOG_TRACE_RS(Log, ret);
@@ -786,8 +753,7 @@ RetStat ConnectionClass::handleRecv<PacketMeasurementsResponseVar>()
             if (DMTFMeasurements.find(block.Min.Index) !=
                 DMTFMeasurements.end())
             {
-                Log.iprintln("DUPLICATE MeasurementBlock Index!"); // TODO
-                                                                   // Warning!!!
+                Log.iprintln("DUPLICATE MeasurementBlock Index!");
             }
             else
             {
@@ -797,9 +763,7 @@ RetStat ConnectionClass::handleRecv<PacketMeasurementsResponseVar>()
                 SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
                 if (off != block.MeasurementVector.size())
                 {
-                    Log.iprintln(
-                        "MeasurementBlock not fully parsed!"); // TODO
-                                                               // Warning!!!
+                    Log.iprintln("MeasurementBlock not fully parsed!");
                 }
             }
         }

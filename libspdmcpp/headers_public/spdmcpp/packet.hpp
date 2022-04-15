@@ -23,10 +23,11 @@ namespace spdmcpp
 {
 // TODO add packet constructors or some such, for safety of not forgetting to
 // set some parameter?! although it may be a bit annoying to handle layering?
+
 // TODO move most of the stuff to .cpp files
-// TODO really could use more macros for endianHostSpdmCopy and direct_copy
-// to speed up typing this out and avoid mistakes, assuming there's no pushback
-// against heavy macro usage?
+
+// TODO implement automatic calling of packet->finalize() for all variably sized
+// packets
 
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define SPDMCPP_LOG_expr(log, expr)                                            \

@@ -44,9 +44,6 @@ struct PacketMessageHeader
     }
 };
 
-// TODO there's this magic template library for iterating over members... it'd
-// be really convenient to use it!!!
-
 [[nodiscard]] inline MessageVersionEnum
     packetMessageHeaderGetMessageVersion(const std::vector<uint8_t>& buf,
                                          size_t off = 0)
@@ -71,22 +68,7 @@ inline void
     SPDMCPP_STATIC_ASSERT(sizeof(p.requestResponseCode) == 1);
     p.requestResponseCode = rrcode;
 }
-/*	inline void endian_swap(packet_message_header& p)//TODO decide, likely not
-   needed?
-    {
-        endian_swap(p.spdm_version);
-        endian_swap(p.requestResponseCode);
-        endian_swap(p.param1);
-        endian_swap(p.param2);
-    }*/
-/*	inline void endian_host_spdm_swap(packet_message_header& p)//TODO decide,
-   likely not needed?
-    {
-        endian_host_spdm_swap(p.spdm_version);
-        endian_host_spdm_swap(p.requestResponseCode);
-        endian_host_spdm_swap(p.param1);
-        endian_host_spdm_swap(p.param2);
-    }*/
+
 inline void endianHostSpdmCopy(const PacketMessageHeader& src,
                                PacketMessageHeader& dst)
 {

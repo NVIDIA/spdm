@@ -51,7 +51,6 @@ struct PacketReqAlgStruct
     {
         return AlgCount & 0xF;
     }
-    // TODO need many more helpers?!
 
     uint16_t getSize() const
     {
