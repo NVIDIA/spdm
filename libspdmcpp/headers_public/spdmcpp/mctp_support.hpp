@@ -22,6 +22,8 @@ namespace spdmcpp
 {
 // these are for use with the mctp-demux-daemon
 
+constexpr size_t mctpMaxMessageSize = 4096;
+
 /** @class MctpTransportClass
  *  @brief Support class for transport through the mctp-demux-daemon
  *  @details This class should be further derived to add timeout support
@@ -174,18 +176,13 @@ inline RetStat MctpIoClass::read(std::vector<uint8_t>& buf,
                                  timeout_us_t /*timeout*/)
 {
     SPDMCPP_LOG_TRACE_FUNC(Log);
-    buf.resize(4096); // MCTP_MAX_MSG
+    buf.resize(mctpMaxMessageSize);
     ssize_t result = recv(Socket, (void*)buf.data(), buf.size(), 0);
-    if (result == -1)
+    if (result == -1 || result == 0)
     {
         buf.clear();
         Log.iprint("Receive error:");
         Log.println(errno);
-        return RetStat::ERROR_UNKNOWN;
-    }
-    if (result == 0)
-    {
-        buf.clear();
         return RetStat::ERROR_UNKNOWN;
     }
     buf.resize(result);
