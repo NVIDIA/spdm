@@ -268,9 +268,11 @@ RetStat ConnectionClass::handleRecv<PacketVersionResponseVar>()
     auto rs = interpretResponse(resp);
     SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
 
+    // the version response should have 1.0 in the header according to
+    // DSP0274_1.1.1 page 34
     if (resp.Min.Header.MessageVersion != MessageVersionEnum::SPDM_1_0)
     {
-        return RetStat::ERROR_INVALID_HEADER_VERSION; // TODO generalize
+        return RetStat::ERROR_INVALID_HEADER_VERSION;
     }
 
     // TODO a lot more checks?
@@ -854,9 +856,12 @@ RetStat ConnectionClass::handleRecv()
     Log.println(ResponseBuffer);
 
     // NOLINTNEXTLINE cppcoreguidelines-init-variables
-    RequestResponseEnum
-        code; // which conflicts with cppcheck redundantInitialization
-    {
+    MessageVersionEnum version;
+    // NOLINTNEXTLINE cppcoreguidelines-init-variables
+    RequestResponseEnum code;
+    // the above conflict with cppcheck redundantInitialization
+
+    { // transport decode
         TransportClass::LayerState lay; // TODO double decode
         if (transport)
         {
@@ -870,10 +875,13 @@ RetStat ConnectionClass::handleRecv()
         {
             return RetStat::ERROR_BUFFER_TOO_SMALL;
         }
+        version = packetMessageHeaderGetMessageVersion(
+            ResponseBuffer, ResponseBufferSPDMOffset);
         code = packetMessageHeaderGetRequestresponsecode(
             ResponseBuffer, ResponseBufferSPDMOffset);
     }
 
+    // "custom" response handling for ERRORS
     if (code == RequestResponseEnum::RESPONSE_ERROR)
     {
         Log.iprint("RESPONSE_ERROR while waiting for response: ");
@@ -885,6 +893,8 @@ RetStat ConnectionClass::handleRecv()
         SPDMCPP_LOG_TRACE_RS(Log, rs);
         return RetStat::ERROR_RESPONSE;
     }
+
+    // if we're not expecting this response return an error
     if (code != WaitingForResponse)
     {
         Log.iprint("ERROR_WRONG_REQUEST_RESPONSE_CODE: ");
@@ -897,26 +907,39 @@ RetStat ConnectionClass::handleRecv()
     WaitingForResponse = RequestResponseEnum::INVALID;
 
     RetStat rs = RetStat::ERROR_UNKNOWN;
-    switch (code)
+    if (code == RequestResponseEnum::RESPONSE_VERSION)
     {
-// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
-#define DTYPE(type)                                                            \
-    case type::requestResponseCode:                                            \
-        rs = handleRecv<type>();                                               \
-        break;
-        DTYPE(PacketVersionResponseVar)
-        DTYPE(PacketCapabilitiesResponse)
-        DTYPE(PacketAlgorithmsResponseVar)
-        DTYPE(PacketDigestsResponseVar)
-        DTYPE(PacketCertificateResponseVar)
-        DTYPE(PacketChallengeAuthResponseVar)
-        DTYPE(PacketMeasurementsResponseVar)
-        default:
-            Log.iprint("!!! Unknown code: ");
-            Log.println(code);
-            return RetStat::ERROR_UNKNOWN_REQUEST_RESPONSE_CODE;
+        // version response is what sets the MessageVersion, so it has to be
+        // handled separately from the packets below
+        rs = handleRecv<PacketVersionResponseVar>();
     }
-#undef DTYPE
+    else
+    {
+        // all other packets should have the "choosen version" in the header
+        if (version != MessageVersion)
+        {
+            return RetStat::ERROR_INVALID_HEADER_VERSION;
+        }
+        switch (code)
+        {
+    // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+    #define DTYPE(type)                                                            \
+        case type::requestResponseCode:                                            \
+            rs = handleRecv<type>();                                               \
+            break;
+            DTYPE(PacketCapabilitiesResponse)
+            DTYPE(PacketAlgorithmsResponseVar)
+            DTYPE(PacketDigestsResponseVar)
+            DTYPE(PacketCertificateResponseVar)
+            DTYPE(PacketChallengeAuthResponseVar)
+            DTYPE(PacketMeasurementsResponseVar)
+            default:
+                Log.iprint("!!! Unknown code: ");
+                Log.println(code);
+                return RetStat::ERROR_UNKNOWN_REQUEST_RESPONSE_CODE;
+    #undef DTYPE
+        }
+    }
     SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
     return rs;
 }
