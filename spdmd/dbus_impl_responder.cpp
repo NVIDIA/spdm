@@ -61,7 +61,7 @@ void Responder::syncSlotsInfo()
             std::vector<uint8_t> cert;
             if (connection.getCertificatesDER(cert, idx))
             {
-                certs.emplace_back(std::tuple(idx, std::get<1>(certs.back())));
+                certs.emplace_back(idx, std::move(cert));
             }
         }
     }
@@ -69,14 +69,9 @@ void Responder::syncSlotsInfo()
     {
         const ConnectionClass::DMTFMeasurementsContainer& src =
             connection.getDMTFMeasurements();
-        for (auto& field : src)
+        for (const auto& field : src)
         {
-            meas.resize(meas.size() + 1);
-            auto& m = meas.back();
-
-            std::get<0>(m) = field.first;
-            std::get<1>(m) = field.second.Min.Type;
-            std::get<2>(m) = std::vector<uint8_t>(field.second.ValueVector);
+            meas.emplace_back(field.first, field.second.Min.Type, field.second.ValueVector);
         }
     }
     measurementsHash(connection.getSignedMeasurementsHash());
