@@ -8,7 +8,6 @@
 #include <sdbusplus/server/object.hpp>
 #include <sdeventplus/event.hpp>
 #include <sdeventplus/source/io.hpp>
-#include <sdeventplus/source/time.hpp>
 #include <spdmcpp/connection.hpp>
 #include <spdmcpp/mctp_support.hpp>
 
@@ -33,24 +32,18 @@ class MctpTransportClass : public spdmcpp::MctpTransportClass
     MctpTransportClass(uint8_t eid, Responder& resp) :
         spdmcpp::MctpTransportClass(eid), responder(resp)
     {}
-    ~MctpTransportClass() override
-    {
-        if (time)
-        {
-            delete time;
-            time = nullptr;
-        }
-    }
+    ~MctpTransportClass() = default;
 
     spdmcpp::RetStat setupTimeout(spdmcpp::timeout_ms_t timeout) override;
 
     bool clearTimeout() override;
 
   protected:
-    static constexpr sdeventplus::ClockId clockId =
-        sdeventplus::ClockId::Monotonic;
     Responder& responder;
-    sdeventplus::source::Time<clockId>* time = nullptr;
+    std::unique_ptr<SpdmdAppContext::Timer> time;
+
+    void timeoutCallback(SpdmdAppContext::Timer& source,
+                         SpdmdAppContext::Timer::TimePoint time);
 };
 
 using ResponderIntf = sdbusplus::server::object::object<

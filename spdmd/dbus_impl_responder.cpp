@@ -303,39 +303,41 @@ void Responder::updateLastUpdateTime()
 spdmcpp::RetStat MctpTransportClass::setupTimeout(spdmcpp::timeout_ms_t timeout)
 {
     sdeventplus::Event& event = responder.getEvent();
-    SPDMCPP_ASSERT(!time);
-    // TODO !!! verify we're not leaking anything !!!
-    auto timeCb = [this](
-                      sdeventplus::source::Time<clockId>& /*source*/,
-                      sdeventplus::source::Time<clockId>::TimePoint /*time*/) {
-        delete time; // TODO !!! is this safe? !!!
-        time = nullptr;
 
-        auto rs = responder.handleTimeout();
-        if (rs == spdmcpp::RetStat::ERROR_TIMEOUT)
-        {
-            // no retry attempted, fail with timeout
-            responder.status(Responder::SPDMStatus::Error_ConnectionTimeout);
-        }
-        else if (isError(rs))
-        {
-            responder.status(Responder::SPDMStatus::Error_Other);
-        }
-    };
-    time = new sdeventplus::source::Time<clockId>(
+    time = make_unique<SpdmdAppContext::Timer>(
         event,
-        sdeventplus::Clock<clockId>(event).now() +
+        SpdmdAppContext::Clock(event).now() +
             std::chrono::milliseconds{timeout},
-        std::chrono::milliseconds{1}, std::move(timeCb));
+        std::chrono::milliseconds{1},
+        std::bind(&MctpTransportClass::timeoutCallback, this,
+                  std::placeholders::_1, std::placeholders::_2));
+
     return RetStat::OK;
+}
+
+void MctpTransportClass::timeoutCallback(
+    SpdmdAppContext::Timer& /*source*/,
+    SpdmdAppContext::Timer::TimePoint /*time*/)
+{
+    time.reset(nullptr);
+
+    auto rs = responder.handleTimeout();
+    if (rs == spdmcpp::RetStat::ERROR_TIMEOUT)
+    {
+        // no retry attempted, fail with timeout
+        responder.status(Responder::SPDMStatus::Error_ConnectionTimeout);
+    }
+    else if (isError(rs))
+    {
+        responder.status(Responder::SPDMStatus::Error_Other);
+    }
 }
 
 bool MctpTransportClass::clearTimeout()
 {
     if (time)
     {
-        delete time;
-        time = nullptr;
+        time.reset(nullptr);
         return true;
     }
     return false;

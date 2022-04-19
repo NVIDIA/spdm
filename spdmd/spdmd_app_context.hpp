@@ -5,6 +5,7 @@
 
 #include <sdbusplus/bus.hpp>
 #include <sdeventplus/event.hpp>
+#include <sdeventplus/source/time.hpp>
 #include <xyz/openbmc_project/Logging/Entry/server.hpp>
 
 #include <chrono>
@@ -21,6 +22,16 @@ namespace spdmd
 class SpdmdAppContext
 {
   public:
+    /** @brief ClockId used for specifying various timeouts  */
+    static constexpr sdeventplus::ClockId clockId =
+        sdeventplus::ClockId::Monotonic;
+
+    /** @brief Time class used for setting up various timeouts  */
+    using Clock = sdeventplus::Clock<SpdmdAppContext::clockId>;
+
+    /** @brief Time class used for setting up various timeouts  */
+    using Timer = sdeventplus::source::Time<clockId>;
+
     /** @brief SPDM requester context class */
     spdmcpp::ContextClass context;
 
