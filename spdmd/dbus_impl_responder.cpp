@@ -215,7 +215,7 @@ spdmcpp::RetStat Responder::handleRecv(std::vector<uint8_t>& buf)
     return rs;
 }
 
-void Responder::refresh(uint8_t slot, std::vector<uint8_t> nonc,
+void Responder::refresh(uint8_t slotIndex, std::vector<uint8_t> nonc,
                         std::vector<uint8_t> measurementIndices,
                         uint32_t sessionId)
 {
@@ -230,6 +230,9 @@ void Responder::refresh(uint8_t slot, std::vector<uint8_t> nonc,
         return;
     }
     status(SPDMStatus::Initializing);
+
+    slot(slotIndex);
+
     updateLastUpdateTime();
 
     if (sessionId)
@@ -269,8 +272,10 @@ void Responder::refresh(uint8_t slot, std::vector<uint8_t> nonc,
 
     if (nonc.size() == 32)
     {
-        auto rs = connection.refreshMeasurements( // NOLINTNEXTLINE cppcoreguidelines-pro-type-reinterpret-cast
-            slot, *reinterpret_cast<nonce_array_32*>(nonc.data()), meas);
+        auto rs = connection.refreshMeasurements(
+            slotIndex,
+            // NOLINTNEXTLINE cppcoreguidelines-pro-type-reinterpret-cast
+            *reinterpret_cast<nonce_array_32*>(nonc.data()), meas);
         SPDMCPP_LOG_TRACE_RS(getLog(), rs);
     }
     else
@@ -280,7 +285,7 @@ void Responder::refresh(uint8_t slot, std::vector<uint8_t> nonc,
             getLog().iprint("WARNING - nonce has invalid size = ");
             getLog().println(nonc.size());
         }
-        auto rs = connection.refreshMeasurements(slot, meas);
+        auto rs = connection.refreshMeasurements(slotIndex, meas);
         SPDMCPP_LOG_TRACE_RS(getLog(), rs);
     }
 }
