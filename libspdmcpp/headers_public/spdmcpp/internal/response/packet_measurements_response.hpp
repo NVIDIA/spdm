@@ -78,7 +78,9 @@ struct PacketMeasurementsResponseVar // TODO all variable packets don't need
     RetStat finalize()
     {
         uint32_t len = 0;
-        len += std::accumulate(MeasurementBlockVector.begin(), MeasurementBlockVector.end(), 0, [](uint32_t a, const auto& iter) { return a + iter.getSize(); } );
+        len += std::accumulate(
+            MeasurementBlockVector.begin(), MeasurementBlockVector.end(), 0,
+            [](uint32_t a, const auto& iter) { return a + iter.getSize(); });
         if (!Min.setMeasurementRecordLength(len))
         {
             return RetStat::ERROR_UNKNOWN;

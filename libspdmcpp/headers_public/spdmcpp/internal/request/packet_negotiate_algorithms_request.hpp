@@ -242,7 +242,9 @@ struct PacketNegotiateAlgorithmsRequestVar
     {
         size_t size = 0;
         size += sizeof(Min);
-        size += std::accumulate(PacketReqAlgVector.begin(), PacketReqAlgVector.end(), 0, [](size_t a, const auto& iter) { return a + iter.getSize(); } );
+        size += std::accumulate(
+            PacketReqAlgVector.begin(), PacketReqAlgVector.end(), 0,
+            [](size_t a, const auto& iter) { return a + iter.getSize(); });
         SPDMCPP_ASSERT(size <= std::numeric_limits<uint16_t>::max());
         return static_cast<uint16_t>(size);
     }

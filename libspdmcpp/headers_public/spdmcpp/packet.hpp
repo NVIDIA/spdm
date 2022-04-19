@@ -29,19 +29,19 @@ namespace spdmcpp
 // against heavy macro usage?
 
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
-#define SPDMCPP_LOG_expr(log, expr)                                       \
+#define SPDMCPP_LOG_expr(log, expr)                                            \
     do                                                                         \
     {                                                                          \
         (log).print(#expr ": ");                                               \
-        (log).print(expr);                          \
+        (log).print(expr);                                                     \
     } while (false)
 
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
-#define SPDMCPP_LOG_iexprln(log, expr)                                    \
+#define SPDMCPP_LOG_iexprln(log, expr)                                         \
     do                                                                         \
     {                                                                          \
         (log).iprint(#expr ":\t");                                             \
-        (log).println(expr);                        \
+        (log).println(expr);                                                   \
     } while (false)
 
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)

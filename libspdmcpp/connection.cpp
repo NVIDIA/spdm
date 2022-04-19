@@ -537,7 +537,8 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
             if (slot.MCertificates.size() == 1)
             {
                 std::vector<uint8_t> hash;
-                HashClass::compute(hash, getSignatureHashEnum(), cert, off, asn1Len);
+                HashClass::compute(hash, getSignatureHashEnum(), cert, off,
+                                   asn1Len);
                 Log.iprint("computed root certificate hash = ");
                 Log.println(hash);
 
@@ -880,7 +881,8 @@ RetStat ConnectionClass::handleRecv()
     Log.println(ResponseBuffer);
 
     // NOLINTNEXTLINE cppcoreguidelines-init-variables
-    RequestResponseEnum code; // which conflicts with cppcheck redundantInitialization
+    RequestResponseEnum
+        code; // which conflicts with cppcheck redundantInitialization
     {
         TransportClass::LayerState lay; // TODO double decode
         if (Transport)

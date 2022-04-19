@@ -122,7 +122,7 @@ class HashClass
         // TODO failure possible?
         mbedtls_md_setup(&Ctx, other.getInfo(), 0);
         // TODO failure possible?
-         mbedtls_md_clone(&Ctx, &other.Ctx);
+        mbedtls_md_clone(&Ctx, &other.Ctx);
     }
 
     HashClass(HashClass&&) = delete;

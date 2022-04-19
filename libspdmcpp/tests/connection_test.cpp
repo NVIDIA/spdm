@@ -31,8 +31,7 @@ using namespace spdmcpp;
 class FixtureTransportClass : public TransportClass
 {
   public:
-    RetStat encodePre(std::vector<uint8_t>& /*buf*/,
-                              LayerState& lay) override
+    RetStat encodePre(std::vector<uint8_t>& /*buf*/, LayerState& lay) override
     {
         setLayerSize(lay, sizeof(HeaderType));
         return RetStat::OK;
@@ -132,7 +131,7 @@ class ConnectionFixture
 
     template <typename T, typename... Targs>
     RetStat interpret(T& packet, Targs... fargs,
-                              MessageHashEnum hashidx = MessageHashEnum::NUM)
+                      MessageHashEnum hashidx = MessageHashEnum::NUM)
     {
         SPDMCPP_ASSERT(IO.WriteQueue.size() == 1);
         auto& buf = IO.WriteQueue.front();
@@ -221,7 +220,7 @@ void testConnectionFlow(BaseAsymAlgoFlags asymAlgo, BaseHashAlgoFlags hashAlgo)
 
     ASSERT_EQ(countBits(algoResp.Min.BaseAsymAlgo), 1);
     ASSERT_EQ(countBits(algoResp.Min.BaseHashAlgo), 1);
-    
+
     fix.getHash(MessageHashEnum::L).setup(toHash(algoResp.Min.BaseHashAlgo));
     fix.getHash(MessageHashEnum::M).setup(toHash(algoResp.Min.BaseHashAlgo));
 
@@ -263,8 +262,10 @@ void testConnectionFlow(BaseAsymAlgoFlags asymAlgo, BaseHashAlgoFlags hashAlgo)
         PacketNegotiateAlgorithmsRequestVar req;
         auto rs = fix.interpret(req, MessageHashEnum::M);
         ASSERT_EQ(rs, RetStat::OK);
-        EXPECT_FLAG_SET(req.Min.BaseAsymAlgo, BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P256);
-        EXPECT_FLAG_SET(req.Min.BaseHashAlgo, BaseHashAlgoFlags::TPM_ALG_SHA_384);
+        EXPECT_FLAG_SET(req.Min.BaseAsymAlgo,
+                        BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P256);
+        EXPECT_FLAG_SET(req.Min.BaseHashAlgo,
+                        BaseHashAlgoFlags::TPM_ALG_SHA_384);
     }
 
     PacketDecodeInfo info;
@@ -277,23 +278,27 @@ void testConnectionFlow(BaseAsymAlgoFlags asymAlgo, BaseHashAlgoFlags hashAlgo)
     mbedtls_x509_crt caCert;
     mbedtls_x509_crt_init(&caCert);
     {
-        ASSERT_MBEDTLS_0(mbedtls_pk_setup(&pkctx,
-                                mbedtls_pk_info_from_type(MBEDTLS_PK_ECKEY)));
+        ASSERT_MBEDTLS_0(mbedtls_pk_setup(
+            &pkctx, mbedtls_pk_info_from_type(MBEDTLS_PK_ECKEY)));
         auto* ctx = mbedtls_pk_ec(pkctx);
-        ASSERT_MBEDTLS_0(mbedtls_ecdsa_genkey(ctx, toMbedtlsGroupID(toSignature(algoResp.Min.BaseAsymAlgo)), fRng, nullptr));
+        ASSERT_MBEDTLS_0(mbedtls_ecdsa_genkey(
+            ctx, toMbedtlsGroupID(toSignature(algoResp.Min.BaseAsymAlgo)), fRng,
+            nullptr));
     }
     {
         mbedtls_x509write_cert ctx;
         mbedtls_x509write_crt_init(&ctx);
-        
+
         mbedtls_x509write_crt_set_version(&ctx, 3 - 1);
         mbedtls_x509write_crt_set_issuer_key(&ctx, &pkctx);
         mbedtls_x509write_crt_set_subject_key(&ctx, &pkctx);
         mbedtls_x509write_crt_set_issuer_name(&ctx, "CN=CA,O=mbed TLS,C=UK");
-        
-        mbedtls_x509write_crt_set_validity(&ctx, "20010101000000", "20301231235959");
 
-        mbedtls_x509write_crt_set_md_alg(&ctx, toMbedtls(toHash(algoResp.Min.BaseHashAlgo)));
+        mbedtls_x509write_crt_set_validity(&ctx, "20010101000000",
+                                           "20301231235959");
+
+        mbedtls_x509write_crt_set_md_alg(
+            &ctx, toMbedtls(toHash(algoResp.Min.BaseHashAlgo)));
 
         std::vector<uint8_t> buf;
         buf.resize(1024);
@@ -308,16 +313,17 @@ void testConnectionFlow(BaseAsymAlgoFlags asymAlgo, BaseHashAlgoFlags hashAlgo)
         }
         log.iprint("mbedtls_x509write_crt_der(): ");
         log.println(ret);
-        
-        ASSERT_MBEDTLS_0(mbedtls_x509_crt_parse_der(&caCert, &*std::prev(buf.end(), ret), ret));
+
+        ASSERT_MBEDTLS_0(mbedtls_x509_crt_parse_der(
+            &caCert, &*std::prev(buf.end(), ret), ret));
         mbedtls_x509write_crt_free(&ctx);
     }
-    
+
     PacketDigestsResponseVar digestResp;
     digestResp.Min.Header.MessageVersion = MessageVersionEnum::SPDM_1_1;
     PacketCertificateResponseVar certResp;
     certResp.Min.Header.MessageVersion = MessageVersionEnum::SPDM_1_1;
-    
+
     {
         std::vector<uint8_t>& certBuf = certResp.CertificateVector;
         certBuf.resize(sizeof(PacketCertificateChain));
@@ -343,8 +349,7 @@ void testConnectionFlow(BaseAsymAlgoFlags asymAlgo, BaseHashAlgoFlags hashAlgo)
         }
         std::vector<uint8_t>& digest = digestResp.Digests[0];
         digest.resize(info.BaseHashSize);
-        HashClass::compute(digest, toHash(algoResp.Min.BaseHashAlgo),
-                           certBuf);
+        HashClass::compute(digest, toHash(algoResp.Min.BaseHashAlgo), certBuf);
     }
 
     {
@@ -404,11 +409,12 @@ void testConnectionFlow(BaseAsymAlgoFlags asymAlgo, BaseHashAlgoFlags hashAlgo)
             }
             std::vector<uint8_t> hash;
             hc.hashFinish(hash);
-            
+
             log.iprint("TEST M1/M2 hash: ");
             log.println(hash);
 
-            ASSERT_MBEDTLS_0(computeSignature(&pkctx, resp.SignatureVector, hash));
+            ASSERT_MBEDTLS_0(
+                computeSignature(&pkctx, resp.SignatureVector, hash));
         }
 
         resp.finalize();
@@ -465,7 +471,8 @@ void testConnectionFlow(BaseAsymAlgoFlags asymAlgo, BaseHashAlgoFlags hashAlgo)
             log.iprint("TEST L1/L2 hash: ");
             log.println(hash);
 
-            ASSERT_MBEDTLS_0(computeSignature(&pkctx, resp.SignatureVector, hash));
+            ASSERT_MBEDTLS_0(
+                computeSignature(&pkctx, resp.SignatureVector, hash));
         }
 
         resp.finalize();
@@ -480,28 +487,32 @@ void testConnectionFlow(BaseAsymAlgoFlags asymAlgo, BaseHashAlgoFlags hashAlgo)
     mbedtls_pk_free(&pkctx);
 }
 
-
 TEST(Connection, FullFlow_ECDSA_256_SHA_256)
 {
-    testConnectionFlow(BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P256, BaseHashAlgoFlags::TPM_ALG_SHA_256);
+    testConnectionFlow(BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P256,
+                       BaseHashAlgoFlags::TPM_ALG_SHA_256);
 }
 
 TEST(Connection, FullFlow_ECDSA_256_SHA_384)
 {
-    testConnectionFlow(BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P256, BaseHashAlgoFlags::TPM_ALG_SHA_384);
+    testConnectionFlow(BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P256,
+                       BaseHashAlgoFlags::TPM_ALG_SHA_384);
 }
 
 TEST(Connection, FullFlow_ECDSA_256_SHA_512)
 {
-    testConnectionFlow(BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P256, BaseHashAlgoFlags::TPM_ALG_SHA_512);
+    testConnectionFlow(BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P256,
+                       BaseHashAlgoFlags::TPM_ALG_SHA_512);
 }
 
 TEST(Connection, FullFlow_ECDSA_384_SHA_384)
 {
-    testConnectionFlow(BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P384, BaseHashAlgoFlags::TPM_ALG_SHA_384);
+    testConnectionFlow(BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P384,
+                       BaseHashAlgoFlags::TPM_ALG_SHA_384);
 }
 
 TEST(Connection, FullFlow_ECDSA_521_SHA_512)
 {
-    testConnectionFlow(BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P521, BaseHashAlgoFlags::TPM_ALG_SHA_512);
+    testConnectionFlow(BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P521,
+                       BaseHashAlgoFlags::TPM_ALG_SHA_512);
 }
