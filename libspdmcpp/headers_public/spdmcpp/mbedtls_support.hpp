@@ -28,6 +28,7 @@ inline void mbedtlsPrintErrorString(LogClass& log, int error)
     mbedtls_strerror(error, str.data(), str.size());
     log.print(str.data());
 }
+
 inline void mbedtlsPrintErrorLine(LogClass& log, const char* prefix, int error)
 {
     std::array<char, 128> str{};
@@ -38,6 +39,32 @@ inline void mbedtlsPrintErrorLine(LogClass& log, const char* prefix, int error)
     log.print(" = '");
     log.print(str.data());
     log.println('\'');
+}
+
+inline std::string mbedtlsToInfoString(mbedtls_x509_crt* c)
+{
+    std::string info;
+    info.resize(4096);
+
+    int ret = mbedtls_x509_crt_info(info.data(), info.size(), "", c);
+    if (ret < 0)
+    {
+        return std::string("mbedtls_x509_crt_info returned error=") +
+               std::to_string(ret);
+    }
+    if (static_cast<size_t>(ret) > info.size())
+    {
+        info.resize(ret + 1); //+1 for the null byte which mbedtls_x509_crt_info
+                              // will want to write
+        ret = mbedtls_x509_crt_info(info.data(), info.size(), "", c);
+        if (ret < 0)
+        {
+            return std::string("mbedtls_x509_crt_info returned error=") +
+                   std::to_string(ret);
+        }
+    }
+    info.resize(ret);
+    return info;
 }
 
 inline mbedtls_ecp_group_id toMbedtlsGroupID(SignatureEnum algo)
@@ -167,6 +194,44 @@ inline int verifySignature(mbedtls_x509_crt* cert,
     mbedtls_ecdh_free(&ctx);
     return ret;
 #endif
+}
+
+/** @brief This function interprets the response previously stored in
+ * ResponseBuffer
+ *  @param[in] buf - Buffer with data to parse
+ *  @param[inout] off - Offset to start at, will be adjusted as parsing goes on
+ * and will point after the last parsed byte
+ *  @returns pair containing return code from mbedtls_x509_crt_parse_der (0 on
+ * success or "a specific X509 or PEM error code") and pointer to the created
+ * mbedtls_x509_crt or nullptr on error
+ */
+
+inline std::pair<int, mbedtls_x509_crt*>
+    mbedtlsCertParseDer(const std::vector<uint8_t>& buf, size_t& off)
+{
+    auto* cert = new mbedtls_x509_crt;
+    mbedtls_x509_crt_init(cert);
+
+    int ret = mbedtls_x509_crt_parse_der(cert, &buf[off], buf.size() - off);
+    if (ret)
+    {
+        mbedtls_x509_crt_free(cert);
+        delete cert;
+        return std::make_pair(ret, nullptr);
+    }
+
+    size_t asn1Len = 0;
+    {
+        const uint8_t* s = &buf[off];
+        uint8_t* p = const_cast<uint8_t*>(s);
+        ret = mbedtls_asn1_get_tag(&p,
+            buf.data() + buf.size(), //NOLINT cppcoreguidelines-pro-bounds-pointer-arithmetic
+            &asn1Len, MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE);
+        SPDMCPP_ASSERT(ret == 0);
+        asn1Len += (p - s);
+    }
+    off += asn1Len;
+    return std::make_pair(ret, cert);
 }
 
 } // namespace spdmcpp

@@ -158,6 +158,93 @@ bool ConnectionClass::getCertificatesPEM(
 }
 #endif
 
+RetStat ConnectionClass::parseCertChain(SlotClass& slot,
+                                        const std::vector<uint8_t>& cert)
+{
+    SPDMCPP_LOG_TRACE_FUNC(Log);
+    PacketCertificateChain certChain;
+    size_t off = 0;
+    auto rs = packetDecodeInternal(certChain, cert, off);
+    SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+
+    SPDMCPP_ASSERT(certChain.Length == cert.size());
+    std::vector<uint8_t> rootCertHash;
+
+    {
+        rootCertHash.resize(getHashSize(Algorithms.Min.BaseHashAlgo));
+        rs = packetDecodeBasic(rootCertHash, cert, off);
+        SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+        Log.iprint("provided root certificate hash = ");
+        Log.println(rootCertHash);
+    }
+
+    slot.CertificateOffset = off;
+
+    do
+    {
+        size_t start = off;
+        auto [ret, c] = mbedtlsCertParseDer(cert, off);
+        if (ret)
+        {
+            mbedtlsPrintErrorLine(Log, "mbedtls_x509_crt_parse_der()", ret);
+            return RetStat::ERROR_CERTIFICATE_PARSING_ERROR;
+        }
+
+        slot.MCertificates.push_back(c);
+
+        if (slot.MCertificates.size() == 1)
+        {
+            std::vector<uint8_t> hash;
+            HashClass::compute(hash, getSignatureHashEnum(), cert, start,
+                               off - start);
+            Log.iprint("computed root certificate hash = ");
+            Log.println(hash);
+
+            if (!std::equal(hash.begin(), hash.end(), rootCertHash.begin()))
+            {
+                Log.iprintln("root certificate DIGEST verify FAILED!");
+                return RetStat::ERROR_ROOT_CERTIFICATE_HASH_INVALID;
+            }
+        }
+    } while (off < cert.size());
+
+    return RetStat::OK;
+}
+
+RetStat ConnectionClass::verifyCertificateChain(const SlotClass& slot)
+{
+    SPDMCPP_LOG_TRACE_FUNC(Log);
+    for (size_t i = 1; i < slot.MCertificates.size(); ++i)
+    {
+        slot.MCertificates[i]->next = slot.MCertificates[i - 1];
+        uint32_t rflags = 0;
+        // TODO shouldn't it be verified against something in the system?!
+        // 				int ret =
+        // mbedtls_x509_crt_verify(slot.getLeafCert(), slot.GetRootCert(),
+        // nullptr, "intel test ECP256 responder cert", &rflags, nullptr,
+        // nullptr); 				int ret =
+        // mbedtls_x509_crt_verify(slot.getLeafCert(), slot.GetRootCert(),
+        // nullptr, nullptr, &rflags, nullptr, nullptr);
+        int ret = mbedtls_x509_crt_verify(slot.MCertificates[i - 1],
+                                          slot.MCertificates[i], nullptr,
+                                          nullptr, &rflags, nullptr, nullptr);
+        Log.iprint("mbedtls_x509_crt_verify ret = ");
+        Log.println(ret);
+        if (ret)
+        {
+            std::string info;
+            info.resize(4096);
+            ret = mbedtls_x509_crt_verify_info(info.data(), info.size(), "",
+                                               rflags);
+            SPDMCPP_ASSERT(ret >= 0);
+            info.resize(ret);
+            Log.print(info);
+            return RetStat::ERROR_CERTIFICATE_CHAIN_VERIFIY_FAILED;
+        }
+    }
+    return RetStat::OK;
+}
+
 RetStat ConnectionClass::tryGetVersion()
 {
     SPDMCPP_LOG_TRACE_FUNC(Log);
@@ -465,179 +552,55 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
     SlotClass& slot = Slots[idx];
     std::vector<uint8_t>& cert = slot.Certificates;
     if (cert.empty())
-    {
+    { // first chunk so reserve space for what's expected to come
         cert.reserve(resp.Min.PortionLength + resp.Min.RemainderLength);
     }
-    //	if (request.Offset != cert.size()) {//TODO
-    {
+    { // store chunk data
         auto off = cert.end() - cert.begin();
         cert.resize(off + resp.Min.PortionLength);
         std::copy(resp.CertificateVector.begin(), resp.CertificateVector.end(),
                   std::next(cert.begin(), off));
     }
     if (resp.Min.RemainderLength)
-    {
+    { // if there's more expected request it and return (waiting for response)
         rs = tryGetCertificateChunk(idx);
         SPDMCPP_LOG_TRACE_RS(Log, rs);
         return rs;
     }
+    // else this was the final chunk so:
 
-    {
+    { // verify certificate_chain hash matches previously fetched digest
+        std::vector<uint8_t> hash;
+        HashClass::compute(hash, getSignatureHashEnum(), cert);
+        Log.iprint("computed certificate digest hash = ");
+        Log.println(hash);
+
+        if (!std::equal(hash.begin(), hash.end(), slot.Digest.begin()))
         {
-            std::vector<uint8_t> hash;
-            HashClass::compute(hash, getSignatureHashEnum(), cert);
-            Log.iprint("computed certificate digest hash = ");
-            Log.println(hash);
-
-            if (!std::equal(hash.begin(), hash.end(), slot.Digest.begin()))
-            {
-                Log.iprintln("certificate chain DIGEST verify FAILED!");
-                return RetStat::ERROR_CERTIFICATE_CHAIN_DIGEST_INVALID;
-            }
+            Log.iprintln("certificate chain DIGEST verify FAILED!");
+            return RetStat::ERROR_CERTIFICATE_CHAIN_DIGEST_INVALID;
         }
-        PacketCertificateChain certChain;
-        size_t off = 0;
-        rs = packetDecodeInternal(certChain, cert, off);
-        SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
-
-        SPDMCPP_ASSERT(certChain.Length == cert.size());
-        std::vector<uint8_t> rootCertHash;
-        {
-            rootCertHash.resize(getHashSize(Algorithms.Min.BaseHashAlgo));
-            rs = packetDecodeBasic(rootCertHash, cert, off);
-            SPDMCPP_LOG_TRACE_RS(Log, rs);
-            Log.iprint("provided root certificate hash = ");
-            Log.println(rootCertHash);
-        }
-
-        slot.CertificateOffset = off;
-
-        do
-        {
-            auto* c = new mbedtls_x509_crt;
-            mbedtls_x509_crt_init(c);
-
-            int ret =
-                mbedtls_x509_crt_parse_der(c, &cert[off], cert.size() - off);
-            //	int ret = mbedtls_x509_crt_parse_der_nocopy(c, &cert[off],
-            // cert.size() - off);
-            if (ret)
-            {
-                mbedtlsPrintErrorLine(Log, "mbedtls_x509_crt_parse_der()", ret);
-            }
-            SPDMCPP_ASSERT(ret == 0); // TODO proper error handling!!!
-
-            slot.MCertificates.push_back(c);
-
-            size_t asn1Len = 0;
-            {
-                uint8_t* s = &cert[off];
-                uint8_t* p = s;
-                ret = mbedtls_asn1_get_tag(&p,
-                cert.data() + cert.size(), //NOLINT cppcoreguidelines-pro-bounds-pointer-arithmetic
-                    &asn1Len, MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE);
-                SPDMCPP_ASSERT(ret == 0);
-                asn1Len += (p - s);
-            }
-
-            if (slot.MCertificates.size() == 1)
-            {
-                std::vector<uint8_t> hash;
-                HashClass::compute(hash, getSignatureHashEnum(), cert, off,
-                                   asn1Len);
-                Log.iprint("computed root certificate hash = ");
-                Log.println(hash);
-
-                if (!std::equal(hash.begin(), hash.end(), rootCertHash.begin()))
-                {
-                    Log.iprintln("root certificate DIGEST verify FAILED!");
-                    return RetStat::ERROR_ROOT_CERTIFICATE_HASH_INVALID;
-                }
-            }
-            off += asn1Len;
-        } while (off < cert.size());
-
-        {
-            std::string info;
-            for (mbedtls_x509_crt* c : slot.MCertificates)
-            {
-                info.resize(4096);
-                int ret =
-                    mbedtls_x509_crt_info(info.data(), info.size(), "", c);
-                SPDMCPP_ASSERT(ret >= 0);
-                info.resize(ret);
-                Log.print(info);
-            }
-        }
-
-#if 1
-        for (size_t i = 1; i < slot.MCertificates.size(); ++i)
-        { // TODO verify/fix
-            slot.MCertificates[i]->next = slot.MCertificates[i - 1];
-            uint32_t rflags = 0;
-            // TODO shouldn't it be verified against something in the system?!
-            // 				int ret =
-            // mbedtls_x509_crt_verify(slot.getLeafCert(), slot.GetRootCert(),
-            // nullptr, "intel test ECP256 responder cert", &rflags, nullptr,
-            // nullptr); 				int ret =
-            // mbedtls_x509_crt_verify(slot.getLeafCert(), slot.GetRootCert(),
-            // nullptr, nullptr, &rflags, nullptr, nullptr);
-            int ret = mbedtls_x509_crt_verify(
-                slot.MCertificates[i - 1], slot.MCertificates[i], nullptr,
-                nullptr, &rflags, nullptr, nullptr);
-            Log.iprint("mbedtls_x509_crt_verify ret = ");
-            Log.println(ret);
-            if (ret)
-            {
-                std::string info;
-                info.resize(4096);
-                ret = mbedtls_x509_crt_verify_info(info.data(), info.size(), "",
-                                                   rflags);
-                SPDMCPP_ASSERT(ret >= 0);
-                info.resize(ret);
-                Log.print(info);
-                return RetStat::ERROR_CERTIFICATE_CHAIN_VERIFIY_FAILED;
-            }
-        }
-#else
-        if (slot.MCertificates.size() >= 2)
-        {
-            /*	for (size_t i = 1; i < slot.MCertificates.size() - 1; ++i) {
-                    slot.MCertificates[i - 1]->next = slot.MCertificates[i];
-                }*/
-            /*	for (size_t i = 1; i < slot.MCertificates.size() - 1; ++i) {
-                    slot.MCertificates[i]->next = slot.MCertificates[i - 1];
-                }*/
-        }
-        {
-            uint32_t rflags = 0;
-            // 				int ret =
-            // mbedtls_x509_crt_verify(slot.getLeafCert(), slot.GetRootCert(),
-            // nullptr, "intel test ECP256 responder cert", &rflags, nullptr,
-            // nullptr);
-            int ret = mbedtls_x509_crt_verify(
-                slot.getLeafCert(), slot.GetRootCert(), nullptr, nullptr,
-                &rflags, nullptr, nullptr);
-            Log.iprint("mbedtls_x509_crt_verify ret = ");
-            Log.println(ret);
-            if (ret)
-            {
-                std::string info;
-                info.resize(4096);
-                ret = mbedtls_x509_crt_verify_info(info.data(), info.size(), "",
-                                                   rflags);
-                SPDMCPP_ASSERT(ret >= 0);
-                info.resize(ret);
-                Log.print(info);
-                SPDMCPP_ASSERT(false);
-            }
-        }
-#endif
-        slot.markInfo(SlotInfoEnum::CERTIFICATES);
-
-        rs = tryChallenge();
-        SPDMCPP_LOG_TRACE_RS(Log, rs);
     }
+
+    // parse chain and store in the respective SlotClass
+    rs = parseCertChain(slot, cert);
+    SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+
+    if (Log.logLevel >= LogClass::Level::Informational)
+    {
+        for (mbedtls_x509_crt* c : slot.MCertificates)
+        {
+            Log.print(mbedtlsToInfoString(c));
+        }
+    }
+
+    rs = verifyCertificateChain(slot);
+    SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+
+    slot.markInfo(SlotInfoEnum::CERTIFICATES);
+
+    rs = tryChallenge();
+    SPDMCPP_LOG_TRACE_RS(Log, rs);
     return rs;
 }
 
@@ -652,7 +615,6 @@ RetStat ConnectionClass::tryGetCertificate(SlotIdx idx)
         return RetStat::ERROR_UNKNOWN;
     }
     std::vector<uint8_t>& cert = Slots[idx].Certificates;
-    // SPDMCPP_ASSERT(cert.empty());
     cert.clear();
 
     auto rs = tryGetCertificateChunk(idx);
@@ -745,14 +707,12 @@ RetStat ConnectionClass::tryGetMeasurements()
     DMTFMeasurements.clear();
 
     if (MeasurementIndices[255])
-    {
-        // this means we get all measurements at once
+    { // this means we get all measurements at once
         MeasurementIndices.reset();
         return tryGetMeasurements(255);
     }
     if (MeasurementIndices.any())
-    {
-        // this means we get some measurements one by one
+    { // this means we get some measurements one by one
         uint8_t idx = getFirstMeasurementIndex();
         MeasurementIndices.reset(idx);
         return tryGetMeasurements(idx);

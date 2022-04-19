@@ -474,6 +474,18 @@ class ConnectionClass : public NonCopyable
         }
     };
 
+    /** @brief Parses a buffer containing PacketCertificateChain as returned by
+     * a reposnder in CERTIFICATE_RESPONSE into SlotClass
+     *  @param[out] slot - SlotClass into which the certificates should be
+     * written
+     *  @param[in] buf - Buffer with data to parse
+     */
+    RetStat parseCertChain(SlotClass& slot, const std::vector<uint8_t>& buf);
+
+    /** @brief verifies the certificate chain is valid
+     */
+    RetStat verifyCertificateChain(const SlotClass& slot);
+
     /** @brief This function interprets the response previously stored in
      * ResponseBuffer
      *  @param[out] packet - The response type and variable into which the
