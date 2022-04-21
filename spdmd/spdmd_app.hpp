@@ -18,7 +18,7 @@ using namespace sdbusplus;
 namespace spdmd
 {
 
-class SpdmdApp : SpdmdAppContext
+class SpdmdApp : public SpdmdAppContext
 {
   public:
     SpdmdApp(const SpdmdApp&) = delete;
