@@ -62,6 +62,35 @@ class SpdmdAppContext
         return reportLog(Logging::server::Entry::Level::Notice, message);
     }
 
+  protected:
+    /** @brief Set of EIDs to automatically measure, if empty all devices are
+     * measured */
+    std::set<uint8_t> cachedMeasurements;
+
+    /** @brief Configured startup delay before performing automatic measurement
+     */
+    std::chrono::seconds measureOnDiscoveryDelay{60};
+
+    /** @brief Indicates whether devices will be automatically measured */
+    bool measureOnDiscovery = false;
+
+    /** @brief This indicates measureOnDiscovery is true and
+     * cachedMeasurementsDelay has already passed */
+    bool measureOnDiscoveryActive = false;
+
+    /** @brief call to check if the given EID should be measured right now */
+    bool shouldMeasureEID(uint8_t eid) const
+    {
+        if (measureOnDiscoveryActive)
+        {
+            if (cachedMeasurements.empty())
+                return true; // this means "all" was selected
+            if (cachedMeasurements.contains(eid))
+                return true;
+        }
+        return false;
+    }
+
   private:
     bool reportLog(Logging::server::Entry::Level severity,
                    const string& message)

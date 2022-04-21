@@ -52,6 +52,11 @@ class SpdmdApp : SpdmdAppContext
      */
     void createResponder(uint8_t eid, const std::string& inventoryPath);
 
+    /** @brief Sets up the automatic measurement delay according to commandline
+     * parameters
+     */
+    void setupMeasurementDelay();
+
     /** @brief Enter SPDM daemon into forever loop
      *
      */
@@ -90,6 +95,14 @@ class SpdmdApp : SpdmdAppContext
 
     /** @brief Buffer for packets received from responders over MCTP */
     std::vector<uint8_t> packetBuffer;
+
+    /** @brief Timer for handling the measurement delay
+     */
+    std::unique_ptr<Timer> measurementDelayTimer;
+
+    /** @brief Callback for the automatic measurement delay
+     */
+    void measurementDelayCallback();
 };
 
 } // namespace spdmd
