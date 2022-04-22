@@ -13,14 +13,19 @@ namespace spdmd
 
 constexpr size_t invalidEid = 256;
 
-const std::string inventoryDefaultPath = "/xyz/openbmc_project/inventory";
+dbus::ServiceHelper mctpControlService("/xyz/openbmc_project/mctp",
+                                       "org.freedesktop.DBus.ObjectManager",
+                                       "xyz.openbmc_project.MCTP.Control");
+dbus::ServiceHelper inventoryService("/xyz/openbmc_project/inventory",
+                                     "org.freedesktop.DBus.ObjectManager",
+                                     "xyz.openbmc_project.Inventory.Manager");
 
 MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
     bus(spdmApp.getBus()), spdmApp(spdmApp),
     mctpEndpointSignal(
         spdmApp.getBus(),
         sdbusplus::bus::match::rules::interfacesAdded(
-            "/xyz/openbmc_project/mctp"),
+            mctpControlService.getPath()),
         std::bind_front(&MctpDiscovery::newEndpointDiscovered, this))
 {
     dbus::ObjectValueTree objects;
@@ -29,16 +34,15 @@ MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
 
     try
     {
-        auto method = bus.new_method_call(
-            "xyz.openbmc_project.MCTP.Control", "/xyz/openbmc_project/mctp",
-            "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
+        auto method =
+            mctpControlService.new_method_call(bus, "GetManagedObjects");
         auto reply = bus.call(method);
         reply.read(objects);
     }
     catch (const std::exception& e)
     {
-        spdmApp.getLog().print(e.what());
-        return;
+        spdmApp.getLog().iprintln(e.what());
+        throw;
     }
 
     for ([[maybe_unused]] const auto& [objectPath, interfaces] : objects)
@@ -154,10 +158,8 @@ std::string MctpDiscovery::getInventoryPath(const std::string& uuid)
     // TODO couldn't test/verify so this is most likely invalid/broken
     try
     {
-        auto method = bus.new_method_call(
-            "xyz.openbmc_project.Inventory.Manager",
-            inventoryDefaultPath.c_str(), "org.freedesktop.DBus.ObjectManager",
-            "GetManagedObjects");
+        auto method =
+            inventoryService.new_method_call(bus, "GetManagedObjects");
         auto reply = bus.call(method);
         reply.read(objects);
 
@@ -169,7 +171,8 @@ std::string MctpDiscovery::getInventoryPath(const std::string& uuid)
                 auto id = getUUID(interfaces);
                 if (id == uuid)
                 {
-                    return inventoryDefaultPath + "/" + std::string(objectPath);
+                    return std::string(inventoryService.getPath()) + "/" +
+                           std::string(objectPath);
                 }
             }
         }
