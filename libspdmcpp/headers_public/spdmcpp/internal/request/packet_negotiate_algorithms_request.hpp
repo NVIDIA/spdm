@@ -9,10 +9,12 @@ struct PacketReqAlgStruct
 {
     AlgTypeEnum AlgType = AlgTypeEnum::UNKNOWN;
     uint8_t AlgCount = 0;
+
+    // the sizes of these arrays are the maximum possible sizes according to
+    // DSP0274_1.1.1 page 43
     std::array<uint8_t, 14> AlgSupported = {0};
     std::array<uint32_t, 15> AlgExternal = {0};
 
-    // 		static constexpr bool sizeIsConstant = false;
     static PacketReqAlgStruct buildSupported2(AlgTypeEnum type, uint8_t algsup0,
                                               uint8_t algsup1)
     {

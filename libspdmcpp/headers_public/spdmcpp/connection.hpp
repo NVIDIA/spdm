@@ -154,6 +154,9 @@ class ConnectionClass : public NonCopyable
 
     /** @brief Unregisters the TransportClass object, should be called before
      * destroying ConnectionClass
+     *  @param[in] transport - the parameter is provided just for verifying
+     * correctness (register and unregister calls must match and can't be
+     * redundant)
      */
     void unregisterTransport(TransportClass& trans)
     {

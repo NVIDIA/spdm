@@ -81,9 +81,28 @@ inline mbedtls_md_type_t toMbedtls(HashEnum algo)
     }
 }
 
+/** @class HashClass
+ *  @brief Abstraction for hashing data
+ *  @details For trivial cases HashClass::compute() can be used directly.
+ *  For more complicated usage patterns the following flow should be used:
+ *    HashClass hc;
+ *    hc.setup(HashEnum::SHA_256);
+ *    hc.update(data);
+ *    ...
+ *    hc.update(data);
+ *
+ *    std::vector<uint8_t> hash_value;
+ *    hc.hashFinish(hash_value);
+ */
 class HashClass
 {
   public:
+    /** @brief static method for quickly computing a hash for a buffer
+     *  @param[out] hash - The computed hash
+     *  @param[in] algo - The hash algorithm to use
+     *  @param[in] buf - Pointer to the data for which the hash is computed
+     *  @param[in] buf - Size of the data (in bytes)
+     */
     static void compute(std::vector<uint8_t>& hash, HashEnum algo,
                         const uint8_t* buf, size_t size)
     {
@@ -92,6 +111,16 @@ class HashClass
         ha.update(buf, size);
         ha.hashFinish(hash);
     }
+
+    /** @brief static method for quickly computing a hash for a buffer
+     *  @param[out] hash - The computed hash
+     *  @param[in] algo - The hash algorithm to use
+     *  @param[in] buf - vector containing data for which the hash is computed
+     *  @param[in] off - offset into the vector where the data should be read
+     * from (must be < buf.size()) defaults to 0, a.k.a. start of the buffer
+     *  @param[in] len - length of the data which will be hashed, by default
+     * buffer is read until the end
+     */
     static void compute(std::vector<uint8_t>& hash, HashEnum algo,
                         const std::vector<uint8_t>& buf, size_t off = 0,
                         size_t len = std::numeric_limits<size_t>::max())
@@ -104,14 +133,23 @@ class HashClass
         compute(hash, algo, &buf[off], std::min(buf.size() - off, len));
     }
 
+    /** @brief basic constructor
+     *  @details setup(algo) should be used afterwards
+     */
     HashClass()
     {
         mbedtls_md_init(&Ctx);
     }
+
+    /** @brief copy constructor, which clones the running state of the hash
+     */
     HashClass(const HashClass& other)
     {
         *this = other;
     }
+
+    /** @brief asignment operator, which clones the running state of the hash
+     */
     HashClass& operator=(const HashClass& other)
     {
         if (this == &other)
@@ -133,6 +171,9 @@ class HashClass
         mbedtls_md_free(&Ctx);
     }
 
+    /** @brief function used to setup a hash
+     *  @details should be called after the basic constructor or hashFinish()
+     */
     void setup(HashEnum algo)
     {
         algorithm = algo;
@@ -142,11 +183,16 @@ class HashClass
         mbedtls_md_starts(&Ctx);
     }
 
+    /** @brief function used to continue computing the hash with the given data
+     */
     void update(const uint8_t* buf, size_t size)
     {
         // TODO failure possible?
         mbedtls_md_update(&Ctx, buf, size);
     }
+
+    /** @brief function used to continue computing the hash with the given data
+     */
     void update(const std::vector<uint8_t>& buf, size_t off = 0,
                 size_t len = std::numeric_limits<size_t>::max())
     {
@@ -157,14 +203,21 @@ class HashClass
         mbedtls_md_update(&Ctx, &buf[off], len);
     }
 
-    //	void hash_output(uint8_t* buf, size_t size)
-
+    /** @brief function used to finish computing the hash and writing it out
+     *  @param[out] buf - pointer to the memory where the hash should be stored
+     *  @param[in] size - size of the memory buffer, must match the hash size
+     */
     void hashFinish(uint8_t* buf, size_t size)
     {
         SPDMCPP_ASSERT(mbedtls_md_get_size(getInfo()) == size);
         // TODO failure possible?
         mbedtls_md_finish(&Ctx, buf);
     }
+
+    /** @brief function used to finish computing the hash and writing it out
+     *  @param[out] buf - vector where the hash should be stored, will be
+     * resized accordingly
+     */
     void hashFinish(std::vector<uint8_t>& buf)
     {
         buf.resize(mbedtls_md_get_size(getInfo()));

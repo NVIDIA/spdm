@@ -69,10 +69,16 @@ class MctpDiscovery
     //     static constexpr auto mctpEndpointIntfPropertyUUID =
     //         "SupportedMessageTypes";
 
-    /** @brief Get EID value from MCTP objects, which implement SPDM  */
+    /** @brief Get EID value from MCTP objects, which implement SPDM
+     *  @returns EID or invalidEid (256) in case of error
+     */
     size_t getEid(const std::map<std::string, dbus::Value>& properties);
 
+    /** @brief Extract UUID value from the object's interfaces */
     std::string getUUID(const dbus::InterfaceMap& interfaces);
+
+    /** @brief get a path from the inventory to an object with the provided uuid
+     */
     std::string getInventoryPath(const std::string& uuid);
 };
 

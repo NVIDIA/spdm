@@ -12,6 +12,8 @@
 namespace spdmcpp
 {
 
+/** @brief helper to fill a buffer with random data
+ */
 inline void fillRandom(std::span<uint8_t, std::dynamic_extent> buf)
 {
     std::random_device rd;

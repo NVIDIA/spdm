@@ -20,7 +20,11 @@ namespace spdmcpp
 
 /** @class LogClass
  *  @brief Class for detailed logging of events
- *  @details Supports indentation and is meant to be used per-thread
+ *  @details Supports indentation and is meant to be used per-thread.
+ *  print() functions just print the data passed as the argument
+ *  iprint() template indents accordingly then prints data
+ *  println() template prints data then a newline
+ *  iprintln() template indents, prints data, then a newline
  */
 class LogClass
 {
@@ -54,6 +58,7 @@ class LogClass
 
     // TODO definitely more helpers needed, time-stamping?!
 
+    /** Various print variants */
     void print(char* str)
     {
         getOstream() << str;
@@ -179,6 +184,9 @@ class LogClass
         endl();
     }
 
+    /** @brief helper which prints the current indentation
+     *  @details typically shouldn't be used, use iprint(data) instead
+     */
     void printIndent()
     {
         auto i = Indentation;
@@ -187,10 +195,18 @@ class LogClass
             getOstream().put('\t');
         }
     }
+
+    /** @brief function for increasing the indentation level
+     *  @details typically shouldn't be used, use SPDMCPP_LOG_INDENT instead
+     */
     void indent()
     {
         ++Indentation;
     }
+
+    /** @brief function for decreasing the indentation level
+     *  @details typically shouldn't be used, use SPDMCPP_LOG_INDENT instead
+     */
     void unindent()
     {
         if (Indentation)
@@ -214,6 +230,11 @@ class LogClass
     std::ostream* Stream;
 }; // class LogClass
 
+/** @class IndentHelper
+ *  @brief Class for automatic indentation of blocks of code
+ *  @details Typically SPDMCPP_LOG_INDENT(log) should be used instead for
+ * convenience
+ */
 class IndentHelper
 {
   public:
@@ -240,7 +261,9 @@ class IndentHelper
 #define SPDMCPP_LOG_INDENT(log) IndentHelper log_indent_helper_##__LINE__((log))
 
 /** @class TraceHelper
- *  @brief Helper class for automatic indenting and unindenting blocks of code
+ *  @brief Helper class for automatic tracing of function calls with indentation
+ *  @details Typically SPDMCPP_LOG_TRACE_FUNC(log) or
+ * SPDMCPP_LOG_TRACE_BLOCK(log) should be used instead
  */
 class TraceHelper
 {

@@ -117,9 +117,11 @@ bool ConnectionClass::getCertificatesDER(std::vector<uint8_t>& buf,
 
     const SlotClass& slot = Slots[slotidx];
 
+    // Certificate offset tells the offset where the DER data starts.
     if (slot.CertificateOffset == 0 ||
         slot.CertificateOffset >= slot.Certificates.size())
     {
+        // Both of the above cases mean that we don't have valid DER data.
         return false;
     }
     auto src = std::span(slot.Certificates).subspan(slot.CertificateOffset);
@@ -416,6 +418,8 @@ RetStat ConnectionClass::tryNegotiateAlgorithms()
 template <>
 RetStat ConnectionClass::handleRecv<PacketAlgorithmsResponseVar>()
 {
+    // Note that this response is decoded and stored in the ConnectionClass
+    // member field because we need information from it for later operations
     PacketAlgorithmsResponseVar& resp = Algorithms;
     auto rs = interpretResponse(resp);
     SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
