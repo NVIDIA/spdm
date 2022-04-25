@@ -114,10 +114,16 @@ class EmulatorClient : public EmulatorBase
         spdmcpp::LogClass log(std::cout);
         TransportType = opt.TransportType;
 
+        int ioSocket = -1;
         SPDMCPP_ASSERT(!Transport);
         switch (TransportType)
         {
             case SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_MCTP:
+                if (!connect(opt.PortNumber))
+                {
+                    return false;
+                }
+                ioSocket = Socket;
                 IO = new EMUIOClass(*this);
                 Transport = new spdmcpp::EmuMctpTransportClass;
                 break;
@@ -128,22 +134,30 @@ class EmulatorClient : public EmulatorBase
                 // spdm_transport_pci_doe_decode_message);
                 break;
             case SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_NONE:
+                if (!connect(opt.PortNumber))
+                {
+                    return false;
+                }
+                ioSocket = Socket;
                 IO = new EMUIOClass(*this);
                 // TODO FIX Transport is now required
                 break;
             case SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_MCTP_DEMUX:
-                IO = new DemuxIOClass(*this);
+                {
+                    auto io = new spdmcpp::MctpIoClass(log);
+                    if (!io->createSocket()) {
+                        delete io;
+                        return false;
+                    }
+                    ioSocket = io->getSocket();
+                    IO = io;
+                }
                 Transport = new spdmcpp::MctpTransportClass(opt.EID);
                 break;
             default:
                 SPDMCPP_ASSERT(false);
                 deleteSpdmcpp();
                 return false;
-        }
-
-        if (!connect(opt.PortNumber))
-        {
-            return false;
         }
 
         if (!createSpdmcpp())
@@ -180,7 +194,7 @@ class EmulatorClient : public EmulatorBase
             }
         };
 
-        sdeventplus::source::IO io(event, Socket, EPOLLIN, std::move(callback));
+        sdeventplus::source::IO io(event, ioSocket, EPOLLIN, std::move(callback));
 
         if (TransportType ==
                 SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_MCTP ||
@@ -252,50 +266,6 @@ class EmulatorClient : public EmulatorBase
                     close(Socket);
                     Socket = -1;
                     return false;
-                }
-                std::cout << "Connect success!\n";
-                break;
-            }
-            case SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_MCTP_DEMUX:
-            {
-                Socket = socket(AF_UNIX, SOCK_SEQPACKET, 0);
-                if (Socket == -1)
-                {
-                    std::cerr << "Create Socket error: " << errno << std::endl;
-                    return false;
-                }
-
-                // NOLINTNEXTLINE cppcoreguidelines-avoid-c-arrays
-                const char path[] = "\0mctp-mux";
-                struct sockaddr_un addr
-                {};
-                addr.sun_family = AF_UNIX;
-                // NOLINTNEXTLINE cppcoreguidelines-pro-bounds-array-to-pointer-decay
-                memcpy(addr.sun_path, path, sizeof(path) - 1);
-
-                // NOLINTNEXTLINE cppcoreguidelines-pro-type-cstyle-cast
-                if (::connect(Socket, (struct sockaddr*)&addr,
-                              sizeof(path) + sizeof(addr.sun_family) - 1) == -1)
-                {
-                    std::cerr
-                        << "connect() error: " << errno << " "
-                        << strerror(errno)
-                        << " to mctp-demux-daemon; maybe it's not running?"
-                        << std::endl;
-                    close(Socket);
-                    Socket = -1;
-                    return false;
-                }
-                {
-                    auto type = spdmcpp::MCTPMessageTypeEnum::SPDM;
-                    ssize_t ret = write(Socket, &type, sizeof(type));
-                    if (ret == -1)
-                    {
-                        std::cerr
-                            << "Failed to write spdm code to socket, errno = "
-                            << -errno << "\n";
-                        return false;
-                    }
                 }
                 std::cout << "Connect success!\n";
                 break;

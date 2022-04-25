@@ -132,20 +132,6 @@ class EMUIOClass : public EmulatorBaseIOClass
         spdmcpp::timeout_us_t timeout = spdmcpp::TIMEOUT_US_INFINITE) override;
 };
 
-class DemuxIOClass : public EmulatorBaseIOClass
-{
-  public:
-    explicit DemuxIOClass(EmulatorBase& emu) : EmulatorBaseIOClass(emu)
-    {}
-
-    spdmcpp::RetStat write(
-        const std::vector<uint8_t>& buf,
-        spdmcpp::timeout_us_t timeout = spdmcpp::TIMEOUT_US_INFINITE) override;
-    spdmcpp::RetStat read(
-        std::vector<uint8_t>& buf,
-        spdmcpp::timeout_us_t timeout = spdmcpp::TIMEOUT_US_INFINITE) override;
-};
-
 // NOLINTNEXTLINE cppcoreguidelines-special-member-functions
 class EmulatorBase : public spdmcpp::NonCopyable
 {
