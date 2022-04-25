@@ -83,7 +83,7 @@ RetStat ConnectionClass::interpretResponse(T& packet, Targs... fargs)
 }
 
 template <typename T>
-RetStat ConnectionClass::asyncResponse()
+RetStat ConnectionClass::setupResponseWait(timeout_ms_t timeout, uint16_t retry)
 {
     Log.iprint("asyncResponse(");
     Log.print(typeid(T).name());
@@ -91,6 +91,17 @@ RetStat ConnectionClass::asyncResponse()
     SPDMCPP_ASSERT(WaitingForResponse == RequestResponseEnum::INVALID);
     SPDMCPP_STATIC_ASSERT(isResponse(T::requestResponseCode));
     WaitingForResponse = T::requestResponseCode;
+
+    if (timeout != TIMEOUT_MS_INFINITE)
+    {
+        auto rs = transport->setupTimeout(timeout);
+        if (isError(rs))
+        {
+            return rs;
+        }
+        SendTimeout = timeout;
+        SendRetry = retry;
+    }
     return RetStat::OK;
 }
 
@@ -106,20 +117,10 @@ RetStat ConnectionClass::sendRequestSetupResponse(const T& request,
     {
         return rs;
     }
-    rs = asyncResponse<R>();
+    rs = setupResponseWait<R>(timeout, retry);
     if (isError(rs))
     {
         return rs;
-    }
-    if (timeout != TIMEOUT_MS_INFINITE)
-    {
-        rs = transport->setupTimeout(timeout);
-        if (isError(rs))
-        {
-            return rs;
-        }
-        SendTimeout = timeout;
-        SendRetry = retry;
     }
     return rs;
 }
