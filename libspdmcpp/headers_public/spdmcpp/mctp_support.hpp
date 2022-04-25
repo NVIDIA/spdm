@@ -93,6 +93,14 @@ class MctpIoClass : public IOClass
     explicit MctpIoClass(LogClass& log) : Log(log)
     {}
 
+    ~MctpIoClass()
+    {
+        if (isSocketOpen())
+        {
+            deleteSocket();
+        }
+    }
+
     bool createSocket()
     {
         SPDMCPP_LOG_TRACE_FUNC(Log);
@@ -147,8 +155,10 @@ class MctpIoClass : public IOClass
                   timeout_us_t timeout = TIMEOUT_US_INFINITE) override;
     RetStat read(std::vector<uint8_t>& buf,
                  timeout_us_t timeout = TIMEOUT_US_INFINITE) override;
-    // 		RetStat setupTimeout(timeout_ms_t timeout) override;
-    //	private://TODO !!!
+    
+    int isSocketOpen() const { return Socket != -1; }
+    int getSocket() const { return Socket; }
+  private:
     LogClass& Log;
     int Socket = -1;
 };

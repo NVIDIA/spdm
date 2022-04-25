@@ -152,7 +152,7 @@ void SpdmdApp::connectMCTP()
         }
     };
 
-    mctpEvent = new sdeventplus::source::IO(event, mctpIo.Socket, EPOLLIN,
+    mctpEvent = new sdeventplus::source::IO(event, mctpIo.getSocket(), EPOLLIN,
                                             std::move(callback));
 }
 
