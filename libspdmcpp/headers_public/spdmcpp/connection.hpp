@@ -233,7 +233,7 @@ class ConnectionClass : public NonCopyable
     /** @brief Function to query whether the ConnectionClass has received
      * the given information from the responder for a specific Certificate Slot
      */
-    bool slothasInfo(SlotIdx slotidx, SlotInfoEnum info) const
+    bool slotHasInfo(SlotIdx slotidx, SlotInfoEnum info) const
     {
         SPDMCPP_ASSERT(slotidx < slotNum);
         return !!(

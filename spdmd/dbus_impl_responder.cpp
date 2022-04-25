@@ -56,7 +56,7 @@ void Responder::syncSlotsInfo()
     for (ConnectionClass::SlotIdx idx = 0; idx < ConnectionClass::slotNum;
          ++idx)
     {
-        if (connection.slothasInfo(idx, SlotInfoEnum::CERTIFICATES))
+        if (connection.slotHasInfo(idx, SlotInfoEnum::CERTIFICATES))
         {
             std::vector<uint8_t> cert;
             if (connection.getCertificatesDER(cert, idx))
@@ -159,7 +159,7 @@ spdmcpp::RetStat Responder::handleRecv(std::vector<uint8_t>& buf)
         updateLastUpdateTime();
         status(SPDMStatus::Success);
     }
-    else if (connection.slothasInfo(slotidx, SlotInfoEnum::CERTIFICATES))
+    else if (connection.slotHasInfo(slotidx, SlotInfoEnum::CERTIFICATES))
     {
         syncSlotsInfo();
         status(SPDMStatus::GettingMeasurements);

@@ -110,7 +110,7 @@ bool ConnectionClass::getCertificatesDER(std::vector<uint8_t>& buf,
     SPDMCPP_LOG_TRACE_FUNC(Log);
     buf.clear();
 
-    if (!slothasInfo(slotidx, SlotInfoEnum::CERTIFICATES))
+    if (!slotHasInfo(slotidx, SlotInfoEnum::CERTIFICATES))
     {
         return false;
     }
@@ -482,8 +482,8 @@ RetStat ConnectionClass::handleRecv<PacketDigestsResponseVar>()
         if (resp.Min.Header.Param2 & (1 << i))
         {
             if (i == CertificateSlotIdx &&
-                slothasInfo(i, SlotInfoEnum::DIGEST) &&
-                slothasInfo(i, SlotInfoEnum::CERTIFICATES) &&
+                slotHasInfo(i, SlotInfoEnum::DIGEST) &&
+                slotHasInfo(i, SlotInfoEnum::CERTIFICATES) &&
                 resp.Digests[i] == Slots[i].Digest)
             {
                 skipCert = true;
