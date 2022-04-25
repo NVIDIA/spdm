@@ -171,8 +171,7 @@ std::string MctpDiscovery::getInventoryPath(const std::string& uuid)
                 auto id = getUUID(interfaces);
                 if (id == uuid)
                 {
-                    return std::string(inventoryService.getPath()) + "/" +
-                           std::string(objectPath);
+                    return std::string(objectPath);
                 }
             }
         }
