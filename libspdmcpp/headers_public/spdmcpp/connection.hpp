@@ -138,8 +138,9 @@ class ConnectionClass : public NonCopyable
     /** @brief Main constructor
      *  @param[in] context - Context containing various common configuration and
      * information
+     *  @param[in] log - the LogClass to use for logging
      */
-    explicit ConnectionClass(const ContextClass& context);
+    explicit ConnectionClass(const ContextClass& context, LogClass& log);
     ~ConnectionClass() = default;
 
     /** @brief Registers a TransportClass for handling the connection (e.g. with
@@ -552,7 +553,7 @@ class ConnectionClass : public NonCopyable
 
     const ContextClass& context;
     TransportClass* transport = nullptr;
-    mutable LogClass Log;
+    LogClass& Log;
 
     /** @brief All versions reported by the Responder as being supported
      */

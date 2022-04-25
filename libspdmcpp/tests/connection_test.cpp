@@ -107,12 +107,13 @@ enum class MessageHashEnum : uint8_t
 class ConnectionFixture
 {
   public:
+    LogClass log;
     FixtureIOClass IO;
     FixtureTransportClass Trans;
     ContextClass Context;
     ConnectionClass Connection;
 
-    ConnectionFixture() : Connection(Context)
+    ConnectionFixture() : log(std::cout), Connection(Context, log)
     {
         Context.registerIo(&IO);
         Connection.registerTransport(Trans);

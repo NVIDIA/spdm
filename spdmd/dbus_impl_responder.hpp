@@ -79,7 +79,7 @@ class Responder : public ResponderIntf
 
     spdmcpp::LogClass& getLog()
     {
-        return connection.getLog();
+        return log;
     }
     sdeventplus::Event& getEvent()
     {
@@ -100,6 +100,7 @@ class Responder : public ResponderIntf
 
     SpdmdAppContext& appContext;
 
+    spdmcpp::LogClass log;
     spdmcpp::ConnectionClass connection;
     MctpTransportClass transport;
 

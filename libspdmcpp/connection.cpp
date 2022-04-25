@@ -20,8 +20,8 @@
 namespace spdmcpp
 {
 
-ConnectionClass::ConnectionClass(const ContextClass& cont) :
-    context(cont), Log(std::cout)
+ConnectionClass::ConnectionClass(const ContextClass& cont, LogClass& log) :
+    context(cont), Log(log)
 {
     resetConnection();
 }

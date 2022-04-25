@@ -111,6 +111,7 @@ class EmulatorClient : public EmulatorBase
   public:
     bool routine(ProgramOptions& opt)
     {
+        spdmcpp::LogClass log(std::cout);
         TransportType = opt.TransportType;
 
         SPDMCPP_ASSERT(!Transport);
@@ -150,7 +151,7 @@ class EmulatorClient : public EmulatorBase
             return false;
         }
 
-        spdmcpp::ConnectionClass con(*Context);
+        spdmcpp::ConnectionClass con(*Context, log);
 
         if (Transport)
         {
