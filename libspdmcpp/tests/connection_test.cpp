@@ -5,6 +5,7 @@
 #include <spdmcpp/context.hpp>
 #include <spdmcpp/connection.hpp>
 #include <spdmcpp/mbedtls_support.hpp>
+#include <spdmcpp/mctp_support.hpp>
 #include <spdmcpp/packet.hpp>
 
 #include <array>
@@ -28,46 +29,17 @@ using namespace spdmcpp;
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define EXPECT_FLAG_SET(value, flag) EXPECT_EQ((value) & (flag), (flag))
 
-class FixtureTransportClass : public TransportClass
+class FixtureTransportClass : public MctpTransportClass
 {
   public:
-    RetStat encodePre(std::vector<uint8_t>& /*buf*/, LayerState& lay) override
-    {
-        setLayerSize(lay, sizeof(HeaderType));
-        return RetStat::OK;
-    }
-    RetStat encodePost(std::vector<uint8_t>& buf, LayerState& lay) override
-    {
-        auto& header = getHeaderRef<HeaderType>(buf, lay);
-        header.pad0 = 19;
-        header.pad1 = 5;
-        return RetStat::OK;
-    }
-
-    RetStat decode(std::vector<uint8_t>& buf, LayerState& lay) override
-    {
-        setLayerSize(lay, sizeof(HeaderType));
-        const auto& header = getHeaderRef<HeaderType>(buf, lay);
-        if (header.pad0 != 19 || header.pad1 != 5)
-        {
-            return RetStat::ERROR_UNKNOWN;
-        }
-        return RetStat::OK;
-    }
+    FixtureTransportClass() : MctpTransportClass(14)
+    {}
 
     spdmcpp::RetStat setupTimeout(spdmcpp::timeout_us_t /*timeout*/) override
     {
         return RetStat::OK;
     }
 
-  protected:
-    struct HeaderType
-    {
-        uint8_t pad0;
-        uint8_t pad1;
-    };
-
-    uint8_t EID = 0;
 };
 
 class FixtureIOClass : public IOClass
@@ -184,12 +156,7 @@ class ConnectionFixture
             getHash(hashidx).update(buf, start);
         }
         Trans.encodePost(buf, lay);
-        /*
-        Log.iprint("Context->IO->write() buf.size() = ");
-        Log.println(buf.size());
-        Log.iprint("buf = ");
-        Log.println(buf);
-        */
+        
         return rs;
     }
 
