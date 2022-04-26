@@ -256,8 +256,7 @@ RetStat ConnectionClass::tryGetVersion()
     }
 
     PacketGetVersionRequest spdmRequest;
-    auto rs = sendRequestSetupResponse(spdmRequest, PacketVersionResponseVar(),
-                                       BufEnum::A, Timings.getT1());
+    auto rs = sendRequestSetupResponse<PacketVersionResponseVar>(spdmRequest, BufEnum::A, Timings.getT1());
     SPDMCPP_LOG_TRACE_RS(Log, rs);
     return rs;
 }
@@ -342,8 +341,7 @@ RetStat ConnectionClass::tryGetCapabilities()
         PacketGetCapabilities10Request request;
         request.Header.MessageVersion = MessageVersion;
 
-        rs = sendRequestSetupResponse(request, PacketCapabilitiesResponse(),
-                                      BufEnum::A, Timings.getT1());
+        rs = sendRequestSetupResponse<PacketCapabilitiesResponse>(request, BufEnum::A, Timings.getT1());
         SPDMCPP_LOG_TRACE_RS(Log, rs);
     }
     else
@@ -367,8 +365,7 @@ RetStat ConnectionClass::tryGetCapabilities()
         RequesterCapabilitiesFlags::HANDSHAKE_IN_THE_CLEAR_CAP;
             */
 
-        rs = sendRequestSetupResponse(request, PacketCapabilitiesResponse(),
-                                      BufEnum::A, Timings.getT1());
+        rs = sendRequestSetupResponse<PacketCapabilitiesResponse>(request, BufEnum::A, Timings.getT1());
         SPDMCPP_LOG_TRACE_RS(Log, rs);
     }
     return rs;
@@ -431,8 +428,7 @@ RetStat ConnectionClass::tryNegotiateAlgorithms()
 
     request.finalize();
 
-    auto rs = sendRequestSetupResponse(request, PacketAlgorithmsResponseVar(),
-                                       BufEnum::A, Timings.getT1());
+    auto rs = sendRequestSetupResponse<PacketAlgorithmsResponseVar>(request, BufEnum::A, Timings.getT1());
     SPDMCPP_LOG_TRACE_RS(Log, rs);
     return rs;
 }
@@ -464,8 +460,7 @@ RetStat ConnectionClass::tryGetDigest()
     PacketGetDigestsRequest request;
     request.Header.MessageVersion = MessageVersion;
 
-    auto rs = sendRequestSetupResponse(request, PacketDigestsResponseVar(),
-                                       BufEnum::B, Timings.getT1());
+    auto rs = sendRequestSetupResponse<PacketDigestsResponseVar>(request, BufEnum::B, Timings.getT1());
     SPDMCPP_LOG_TRACE_RS(Log, rs);
     return rs;
 }
@@ -536,8 +531,7 @@ RetStat ConnectionClass::tryGetCertificateChunk(SlotIdx slotidx)
     request.Offset = cert.size();
     request.Length = std::numeric_limits<uint16_t>::max();
 
-    auto rs = sendRequestSetupResponse(request, PacketCertificateResponseVar(),
-                                       BufEnum::B, Timings.getT1());
+    auto rs = sendRequestSetupResponse<PacketCertificateResponseVar>(request, BufEnum::B, Timings.getT1());
     SPDMCPP_LOG_TRACE_RS(Log, rs);
     return rs;
 }
@@ -636,8 +630,7 @@ RetStat ConnectionClass::tryChallenge()
     // 		request.Header.Param2 = packetDecodeInfo.ChallengeParam2 = 1;
     fillRandom(request.Nonce);
 
-    auto rs = sendRequestSetupResponse(
-        request, PacketChallengeAuthResponseVar(), BufEnum::C, Timings.getT2());
+    auto rs = sendRequestSetupResponse<PacketChallengeAuthResponseVar>(request, BufEnum::C, Timings.getT2());
     SPDMCPP_LOG_TRACE_RS(Log, rs);
     return rs;
 }
@@ -751,8 +744,7 @@ RetStat ConnectionClass::tryGetMeasurements(uint8_t idx)
 
     request.Min.Header.Param2 = idx;
 
-    auto rs = sendRequestSetupResponse(request, PacketMeasurementsResponseVar(),
-                                       BufEnum::L, Timings.getT2());
+    auto rs = sendRequestSetupResponse<PacketMeasurementsResponseVar>(request, BufEnum::L, Timings.getT2());
     SPDMCPP_LOG_TRACE_RS(Log, rs);
     return rs;
 }

@@ -105,9 +105,8 @@ RetStat ConnectionClass::setupResponseWait(timeout_ms_t timeout, uint16_t retry)
     return RetStat::OK;
 }
 
-template <typename T, typename R>
+template <typename R, typename T>
 RetStat ConnectionClass::sendRequestSetupResponse(const T& request,
-                                                  const R& /*response*/,
                                                   BufEnum bufidx,
                                                   timeout_ms_t timeout,
                                                   uint16_t retry)

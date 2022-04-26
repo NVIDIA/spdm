@@ -508,8 +508,8 @@ class ConnectionClass : public NonCopyable
      *  @param[in] retry - The number of times the request should be
      * automatically retried if a response was not received
      */
-    template <typename T, typename R>
-    RetStat sendRequestSetupResponse(const T& request, const R& response,
+    template <typename R, typename T>
+    RetStat sendRequestSetupResponse(const T& request,
                                      BufEnum bufidx = BufEnum::NUM,
                                      timeout_ms_t timeout = TIMEOUT_MS_INFINITE,
                                      uint16_t retry = 4);
