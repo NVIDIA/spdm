@@ -116,10 +116,6 @@ class IOClass : NonCopyable
                           timeout_us_t timeout = TIMEOUT_US_INFINITE) = 0;
     virtual RetStat read(std::vector<uint8_t>& buf,
                          timeout_us_t timeout = TIMEOUT_US_INFINITE) = 0;
-    virtual RetStat setupTimeout(timeout_us_t /*timeout*/)
-    {
-        return RetStat::ERROR_UNKNOWN;
-    }
 };
 
 } // namespace spdmcpp

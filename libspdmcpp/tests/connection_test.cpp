@@ -87,13 +87,13 @@ class ConnectionFixture
 
     ConnectionFixture() : log(std::cout), Connection(Context, log)
     {
-        Context.registerIo(&IO);
+        Context.registerIo(IO);
         Connection.registerTransport(Trans);
     }
     ~ConnectionFixture()
     {
         Connection.unregisterTransport(Trans);
-        Context.unregisterIo(&IO);
+        Context.unregisterIo(IO);
     }
 
     HashClass& getHash(MessageHashEnum hashidx)

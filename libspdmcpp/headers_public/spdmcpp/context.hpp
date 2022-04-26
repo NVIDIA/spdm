@@ -29,14 +29,14 @@ class ContextClass
                   std::greater());
     }
 
-    void registerIo(IOClass* io)
+    void registerIo(IOClass& io)
     {
         SPDMCPP_ASSERT(!IO);
-        IO = io;
+        IO = &io;
     }
-    void unregisterIo(IOClass* io)
+    void unregisterIo(IOClass& io)
     {
-        SPDMCPP_ASSERT(IO == io);
+        SPDMCPP_ASSERT(IO == &io);
         IO = nullptr;
     }
 

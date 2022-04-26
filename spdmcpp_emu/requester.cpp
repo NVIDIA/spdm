@@ -112,65 +112,52 @@ class EmulatorClient : public EmulatorBase
     bool routine(ProgramOptions& opt)
     {
         spdmcpp::LogClass log(std::cout);
-        TransportType = opt.TransportType;
-
-        int ioSocket = -1;
+        
         SPDMCPP_ASSERT(!Transport);
-        switch (TransportType)
+        SPDMCPP_ASSERT(!IO);
+        
+        int ioSocket = -1;
+        if (opt.TransportType == SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_MCTP_DEMUX)
         {
+            auto io = std::make_unique<spdmcpp::MctpIoClass>(log);
+            if (!io->createSocket()) {
+                io.reset(nullptr);
+                return false;
+            }
+            ioSocket = io->getSocket();
+            IO.reset(io.release());
+
+            Transport = std::make_unique<spdmcpp::MctpTransportClass>(opt.EID);
+        }
+        else
+        {
+            auto io = std::make_unique<EmulatorIOClass>(opt.TransportType);
+            if (!io->createSocket(opt.PortNumber))
+            {
+                io.reset(nullptr);
+                return false;
+            }
+            ioSocket = io->getSocket();
+            IO.reset(io.release());
+
+            switch (opt.TransportType) {
             case SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_MCTP:
-                if (!connect(opt.PortNumber))
-                {
-                    return false;
-                }
-                ioSocket = Socket;
-                IO = new EMUIOClass(*this);
-                Transport = new spdmcpp::EmuMctpTransportClass;
-                break;
-            case SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_PCI_DOE:
-                SPDMCPP_ASSERT(false);
-                //	spdm_registerTransport_layer_func(spdm_context,
-                // spdm_transport_pci_doe_encode_message,
-                // spdm_transport_pci_doe_decode_message);
-                break;
-            case SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_NONE:
-                if (!connect(opt.PortNumber))
-                {
-                    return false;
-                }
-                ioSocket = Socket;
-                IO = new EMUIOClass(*this);
-                // TODO FIX Transport is now required
-                break;
-            case SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_MCTP_DEMUX:
-                {
-                    auto io = new spdmcpp::MctpIoClass(log);
-                    if (!io->createSocket()) {
-                        delete io;
-                        return false;
-                    }
-                    ioSocket = io->getSocket();
-                    IO = io;
-                }
-                Transport = new spdmcpp::MctpTransportClass(opt.EID);
+                Transport = std::make_unique<EmulatorTransportClass>(spdmcpp::MCTPMessageTypeEnum::SPDM);
                 break;
             default:
-                SPDMCPP_ASSERT(false);
-                deleteSpdmcpp();
-                return false;
+                Transport = std::make_unique<EmulatorTransportClass>();
+                break;
+            }
         }
 
-        if (!createSpdmcpp())
+        if (!createContext())
         {
             return false;
         }
 
         spdmcpp::ConnectionClass con(*Context, log);
 
-        if (Transport)
-        {
-            con.registerTransport(*Transport);
-        }
+        con.registerTransport(*Transport);
 
         auto callback = [this, &con](sdeventplus::source::IO& /*io*/,
                                      int /*fd*/, uint32_t revents) {
@@ -196,86 +183,19 @@ class EmulatorClient : public EmulatorBase
 
         sdeventplus::source::IO io(event, ioSocket, EPOLLIN, std::move(callback));
 
-        if (TransportType ==
-                SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_MCTP ||
-            TransportType ==
-                SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_PCI_DOE)
-        {
-            BufferType msg("Client Hello!");
-            auto response = SocketCommandEnum::SOCKET_SPDM_COMMAND_UNKOWN;
-            BufferType recv;
-            if (!sendMessageReceiveResponse(
-                    SocketCommandEnum::SOCKET_SPDM_COMMAND_TEST, msg, response,
-                    recv))
-            {
-                return false;
-            }
-            SPDMCPP_ASSERT(response ==
-                           SocketCommandEnum::SOCKET_SPDM_COMMAND_TEST);
-            std::cout << "Got back: " << recv.data() << std::endl;
-        }
-
         auto rs = con.refreshMeasurements(0);
         SPDMCPP_LOG_TRACE_RS(con.getLog(), rs);
 
         std::cout << "press enter to continue...\n";
         event.loop();
 
-        if (Transport)
-        {
-            con.unregisterTransport(*Transport);
-            delete Transport;
-            Transport = nullptr;
-        }
-        deleteSpdmcpp();
+        con.unregisterTransport(*Transport);
+        Transport.reset(nullptr);
+
+        deleteContext();
         return true;
     }
 
-  private:
-    bool connect(uint16_t port)
-    {
-        switch (TransportType)
-        {
-            case SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_MCTP:
-            case SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_PCI_DOE:
-            case SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_NONE:
-            {
-                if (!createSocket())
-                {
-                    return false;
-                }
-                struct in_addr mIpAddress = {0x0100007F}; // TODO option?
-                struct sockaddr_in serverAddr
-                {};
-                serverAddr.sin_family = AF_INET;
-                memcpy(&serverAddr.sin_addr.s_addr, &mIpAddress,
-                       sizeof(struct in_addr));
-                // NOLINTNEXTLINE cppcoreguidelines-pro-bounds-array-to-pointer-decay
-                serverAddr.sin_port = htons(port);
-                // NOLINTNEXTLINE cppcoreguidelines-pro-bounds-array-to-pointer-decay
-                memset(serverAddr.sin_zero, 0, sizeof(serverAddr.sin_zero));
-
-                // NOLINTNEXTLINE cppcoreguidelines-pro-type-cstyle-cast
-                if (::connect(Socket, (struct sockaddr*)&serverAddr,
-                              sizeof(serverAddr)) == -1)
-                {
-                    std::cerr << "connect() error: " << errno << " "
-                              << strerror(errno) << " to port: '" << port
-                              << "'; spdm_responder_emu not running?"
-                              << std::endl;
-                    close(Socket);
-                    Socket = -1;
-                    return false;
-                }
-                std::cout << "Connect success!\n";
-                break;
-            }
-            default:
-                SPDMCPP_ASSERT(false);
-                return false;
-        }
-        return true;
-    }
 };
 
 int main(int argc, char** argv)

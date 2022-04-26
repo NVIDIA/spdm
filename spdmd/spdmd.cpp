@@ -23,10 +23,14 @@ SpdmdApp::SpdmdApp() :
     SpdmdAppContext(sdeventplus::Event::get_default(), bus::new_system(),
                     std::cout),
     mctpIo(getLog())
-{}
+{
+    context.registerIo(mctpIo);
+}
 
 SpdmdApp::~SpdmdApp()
 {
+    context.unregisterIo(mctpIo);
+
     delete mctpEvent;
 }
 
@@ -103,8 +107,6 @@ void SpdmdApp::connectMCTP()
     {
         throw std::runtime_error("Couldn't create mctp socket");
     }
-
-    context.registerIo(&mctpIo);
 
     auto callback = [this](sdeventplus::source::IO& /*io*/, int /*fd*/,
                            uint32_t revents) {

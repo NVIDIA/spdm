@@ -36,38 +36,6 @@
 #include <spdmcpp/context.hpp>
 #include <spdmcpp/connection.hpp>
 
-namespace spdmcpp
-{
-class EmuMctpTransportClass :
-    public TransportClass // for matching dmtf spdm emulator --trans MCTP
-{
-  public:
-    RetStat encodePre(std::vector<uint8_t>& /*buf*/, LayerState& lay) override
-    {
-        setLayerSize(lay, sizeof(HeaderType));
-        return spdmcpp::RetStat::OK;
-    }
-    RetStat encodePost(std::vector<uint8_t>& buf, LayerState& lay) override
-    {
-        auto& header = getHeaderRef<HeaderType>(buf, lay);
-        header.MessageType = MCTPMessageTypeEnum::SPDM;
-        return RetStat::OK;
-    }
-
-    RetStat decode(std::vector<uint8_t>& /*buf*/, LayerState& lay) override
-    {
-        setLayerSize(lay, sizeof(HeaderType));
-        return spdmcpp::RetStat::OK;
-    }
-
-  protected:
-    struct HeaderType
-    {
-        MCTPMessageTypeEnum MessageType;
-    };
-};
-} // namespace spdmcpp
-
 enum class SocketCommandEnum : uint32_t
 {
     SOCKET_SPDM_COMMAND_NORMAL = 0x0001,
@@ -100,29 +68,86 @@ struct BufferType : public std::vector<uint8_t>
     }
 };
 
-class EmulatorBase;
-
-class EmulatorBaseIOClass : public spdmcpp::IOClass
+class EmulatorTransportClass :
+    public spdmcpp::TransportClass // for matching dmtf spdm emulator --trans MCTP
 {
   public:
-    explicit EmulatorBaseIOClass(EmulatorBase& emu);
+    EmulatorTransportClass()
+    {
+    }
 
-    spdmcpp::RetStat setupTimeout(spdmcpp::timeout_us_t timeout) override;
+    template<typename T>
+    explicit EmulatorTransportClass(const T& header)
+    {
+        headerData.resize(sizeof(T));
+        memcpy(headerData.data(), &header, sizeof(T));
+    }
+
+    spdmcpp::RetStat encodePre(std::vector<uint8_t>& buf, LayerState& lay) override
+    {
+        setLayerSize(lay, headerData.size());
+        if (!headerData.empty()) {
+            buf.resize(lay.getEndOffset());
+            std::copy(headerData.begin(), headerData.end(), buf.begin() + lay.getOffset());
+        }
+        return spdmcpp::RetStat::OK;
+    }
+    spdmcpp::RetStat encodePost(std::vector<uint8_t>& /*buf*/, LayerState& /*lay*/) override
+    {
+        return spdmcpp::RetStat::OK;
+    }
+
+    spdmcpp::RetStat decode(std::vector<uint8_t>& /*buf*/, LayerState& lay) override
+    {
+        setLayerSize(lay, headerData.size());
+        return spdmcpp::RetStat::OK;
+    }
+
+    spdmcpp::RetStat setupTimeout(spdmcpp::timeout_ms_t /*timeout*/) override
+    {
+        //pretend it's working fine, we don't actually need it at the moment
+        return spdmcpp::RetStat::OK;
+    }
 
   protected:
-    EmulatorBase& emulator;
-
-  private:
-    static constexpr sdeventplus::ClockId cid = sdeventplus::ClockId::Monotonic;
-    sdeventplus::source::Time<sdeventplus::ClockId::Monotonic>* timeout =
-        nullptr;
+    std::vector<uint8_t> headerData;
 };
 
-class EMUIOClass : public EmulatorBaseIOClass
+class EmulatorIOClass : public spdmcpp::IOClass
 {
   public:
-    explicit EMUIOClass(EmulatorBase& emu) : EmulatorBaseIOClass(emu)
-    {}
+    explicit EmulatorIOClass(SocketTransportTypeEnum transport);
+    ~EmulatorIOClass();
+
+    bool createSocket(uint16_t port);
+    void deleteSocket();
+
+    bool writeBytes(const uint8_t* buf, size_t size);
+    bool readBytes(uint8_t* buf, size_t size);
+
+    bool writeBytes(const std::vector<uint8_t>& buf);
+    bool readBytes(std::vector<uint8_t>& buf);
+
+    bool writeData32(uint32_t data);
+    bool readData32(uint32_t* data);
+
+    bool writeData(SocketCommandEnum cmd);
+    bool readData(SocketCommandEnum& cmd);
+
+    bool sendBuf(const std::vector<uint8_t>& buf);
+
+    bool receiveBuf(std::vector<uint8_t>& buf);
+
+    bool sendPlatformData(SocketCommandEnum command,
+                          const std::vector<uint8_t>& buf);
+
+    bool receivePlatformData(SocketCommandEnum& command,
+                             std::vector<uint8_t>& recv);
+
+    bool sendMessageReceiveResponse(SocketCommandEnum command,
+                                    const BufferType& send,
+                                    SocketCommandEnum& response,
+                                    BufferType& recv);
 
     spdmcpp::RetStat write(
         const std::vector<uint8_t>& buf,
@@ -130,6 +155,14 @@ class EMUIOClass : public EmulatorBaseIOClass
     spdmcpp::RetStat read(
         std::vector<uint8_t>& buf,
         spdmcpp::timeout_us_t timeout = spdmcpp::TIMEOUT_US_INFINITE) override;
+    
+    int getSocket() const { return socket; }
+  protected:
+    // static constexpr sdeventplus::ClockId cid = sdeventplus::ClockId::Monotonic;
+    // sdeventplus::source::Time<sdeventplus::ClockId::Monotonic>* timeout =
+        // nullptr;
+    SocketTransportTypeEnum transportType = SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_UNKNOWN;
+    int socket = -1;
 };
 
 // NOLINTNEXTLINE cppcoreguidelines-special-member-functions
@@ -138,248 +171,31 @@ class EmulatorBase : public spdmcpp::NonCopyable
   public:
     EmulatorBase() : event(sdeventplus::Event::get_default())
     {}
-    explicit EmulatorBase(int socket) :
-        event(sdeventplus::Event::get_default()), Socket(socket)
-    {}
     ~EmulatorBase()
     {
-        closeSocketIfCreated();
         SPDMCPP_ASSERT(!Context);
+        SPDMCPP_ASSERT(!IO);
     }
 
-    bool writeBytes(const uint8_t* buf, size_t size)
-    {
-        size_t sent = 0;
-        while (sent < size)
-        {
-            // NOLINTNEXTLINE cppcoreguidelines-pro-bounds-pointer-arithmetic
-            ssize_t ret = send(Socket, (void*)(buf + sent), size - sent, 0);
-            if (ret == -1)
-            {
-                std::cerr << "EmulatorBase::write_bytes() errno = " << errno
-                          << std::endl;
-                return false;
-            }
-            sent += ret;
-        }
-        return true;
-    }
-    bool readBytes(uint8_t* buf, size_t size)
-    {
-        size_t done = 0;
-        while (done < size)
-        {
-            // NOLINTNEXTLINE cppcoreguidelines-pro-bounds-pointer-arithmetic
-            ssize_t result = recv(Socket, (void*)(buf + done), size - done, 0);
-            if (result == -1)
-            {
-                std::cerr << "EmulatorBase::read_bytes() errno = " << errno
-                          << std::endl;
-                return false;
-            }
-            if (result == 0)
-            {
-                return false;
-            }
-            done += result;
-        }
-        return true;
-    }
-
-    bool writeBytes(const std::vector<uint8_t>& buf)
-    {
-        return writeBytes(buf.data(), buf.size());
-    }
-    bool readBytes(std::vector<uint8_t>& buf)
-    {
-        return readBytes(buf.data(), buf.size());
-    }
-
-    bool writeData32(uint32_t data)
-    {
-        data = htonl(data);
-        // NOLINTNEXTLINE cppcoreguidelines-pro-type-cstyle-cast
-        return writeBytes((uint8_t*)&data, sizeof(data));
-    }
-    bool readData32(uint32_t* data)
-    {
-        // NOLINTNEXTLINE cppcoreguidelines-pro-type-cstyle-cast
-        if (!readBytes((uint8_t*)data, sizeof(*data)))
-        {
-            return false;
-        }
-        *data = ntohl(*data);
-        return true;
-    }
-
-    bool writeData(SocketCommandEnum cmd)
-    {
-        return writeData32(static_cast<uint32_t>(cmd));
-    }
-    bool readData(SocketCommandEnum& cmd)
-    {
-        uint32_t data = 0;
-        if (!readData32(&data))
-        {
-            return false;
-        }
-        cmd = static_cast<SocketCommandEnum>(data);
-        return true;
-    }
-
-    bool sendBuf(const std::vector<uint8_t>& buf)
-    {
-        if (!writeData32(buf.size()))
-        {
-            return false;
-        }
-        if (!writeBytes(buf))
-        {
-            return false;
-        }
-        return true;
-    }
-
-    bool receiveBuf(std::vector<uint8_t>& buf)
-    {
-        uint32_t size = 0;
-        if (!readData32(&size))
-        {
-            return false;
-        }
-        buf.resize(size);
-        if (!readBytes(buf))
-        {
-            return false;
-        }
-        return true;
-    }
-
-    bool sendPlatformData(SocketCommandEnum command,
-                          const std::vector<uint8_t>& buf)
-    {
-        if (!writeData(command))
-        {
-            return false;
-        }
-        if (!writeData32(static_cast<uint32_t>(TransportType)))
-        {
-            return false;
-        }
-        if (!sendBuf(buf))
-        {
-            return false;
-        }
-
-        return true;
-    }
-
-    bool receivePlatformData(SocketCommandEnum& command,
-                             std::vector<uint8_t>& recv)
-    {
-        if (!readData(command))
-        {
-            return false;
-        }
-        {
-            uint32_t transportType = 0;
-            if (!readData32(&transportType))
-            {
-                return false;
-            }
-            SPDMCPP_ASSERT(static_cast<SocketTransportTypeEnum>(
-                               transportType) == TransportType);
-        }
-        if (!receiveBuf(recv))
-        {
-            return false;
-        }
-        return true;
-    }
-
-    bool sendMessageReceiveResponse(SocketCommandEnum command,
-                                    const BufferType& send,
-                                    SocketCommandEnum& response,
-                                    BufferType& recv)
-    {
-        if (!sendPlatformData(command, send))
-        {
-            std::cerr << "sendPlatformData error: " << errno << std::endl;
-            return false;
-        }
-        if (!receivePlatformData(response, recv))
-        {
-            std::cerr << "receivePlatformData error: " << errno << std::endl;
-            return false;
-        }
-        return true;
-    }
-
-    spdmcpp::IOClass& getIO()
-    {
-        return *IO;
-    }
-    spdmcpp::TransportClass& getTransport()
-    {
-        return *Transport;
-    }
-    spdmcpp::ConnectionClass& getConnection()
-    {
-        return *connection;
-    }
-    int getSocket() const
-    {
-        return Socket;
-    }
     sdeventplus::Event event;
 
   protected:
-    int Socket = -1;
-    spdmcpp::ContextClass* Context = nullptr;
-    spdmcpp::ConnectionClass* connection = nullptr;
+    std::unique_ptr<spdmcpp::ContextClass> Context;
+    std::unique_ptr<spdmcpp::ConnectionClass> connection;
 
-    spdmcpp::IOClass* IO = nullptr;
+    std::unique_ptr<spdmcpp::IOClass> IO;
+    std::unique_ptr<spdmcpp::TransportClass> Transport;
 
-    SocketTransportTypeEnum TransportType =
-        SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_UNKNOWN;
-    spdmcpp::TransportClass* Transport = nullptr;
-
-    bool createSocket()
+    bool createContext()
     {
-        SPDMCPP_ASSERT(Socket == -1);
-        Socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-        if (Socket == -1)
-        {
-            std::cerr << "Create Socket error: " << errno << std::endl;
-            return false;
-        }
+        Context = std::make_unique<spdmcpp::ContextClass>();
+        Context->registerIo(*IO);
         return true;
     }
-    void closeSocket()
+    void deleteContext()
     {
-        SPDMCPP_ASSERT(Socket != -1);
-        close(Socket);
-        Socket = -1;
-    }
-    void closeSocketIfCreated()
-    {
-        if (Socket != -1)
-        {
-            closeSocket();
-        }
-    }
-
-    bool createSpdmcpp()
-    {
-        Context = new spdmcpp::ContextClass;
-        Context->registerIo(IO);
-        return true;
-    }
-    void deleteSpdmcpp()
-    {
-        Context->unregisterIo(IO);
-        delete IO;
-        delete Context;
-        Context = nullptr;
+        Context->unregisterIo(*IO);
+        IO.reset(nullptr);
+        Context.reset(nullptr);
     }
 };

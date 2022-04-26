@@ -198,14 +198,5 @@ inline RetStat MctpIoClass::read(std::vector<uint8_t>& buf,
     buf.resize(result);
     return RetStat::OK;
 }
-#if 0
-	inline RetStat MctpIoClass::setupTimeout(timeout_ms_t /*timeout*/)
-	{
-		SPDMCPP_LOG_TRACE_FUNC(Log);
-	/*	constexpr sdeventplus::ClockId cid = sdeventplus::ClockId::Monotonic;
-		Emulator.Timeout->set_time(sdeventplus::Clock<cid>(Emulator.Event).now() + std::chrono::microseconds{timeout});
-		Emulator.Timeout->set_enabled(sdeventplus::source::Enabled::OneShot);*/
-		return RetStat::OK;
-	}
-#endif
+
 } // namespace spdmcpp
