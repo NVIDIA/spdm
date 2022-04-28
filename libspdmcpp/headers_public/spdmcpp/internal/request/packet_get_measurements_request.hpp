@@ -61,7 +61,7 @@ struct PacketGetMeasurementsRequestVar
 
     uint16_t getSize() const
     {
-        size_t size = 0;
+        uint16_t size = 0;
         size += sizeof(Min);
         if (Min.hasNonce())
         {
@@ -71,8 +71,7 @@ struct PacketGetMeasurementsRequestVar
                 size += sizeof(SlotIDParam);
             }
         }
-        SPDMCPP_ASSERT(size <= std::numeric_limits<uint16_t>::max());
-        return static_cast<uint16_t>(size);
+        return size;
     }
 
     bool operator==(const PacketGetMeasurementsRequestVar& other) const

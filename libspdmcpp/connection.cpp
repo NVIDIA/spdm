@@ -105,7 +105,7 @@ void ConnectionClass::resetConnection()
 }
 
 bool ConnectionClass::getCertificatesDER(std::vector<uint8_t>& buf,
-                                         uint8_t slotidx) const
+                                         SlotIdx slotidx) const
 {
     SPDMCPP_LOG_TRACE_FUNC(Log);
     buf.clear();
