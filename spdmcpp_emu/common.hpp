@@ -68,13 +68,12 @@ struct BufferType : public std::vector<uint8_t>
     }
 };
 
+// NOLINTNEXTLINE cppcoreguidelines-special-member-functions
 class EmulatorTransportClass :
     public spdmcpp::TransportClass // for matching dmtf spdm emulator --trans MCTP
 {
   public:
-    EmulatorTransportClass()
-    {
-    }
+    EmulatorTransportClass() = default;
 
     template<typename T>
     explicit EmulatorTransportClass(const T& header)
@@ -88,7 +87,8 @@ class EmulatorTransportClass :
         setLayerSize(lay, headerData.size());
         if (!headerData.empty()) {
             buf.resize(lay.getEndOffset());
-            std::copy(headerData.begin(), headerData.end(), buf.begin() + lay.getOffset());
+            auto start = static_cast<std::vector<uint8_t>::difference_type>(lay.getOffset());
+            std::copy(headerData.begin(), headerData.end(), std::next(buf.begin(), start));
         }
         return spdmcpp::RetStat::OK;
     }
@@ -113,11 +113,12 @@ class EmulatorTransportClass :
     std::vector<uint8_t> headerData;
 };
 
+// NOLINTNEXTLINE cppcoreguidelines-special-member-functions
 class EmulatorIOClass : public spdmcpp::IOClass
 {
   public:
     explicit EmulatorIOClass(SocketTransportTypeEnum transport);
-    ~EmulatorIOClass();
+    ~EmulatorIOClass() override;
 
     bool createSocket(uint16_t port);
     void deleteSocket();

@@ -84,9 +84,13 @@ class SpdmdAppContext
         if (measureOnDiscoveryActive)
         {
             if (cachedMeasurements.empty())
+            {
                 return true; // this means "all" was selected
+            }
             if (cachedMeasurements.contains(eid))
+            {
                 return true;
+            }
         }
         return false;
     }

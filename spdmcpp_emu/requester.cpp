@@ -125,7 +125,7 @@ class EmulatorClient : public EmulatorBase
                 return false;
             }
             ioSocket = io->getSocket();
-            IO.reset(io.release());
+            IO = std::move(io);
 
             Transport = std::make_unique<spdmcpp::MctpTransportClass>(opt.EID);
         }
@@ -138,7 +138,7 @@ class EmulatorClient : public EmulatorBase
                 return false;
             }
             ioSocket = io->getSocket();
-            IO.reset(io.release());
+            IO = std::move(io);
 
             switch (opt.TransportType) {
             case SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_MCTP:

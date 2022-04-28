@@ -42,16 +42,17 @@ struct ServiceHelper
     /**
      *  @brief Constructor
      *
-     *  @param[in] path_ - DBUS object path, must be a constant literal that's
+     *  @param[in] aPath - DBUS object path, must be a constant literal that's
      * never deallocated
-     *  @param[in] interface_ - DBUS Interface, must be a constant literal
+     *  @param[in] anInterface - DBUS Interface, must be a constant literal
      * that's never deallocated
+     *  @param[in] adefaultService - DBUS Service to serve as the default in case getService fails
      *
      */
-    constexpr ServiceHelper(const char* path_, const char* interface_,
-                            const char* defaultService_ = nullptr) :
-        path(path_),
-        interface(interface_), defaultService(defaultService_)
+    constexpr ServiceHelper(const char* aPath, const char* anInterface,
+                            const char* adefaultService = nullptr) :
+        path(aPath),
+        interface(anInterface), defaultService(adefaultService)
     {}
 
     /**
@@ -116,6 +117,7 @@ struct ServiceHelper
      *
      *  @throw sdbusplus::exception::exception when it fails
      */
+    // NOLINTNEXTLINE readability-identifier-naming
     auto new_method_call(sdbusplus::bus::bus& bus, const char* method) const
     {
         return bus.new_method_call(getServiceWithFallback(bus).c_str(), path,

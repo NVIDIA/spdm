@@ -69,10 +69,13 @@ void Responder::syncSlotsInfo()
     {
         const ConnectionClass::DMTFMeasurementsContainer& src =
             connection.getDMTFMeasurements();
-        for (const auto& field : src)
-        {
-            meas.emplace_back(field.first, field.second.Min.Type, field.second.ValueVector);
-        }
+
+        std::transform(src.begin(), src.end(), std::back_inserter(meas),
+                       [](const auto& field) {
+                           return MeasurementsContainerType::value_type(
+                               field.first, field.second.Min.Type,
+                               field.second.ValueVector);
+                       });
     }
     measurementsHash(connection.getSignedMeasurementsHash());
     {
@@ -86,7 +89,7 @@ void Responder::syncSlotsInfo()
         buf.insert(buf.end(), sig.begin(), sig.end());
 
         signedMeasurements(std::move(buf));
-        measurementsSignature(std::move(sig));
+        measurementsSignature(sig);
     }
 
     {
@@ -308,16 +311,17 @@ spdmcpp::RetStat MctpTransportClass::setupTimeout(spdmcpp::timeout_ms_t timeout)
         event,
         SpdmdAppContext::Clock(event).now() +
             std::chrono::milliseconds{timeout},
-        std::chrono::milliseconds{1},
-        std::bind(&MctpTransportClass::timeoutCallback, this,
-                  std::placeholders::_1, std::placeholders::_2));
+            std::chrono::milliseconds{1},
+            [this](SpdmdAppContext::Timer& /*source*/, SpdmdAppContext::Timer::TimePoint /*time*/)
+            {
+                timeoutCallback();
+            }
+        );
 
     return RetStat::OK;
 }
 
-void MctpTransportClass::timeoutCallback(
-    SpdmdAppContext::Timer& /*source*/,
-    SpdmdAppContext::Timer::TimePoint /*time*/)
+void MctpTransportClass::timeoutCallback()
 {
     time.reset(nullptr);
 

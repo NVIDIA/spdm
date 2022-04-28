@@ -32,7 +32,7 @@ class MctpTransportClass : public spdmcpp::MctpTransportClass
     MctpTransportClass(uint8_t eid, Responder& resp) :
         spdmcpp::MctpTransportClass(eid), responder(resp)
     {}
-    ~MctpTransportClass() = default;
+    ~MctpTransportClass() override = default;
 
     spdmcpp::RetStat setupTimeout(spdmcpp::timeout_ms_t timeout) override;
 
@@ -42,8 +42,7 @@ class MctpTransportClass : public spdmcpp::MctpTransportClass
     Responder& responder;
     std::unique_ptr<SpdmdAppContext::Timer> time;
 
-    void timeoutCallback(SpdmdAppContext::Timer& source,
-                         SpdmdAppContext::Timer::TimePoint time);
+    void timeoutCallback();
 };
 
 using ResponderIntf = sdbusplus::server::object::object<

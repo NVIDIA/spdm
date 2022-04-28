@@ -189,7 +189,7 @@ RetStat ConnectionClass::parseCertChain(SlotClass& slot,
             mbedtlsPrintErrorLine(Log, "mbedtls_x509_crt_parse_der()", ret);
             return RetStat::ERROR_CERTIFICATE_PARSING_ERROR;
         }
-
+        // NOLINTNEXTLINE clang-analyzer-cplusplus.NewDeleteLeaks
         slot.MCertificates.push_back(c);
 
         if (slot.MCertificates.size() == 1)

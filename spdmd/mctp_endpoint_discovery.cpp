@@ -146,7 +146,7 @@ std::string MctpDiscovery::getUUID(const dbus::InterfaceMap& interfaces)
             return std::get<std::string>(uuid->second);
         }
     }
-    return std::string();
+    return {};
 }
 
 std::string MctpDiscovery::getInventoryPath(const std::string& uuid)
@@ -171,7 +171,7 @@ std::string MctpDiscovery::getInventoryPath(const std::string& uuid)
                 auto id = getUUID(interfaces);
                 if (id == uuid)
                 {
-                    return std::string(objectPath);
+                    return {objectPath};
                 }
             }
         }
@@ -181,7 +181,7 @@ std::string MctpDiscovery::getInventoryPath(const std::string& uuid)
         spdmApp.getLog().print(e.what());
     }
     spdmApp.reportError(std::string("SPDM MctpDiscovery couldn't get Inventory path for UUID '") + uuid + '\'');
-    return std::string();
+    return {};
 }
 
 } // namespace spdmd

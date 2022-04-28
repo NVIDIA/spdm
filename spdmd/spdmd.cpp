@@ -50,7 +50,7 @@ void SpdmdApp::setupCli(int argc, char** argv)
     opt->delimiter(',');
     opt->check(CLI::IsMember({"all"}) | CLI::Range(1, 254));
 
-    opt = app.add_option(
+    app.add_option(
         "--cached_measurements_delay", measureOnDiscoveryDelay,
         "[seconds]; The initial communication should be performed after running the daemon with a delay configured by this param. Default value: 60.");
 

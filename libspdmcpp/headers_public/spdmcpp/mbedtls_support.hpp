@@ -223,7 +223,7 @@ inline std::pair<int, mbedtls_x509_crt*>
     size_t asn1Len = 0;
     {
         const uint8_t* s = &buf[off];
-        uint8_t* p = const_cast<uint8_t*>(s);
+        uint8_t* p = const_cast<uint8_t*>(s); // NOLINT cppcoreguidelines-pro-type-const-cast
         ret = mbedtls_asn1_get_tag(&p,
             buf.data() + buf.size(), //NOLINT cppcoreguidelines-pro-bounds-pointer-arithmetic
             &asn1Len, MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE);

@@ -87,13 +87,14 @@ class MctpTransportClass : public TransportClass
     uint8_t EID = 0;
 };
 
+// NOLINTNEXTLINE cppcoreguidelines-special-member-functions
 class MctpIoClass : public IOClass
 {
   public:
     explicit MctpIoClass(LogClass& log) : Log(log)
     {}
 
-    ~MctpIoClass()
+    ~MctpIoClass() override
     {
         if (isSocketOpen())
         {
