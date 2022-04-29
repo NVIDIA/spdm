@@ -380,13 +380,10 @@ RetStat ConnectionClass::handleRecv<PacketCapabilitiesResponse>()
     markInfo(ConnectionInfoEnum::CAPABILITIES);
     appendRecvToBuf(BufEnum::A);
 
+    responderCapabilitiesFlags = resp.Flags;
     if (!(resp.Flags & ResponderCapabilitiesFlags::CERT_CAP))
     {
         return RetStat::ERROR_MISSING_CAPABILITY_CERT;
-    }
-    if (!(resp.Flags & ResponderCapabilitiesFlags::CHAL_CAP))
-    {
-        return RetStat::ERROR_MISSING_CAPABILITY_CHAL;
     }
     if (!(resp.Flags & ResponderCapabilitiesFlags::MEAS_CAP_10))
     {
@@ -501,7 +498,7 @@ RetStat ConnectionClass::handleRecv<PacketDigestsResponseVar>()
     appendRecvToBuf(BufEnum::B);
     if (skipCert)
     {
-        rs = tryChallenge();
+        rs = tryChallengeIfSupported();
         SPDMCPP_LOG_TRACE_RS(Log, rs);
     }
     else
@@ -595,7 +592,7 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
 
     slot.markInfo(SlotInfoEnum::CERTIFICATES);
 
-    rs = tryChallenge();
+    rs = tryChallengeIfSupported();
     SPDMCPP_LOG_TRACE_RS(Log, rs);
     return rs;
 }
@@ -616,6 +613,15 @@ RetStat ConnectionClass::tryGetCertificate(SlotIdx idx)
     auto rs = tryGetCertificateChunk(idx);
     SPDMCPP_LOG_TRACE_RS(Log, rs);
     return rs;
+}
+
+RetStat ConnectionClass::tryChallengeIfSupported()
+{
+    if (!(responderCapabilitiesFlags & ResponderCapabilitiesFlags::CHAL_CAP))
+    {
+        return tryGetMeasurements();
+    }
+    return tryChallenge();
 }
 
 RetStat ConnectionClass::tryChallenge()

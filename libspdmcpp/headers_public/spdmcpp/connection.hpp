@@ -372,6 +372,7 @@ class ConnectionClass : public NonCopyable
     [[nodiscard]] RetStat tryGetMeasurements();
     [[nodiscard]] RetStat tryGetMeasurements(uint8_t idx);
 
+    [[nodiscard]] RetStat tryChallengeIfSupported();
     [[nodiscard]] RetStat tryChallenge();
 
     template <class T>
@@ -562,6 +563,10 @@ class ConnectionClass : public NonCopyable
     /** @brief The choosen version for communicating with the Responder
      */
     MessageVersionEnum MessageVersion = MessageVersionEnum::UNKNOWN;
+
+    /** @brief The supported Responder Capabilities
+     */
+    ResponderCapabilitiesFlags responderCapabilitiesFlags;
 
     /** @brief The decodeded Algorithms response from the Responder
      */
