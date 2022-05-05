@@ -22,7 +22,8 @@ namespace dbus_api
 Responder::Responder(SpdmdAppContext& appCtx, const std::string& path,
                      uint8_t eid, const std::string& inventoryPath) :
     ResponderIntf(appCtx.bus, path.c_str(), action::defer_emit),
-    appContext(appCtx), log(std::cerr), connection(appCtx.context, log), transport(eid, *this)
+    appContext(appCtx), log(std::cerr), connection(appCtx.context, log),
+    transport(eid, *this)
 {
     {
         std::vector<std::tuple<std::string, std::string, std::string>> prop;
@@ -311,12 +312,11 @@ spdmcpp::RetStat MctpTransportClass::setupTimeout(spdmcpp::timeout_ms_t timeout)
         event,
         SpdmdAppContext::Clock(event).now() +
             std::chrono::milliseconds{timeout},
-            std::chrono::milliseconds{1},
-            [this](SpdmdAppContext::Timer& /*source*/, SpdmdAppContext::Timer::TimePoint /*time*/)
-            {
-                timeoutCallback();
-            }
-        );
+        std::chrono::milliseconds{1},
+        [this](SpdmdAppContext::Timer& /*source*/,
+               SpdmdAppContext::Timer::TimePoint /*time*/) {
+            timeoutCallback();
+        });
 
     return RetStat::OK;
 }

@@ -112,15 +112,17 @@ class EmulatorClient : public EmulatorBase
     bool routine(ProgramOptions& opt)
     {
         spdmcpp::LogClass log(std::cout);
-        
+
         SPDMCPP_ASSERT(!Transport);
         SPDMCPP_ASSERT(!IO);
-        
+
         int ioSocket = -1;
-        if (opt.TransportType == SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_MCTP_DEMUX)
+        if (opt.TransportType ==
+            SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_MCTP_DEMUX)
         {
             auto io = std::make_unique<spdmcpp::MctpIoClass>(log);
-            if (!io->createSocket()) {
+            if (!io->createSocket())
+            {
                 io.reset(nullptr);
                 return false;
             }
@@ -140,13 +142,15 @@ class EmulatorClient : public EmulatorBase
             ioSocket = io->getSocket();
             IO = std::move(io);
 
-            switch (opt.TransportType) {
-            case SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_MCTP:
-                Transport = std::make_unique<EmulatorTransportClass>(spdmcpp::MCTPMessageTypeEnum::SPDM);
-                break;
-            default:
-                Transport = std::make_unique<EmulatorTransportClass>();
-                break;
+            switch (opt.TransportType)
+            {
+                case SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_MCTP:
+                    Transport = std::make_unique<EmulatorTransportClass>(
+                        spdmcpp::MCTPMessageTypeEnum::SPDM);
+                    break;
+                default:
+                    Transport = std::make_unique<EmulatorTransportClass>();
+                    break;
             }
         }
 
@@ -181,7 +185,8 @@ class EmulatorClient : public EmulatorBase
             }
         };
 
-        sdeventplus::source::IO io(event, ioSocket, EPOLLIN, std::move(callback));
+        sdeventplus::source::IO io(event, ioSocket, EPOLLIN,
+                                   std::move(callback));
 
         auto rs = con.refreshMeasurements(0);
         SPDMCPP_LOG_TRACE_RS(con.getLog(), rs);
@@ -195,7 +200,6 @@ class EmulatorClient : public EmulatorBase
         deleteContext();
         return true;
     }
-
 };
 
 int main(int argc, char** argv)

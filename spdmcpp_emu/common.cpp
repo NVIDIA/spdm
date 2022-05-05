@@ -1,12 +1,11 @@
 
 #include <common.hpp>
+#include <sdeventplus/source/time.hpp>
 #include <spdmcpp/context.hpp>
 
-#include <sdeventplus/source/time.hpp>
-
-EmulatorIOClass::EmulatorIOClass(SocketTransportTypeEnum trans) : transportType(trans)
-{
-}
+EmulatorIOClass::EmulatorIOClass(SocketTransportTypeEnum trans) :
+    transportType(trans)
+{}
 
 EmulatorIOClass::~EmulatorIOClass()
 {
@@ -30,30 +29,26 @@ bool EmulatorIOClass::createSocket(uint16_t port)
     struct sockaddr_in serverAddr
     {};
     serverAddr.sin_family = AF_INET;
-    memcpy(&serverAddr.sin_addr.s_addr, &mIpAddress,
-            sizeof(struct in_addr));
+    memcpy(&serverAddr.sin_addr.s_addr, &mIpAddress, sizeof(struct in_addr));
     // NOLINTNEXTLINE cppcoreguidelines-pro-bounds-array-to-pointer-decay
     serverAddr.sin_port = htons(port);
     // NOLINTNEXTLINE cppcoreguidelines-pro-bounds-array-to-pointer-decay
     memset(serverAddr.sin_zero, 0, sizeof(serverAddr.sin_zero));
 
     // NOLINTNEXTLINE cppcoreguidelines-pro-type-cstyle-cast
-    if (::connect(socket, (struct sockaddr*)&serverAddr,
-                    sizeof(serverAddr)) == -1)
+    if (::connect(socket, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) ==
+        -1)
     {
-        std::cerr << "connect() error: " << errno << " "
-                    << strerror(errno) << " to port: '" << port
-                    << "'; spdm_responder_emu not running?"
-                    << std::endl;
+        std::cerr << "connect() error: " << errno << " " << strerror(errno)
+                  << " to port: '" << port
+                  << "'; spdm_responder_emu not running?" << std::endl;
         close(socket);
         socket = -1;
         return false;
     }
     std::cout << "Connect success!\n";
-    if (transportType ==
-            SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_MCTP ||
-        transportType ==
-            SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_PCI_DOE)
+    if (transportType == SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_MCTP ||
+        transportType == SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_PCI_DOE)
     {
         BufferType msg("Client Hello!");
         auto response = SocketCommandEnum::SOCKET_SPDM_COMMAND_UNKOWN;
@@ -64,8 +59,7 @@ bool EmulatorIOClass::createSocket(uint16_t port)
         {
             return false;
         }
-        SPDMCPP_ASSERT(response ==
-                        SocketCommandEnum::SOCKET_SPDM_COMMAND_TEST);
+        SPDMCPP_ASSERT(response == SocketCommandEnum::SOCKET_SPDM_COMMAND_TEST);
         std::cout << "Got back: " << recv.data() << std::endl;
     }
 
@@ -88,7 +82,7 @@ bool EmulatorIOClass::writeBytes(const uint8_t* buf, size_t size)
         if (ret == -1)
         {
             std::cerr << "EmulatorBase::write_bytes() errno = " << errno
-                        << std::endl;
+                      << std::endl;
             return false;
         }
         sent += ret;
@@ -105,7 +99,7 @@ bool EmulatorIOClass::readBytes(uint8_t* buf, size_t size)
         if (result == -1)
         {
             std::cerr << "EmulatorBase::read_bytes() errno = " << errno
-                        << std::endl;
+                      << std::endl;
             return false;
         }
         if (result == 0)
@@ -187,7 +181,7 @@ bool EmulatorIOClass::receiveBuf(std::vector<uint8_t>& buf)
 }
 
 bool EmulatorIOClass::sendPlatformData(SocketCommandEnum command,
-                        const std::vector<uint8_t>& buf)
+                                       const std::vector<uint8_t>& buf)
 {
     if (!writeData(command))
     {
@@ -206,7 +200,7 @@ bool EmulatorIOClass::sendPlatformData(SocketCommandEnum command,
 }
 
 bool EmulatorIOClass::receivePlatformData(SocketCommandEnum& command,
-                            std::vector<uint8_t>& recv)
+                                          std::vector<uint8_t>& recv)
 {
     if (!readData(command))
     {
@@ -218,8 +212,8 @@ bool EmulatorIOClass::receivePlatformData(SocketCommandEnum& command,
         {
             return false;
         }
-        SPDMCPP_ASSERT(static_cast<SocketTransportTypeEnum>(
-                            trans) == transportType);
+        SPDMCPP_ASSERT(static_cast<SocketTransportTypeEnum>(trans) ==
+                       transportType);
     }
     if (!receiveBuf(recv))
     {
@@ -229,9 +223,9 @@ bool EmulatorIOClass::receivePlatformData(SocketCommandEnum& command,
 }
 
 bool EmulatorIOClass::sendMessageReceiveResponse(SocketCommandEnum command,
-                                const BufferType& send,
-                                SocketCommandEnum& response,
-                                BufferType& recv)
+                                                 const BufferType& send,
+                                                 SocketCommandEnum& response,
+                                                 BufferType& recv)
 {
     if (!sendPlatformData(command, send))
     {
@@ -247,7 +241,7 @@ bool EmulatorIOClass::sendMessageReceiveResponse(SocketCommandEnum command,
 }
 
 spdmcpp::RetStat EmulatorIOClass::write(const std::vector<uint8_t>& buf,
-                                   spdmcpp::timeout_us_t /*timeout*/)
+                                        spdmcpp::timeout_us_t /*timeout*/)
 {
     if (!sendPlatformData(SocketCommandEnum::SOCKET_SPDM_COMMAND_NORMAL, buf))
     {
@@ -257,7 +251,7 @@ spdmcpp::RetStat EmulatorIOClass::write(const std::vector<uint8_t>& buf,
 }
 
 spdmcpp::RetStat EmulatorIOClass::read(std::vector<uint8_t>& buf,
-                                  spdmcpp::timeout_us_t /*timeout*/)
+                                       spdmcpp::timeout_us_t /*timeout*/)
 {
     auto response = SocketCommandEnum::SOCKET_SPDM_COMMAND_UNKOWN;
     if (!receivePlatformData(response, buf))
@@ -267,4 +261,3 @@ spdmcpp::RetStat EmulatorIOClass::read(std::vector<uint8_t>& buf,
     SPDMCPP_ASSERT(response == SocketCommandEnum::SOCKET_SPDM_COMMAND_NORMAL);
     return spdmcpp::RetStat::OK;
 }
-

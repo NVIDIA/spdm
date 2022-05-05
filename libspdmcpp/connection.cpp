@@ -1,7 +1,7 @@
 
-#include <spdmcpp/context.hpp>
 #include <spdmcpp/connection.hpp>
 #include <spdmcpp/connection_inl.hpp>
+#include <spdmcpp/context.hpp>
 #include <spdmcpp/helpers.hpp>
 #include <spdmcpp/mbedtls_support.hpp>
 
@@ -147,15 +147,19 @@ bool ConnectionClass::getCertificatesPEM(std::string& str,
         size_t size = 4096;
         str.resize(off + size);
         int ret = mbedtls_pem_write_buffer(
-            "-----BEGIN CERTIFICATE-----\n", "-----END CERTIFICATE-----\n", (const unsigned char*)cert->raw.p, cert->raw.len,
+            "-----BEGIN CERTIFICATE-----\n", "-----END CERTIFICATE-----\n",
+            (const unsigned char*)cert->raw.p, cert->raw.len,
             (unsigned char*)str.data() + off, size, &size);
         if (ret)
         {
-            Log.iprint("ConnectionClass::getCertificatesPEM() mbedtls_pem_write_buffer failed with: ");
+            Log.iprint(
+                "ConnectionClass::getCertificatesPEM() mbedtls_pem_write_buffer failed with: ");
             Log.println(ret);
             return false;
         }
-        str.resize(off + size - 1); //-1 because mbedtls_pem_write_buffer counts the null byte
+        str.resize(
+            off + size -
+            1); //-1 because mbedtls_pem_write_buffer counts the null byte
     }
     return true;
 }
@@ -258,7 +262,8 @@ RetStat ConnectionClass::tryGetVersion()
     }
 
     PacketGetVersionRequest spdmRequest;
-    auto rs = sendRequestSetupResponse<PacketVersionResponseVar>(spdmRequest, BufEnum::A, Timings.getT1());
+    auto rs = sendRequestSetupResponse<PacketVersionResponseVar>(
+        spdmRequest, BufEnum::A, Timings.getT1());
     SPDMCPP_LOG_TRACE_RS(Log, rs);
     return rs;
 }
@@ -343,7 +348,8 @@ RetStat ConnectionClass::tryGetCapabilities()
         PacketGetCapabilities10Request request;
         request.Header.MessageVersion = MessageVersion;
 
-        rs = sendRequestSetupResponse<PacketCapabilitiesResponse>(request, BufEnum::A, Timings.getT1());
+        rs = sendRequestSetupResponse<PacketCapabilitiesResponse>(
+            request, BufEnum::A, Timings.getT1());
         SPDMCPP_LOG_TRACE_RS(Log, rs);
     }
     else
@@ -367,7 +373,8 @@ RetStat ConnectionClass::tryGetCapabilities()
         RequesterCapabilitiesFlags::HANDSHAKE_IN_THE_CLEAR_CAP;
             */
 
-        rs = sendRequestSetupResponse<PacketCapabilitiesResponse>(request, BufEnum::A, Timings.getT1());
+        rs = sendRequestSetupResponse<PacketCapabilitiesResponse>(
+            request, BufEnum::A, Timings.getT1());
         SPDMCPP_LOG_TRACE_RS(Log, rs);
     }
     return rs;
@@ -427,7 +434,8 @@ RetStat ConnectionClass::tryNegotiateAlgorithms()
 
     request.finalize();
 
-    auto rs = sendRequestSetupResponse<PacketAlgorithmsResponseVar>(request, BufEnum::A, Timings.getT1());
+    auto rs = sendRequestSetupResponse<PacketAlgorithmsResponseVar>(
+        request, BufEnum::A, Timings.getT1());
     SPDMCPP_LOG_TRACE_RS(Log, rs);
     return rs;
 }
@@ -459,7 +467,8 @@ RetStat ConnectionClass::tryGetDigest()
     PacketGetDigestsRequest request;
     request.Header.MessageVersion = MessageVersion;
 
-    auto rs = sendRequestSetupResponse<PacketDigestsResponseVar>(request, BufEnum::B, Timings.getT1());
+    auto rs = sendRequestSetupResponse<PacketDigestsResponseVar>(
+        request, BufEnum::B, Timings.getT1());
     SPDMCPP_LOG_TRACE_RS(Log, rs);
     return rs;
 }
@@ -530,7 +539,8 @@ RetStat ConnectionClass::tryGetCertificateChunk(SlotIdx slotidx)
     request.Offset = cert.size();
     request.Length = std::numeric_limits<uint16_t>::max();
 
-    auto rs = sendRequestSetupResponse<PacketCertificateResponseVar>(request, BufEnum::B, Timings.getT1());
+    auto rs = sendRequestSetupResponse<PacketCertificateResponseVar>(
+        request, BufEnum::B, Timings.getT1());
     SPDMCPP_LOG_TRACE_RS(Log, rs);
     return rs;
 }
@@ -638,7 +648,8 @@ RetStat ConnectionClass::tryChallenge()
     // 		request.Header.Param2 = packetDecodeInfo.ChallengeParam2 = 1;
     fillRandom(request.Nonce);
 
-    auto rs = sendRequestSetupResponse<PacketChallengeAuthResponseVar>(request, BufEnum::C, Timings.getT2());
+    auto rs = sendRequestSetupResponse<PacketChallengeAuthResponseVar>(
+        request, BufEnum::C, Timings.getT2());
     SPDMCPP_LOG_TRACE_RS(Log, rs);
     return rs;
 }
@@ -752,7 +763,8 @@ RetStat ConnectionClass::tryGetMeasurements(uint8_t idx)
 
     request.Min.Header.Param2 = idx;
 
-    auto rs = sendRequestSetupResponse<PacketMeasurementsResponseVar>(request, BufEnum::L, Timings.getT2());
+    auto rs = sendRequestSetupResponse<PacketMeasurementsResponseVar>(
+        request, BufEnum::L, Timings.getT2());
     SPDMCPP_LOG_TRACE_RS(Log, rs);
     return rs;
 }

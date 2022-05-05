@@ -46,7 +46,8 @@ struct ServiceHelper
      * never deallocated
      *  @param[in] anInterface - DBUS Interface, must be a constant literal
      * that's never deallocated
-     *  @param[in] adefaultService - DBUS Service to serve as the default in case getService fails
+     *  @param[in] adefaultService - DBUS Service to serve as the default in
+     * case getService fails
      *
      */
     constexpr ServiceHelper(const char* aPath, const char* anInterface,

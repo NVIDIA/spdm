@@ -536,13 +536,14 @@ class ConnectionClass : public NonCopyable
     RetStat sendRequest(const T& packet, BufEnum bufidx = BufEnum::NUM);
 
     /** @brief Low-level, typically shouldn't be used, sets up information that
-     * we're waiting for a response packet of the given type and setups a timeout if it isn't TIMEOUT_MS_INFINITE
+     * we're waiting for a response packet of the given type and setups a
+     * timeout if it isn't TIMEOUT_MS_INFINITE
      *  @param[in] timeout - The response timeout
      *  @param[in] retry - The number of times the request should be
      */
     template <typename T>
     RetStat setupResponseWait(timeout_ms_t timeout = TIMEOUT_MS_INFINITE,
-                                     uint16_t retry = 4);
+                              uint16_t retry = 4);
 
     /** @brief Clears a previously setup response timeout
      */

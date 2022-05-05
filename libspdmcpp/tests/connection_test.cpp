@@ -2,8 +2,8 @@
 #include "test_helpers.hpp"
 
 #include <spdmcpp/common.hpp>
-#include <spdmcpp/context.hpp>
 #include <spdmcpp/connection.hpp>
+#include <spdmcpp/context.hpp>
 #include <spdmcpp/mbedtls_support.hpp>
 #include <spdmcpp/mctp_support.hpp>
 #include <spdmcpp/packet.hpp>
@@ -39,7 +39,6 @@ class FixtureTransportClass : public MctpTransportClass
     {
         return RetStat::OK;
     }
-
 };
 
 class FixtureIOClass : public IOClass
@@ -156,7 +155,7 @@ class ConnectionFixture
             getHash(hashidx).update(buf, start);
         }
         Trans.encodePost(buf, lay);
-        
+
         return rs;
     }
 

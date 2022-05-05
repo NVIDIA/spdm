@@ -42,8 +42,12 @@ class MctpDiscovery
     /** @brief Called when a new mctp endpoint is discovered */
     void newEndpointDiscovered(sdbusplus::message::message& msg);
 
-    /** @brief Common function for creating a responder object, either on start or later when a new endpoint is discovered */
-    void addNewEndpoint(const sdbusplus::message::object_path& objectPath, const std::map<std::string, std::map<std::string, dbus::Value>>& interfaces);
+    /** @brief Common function for creating a responder object, either on start
+     * or later when a new endpoint is discovered */
+    void addNewEndpoint(
+        const sdbusplus::message::object_path& objectPath,
+        const std::map<std::string, std::map<std::string, dbus::Value>>&
+            interfaces);
 
     /** @brief SPDM type of an MCTP message */
     static constexpr uint8_t mctpTypeSPDM = 5;

@@ -30,11 +30,10 @@
 
 #include <sdeventplus/source/io.hpp>
 #include <sdeventplus/source/time.hpp>
-
 #include <spdmcpp/assert.hpp>
 #include <spdmcpp/common.hpp>
-#include <spdmcpp/context.hpp>
 #include <spdmcpp/connection.hpp>
+#include <spdmcpp/context.hpp>
 
 enum class SocketCommandEnum : uint32_t
 {
@@ -70,34 +69,41 @@ struct BufferType : public std::vector<uint8_t>
 
 // NOLINTNEXTLINE cppcoreguidelines-special-member-functions
 class EmulatorTransportClass :
-    public spdmcpp::TransportClass // for matching dmtf spdm emulator --trans MCTP
+    public spdmcpp::TransportClass // for matching dmtf spdm emulator --trans
+                                   // MCTP
 {
   public:
     EmulatorTransportClass() = default;
 
-    template<typename T>
+    template <typename T>
     explicit EmulatorTransportClass(const T& header)
     {
         headerData.resize(sizeof(T));
         memcpy(headerData.data(), &header, sizeof(T));
     }
 
-    spdmcpp::RetStat encodePre(std::vector<uint8_t>& buf, LayerState& lay) override
+    spdmcpp::RetStat encodePre(std::vector<uint8_t>& buf,
+                               LayerState& lay) override
     {
         setLayerSize(lay, headerData.size());
-        if (!headerData.empty()) {
+        if (!headerData.empty())
+        {
             buf.resize(lay.getEndOffset());
-            auto start = static_cast<std::vector<uint8_t>::difference_type>(lay.getOffset());
-            std::copy(headerData.begin(), headerData.end(), std::next(buf.begin(), start));
+            auto start = static_cast<std::vector<uint8_t>::difference_type>(
+                lay.getOffset());
+            std::copy(headerData.begin(), headerData.end(),
+                      std::next(buf.begin(), start));
         }
         return spdmcpp::RetStat::OK;
     }
-    spdmcpp::RetStat encodePost(std::vector<uint8_t>& /*buf*/, LayerState& /*lay*/) override
+    spdmcpp::RetStat encodePost(std::vector<uint8_t>& /*buf*/,
+                                LayerState& /*lay*/) override
     {
         return spdmcpp::RetStat::OK;
     }
 
-    spdmcpp::RetStat decode(std::vector<uint8_t>& /*buf*/, LayerState& lay) override
+    spdmcpp::RetStat decode(std::vector<uint8_t>& /*buf*/,
+                            LayerState& lay) override
     {
         setLayerSize(lay, headerData.size());
         return spdmcpp::RetStat::OK;
@@ -105,7 +111,7 @@ class EmulatorTransportClass :
 
     spdmcpp::RetStat setupTimeout(spdmcpp::timeout_ms_t /*timeout*/) override
     {
-        //pretend it's working fine, we don't actually need it at the moment
+        // pretend it's working fine, we don't actually need it at the moment
         return spdmcpp::RetStat::OK;
     }
 
@@ -156,13 +162,19 @@ class EmulatorIOClass : public spdmcpp::IOClass
     spdmcpp::RetStat read(
         std::vector<uint8_t>& buf,
         spdmcpp::timeout_us_t timeout = spdmcpp::TIMEOUT_US_INFINITE) override;
-    
-    int getSocket() const { return socket; }
+
+    int getSocket() const
+    {
+        return socket;
+    }
+
   protected:
-    // static constexpr sdeventplus::ClockId cid = sdeventplus::ClockId::Monotonic;
+    // static constexpr sdeventplus::ClockId cid =
+    // sdeventplus::ClockId::Monotonic;
     // sdeventplus::source::Time<sdeventplus::ClockId::Monotonic>* timeout =
-        // nullptr;
-    SocketTransportTypeEnum transportType = SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_UNKNOWN;
+    // nullptr;
+    SocketTransportTypeEnum transportType =
+        SocketTransportTypeEnum::SOCKET_TRANSPORT_TYPE_UNKNOWN;
     int socket = -1;
 };
 
