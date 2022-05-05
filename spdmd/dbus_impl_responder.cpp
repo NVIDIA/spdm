@@ -21,7 +21,7 @@ namespace dbus_api
 
 Responder::Responder(SpdmdAppContext& appCtx, const std::string& path,
                      uint8_t eid, const std::string& inventoryPath) :
-    ResponderIntf(appCtx.bus, (path + "/" + std::to_string(eid)).c_str(), action::defer_emit),
+    ResponderIntf(appCtx.bus, path.c_str(), action::defer_emit),
     appContext(appCtx), log(std::cerr), connection(appCtx.context, log), transport(eid, *this)
 {
     {

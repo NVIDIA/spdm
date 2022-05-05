@@ -179,8 +179,20 @@ void SpdmdApp::createResponder(uint8_t eid, const std::string& inventoryPath)
         "Creating SPDM object for a responder with EID = " + to_string(eid);
     reportNotice(msg);
 
-    responders[eid] =
-        new dbus_api::Responder(*this, spdmRootObjectPath, eid, inventoryPath);
+    std::string path(spdmRootObjectPath);
+    { // construct responder path
+        path += '/';
+        auto sub = sdbusplus::message::object_path(inventoryPath).filename();
+        if (!sub.empty())
+        {
+            path += sub;
+        }
+        else
+        { // fallback to eid for local-testing
+            path += std::to_string(eid);
+        }
+    }
+    responders[eid] = new dbus_api::Responder(*this, path, eid, inventoryPath);
 
     if (shouldMeasureEID(eid))
     {
