@@ -146,10 +146,12 @@ bool ConnectionClass::getCertificatesPEM(std::string& str,
         size_t off = str.size();
         size_t size = 4096;
         str.resize(off + size);
+        auto span = std::span(str).subspan(off);
         int ret = mbedtls_pem_write_buffer(
             "-----BEGIN CERTIFICATE-----\n", "-----END CERTIFICATE-----\n",
             (const unsigned char*)cert->raw.p, cert->raw.len,
-            (unsigned char*)str.data() + off, size, &size);
+            // NOLINTNEXTLINE cppcoreguidelines-pro-type-reinterpret-cast
+            reinterpret_cast<unsigned char*>(span.data()), span.size(), &size);
         if (ret)
         {
             Log.iprint(
@@ -157,9 +159,8 @@ bool ConnectionClass::getCertificatesPEM(std::string& str,
             Log.println(ret);
             return false;
         }
-        str.resize(
-            off + size -
-            1); //-1 because mbedtls_pem_write_buffer counts the null byte
+        // -1 because mbedtls_pem_write_buffer counts the null byte
+        str.resize(off + size - 1);
     }
     return true;
 }

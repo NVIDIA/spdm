@@ -577,7 +577,8 @@ class ConnectionClass : public NonCopyable
 
     /** @brief The supported Responder Capabilities
      */
-    ResponderCapabilitiesFlags responderCapabilitiesFlags;
+    ResponderCapabilitiesFlags responderCapabilitiesFlags =
+        ResponderCapabilitiesFlags::NIL;
 
     /** @brief The decodeded Algorithms response from the Responder
      */
