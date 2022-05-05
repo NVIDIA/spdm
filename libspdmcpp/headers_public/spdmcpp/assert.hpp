@@ -1,6 +1,8 @@
 
 #pragma once
 
+// clang-format off
+
 #ifndef NDEBUG
     #include <cassert>
 
@@ -16,3 +18,5 @@
     {                                                                          \
     } while (false)
 #endif
+
+// clang-format on

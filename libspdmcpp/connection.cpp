@@ -934,12 +934,12 @@ RetStat ConnectionClass::handleRecv()
             return RetStat::ERROR_INVALID_HEADER_VERSION;
         }
         switch (code)
-        {
-    // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
-    #define DTYPE(type)                                                            \
-        case type::requestResponseCode:                                            \
-            rs = handleRecv<type>();                                               \
-            break;
+        { // clang-format off
+        // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+        #define DTYPE(type)                                                            \
+            case type::requestResponseCode:                                            \
+                rs = handleRecv<type>();                                               \
+                break;
             DTYPE(PacketCapabilitiesResponse)
             DTYPE(PacketAlgorithmsResponseVar)
             DTYPE(PacketDigestsResponseVar)
@@ -950,8 +950,8 @@ RetStat ConnectionClass::handleRecv()
                 Log.iprint("!!! Unknown code: ");
                 Log.println(code);
                 return RetStat::ERROR_UNKNOWN_REQUEST_RESPONSE_CODE;
-    #undef DTYPE
-        }
+        #undef DTYPE
+        } // clang-format on
     }
     SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
     return rs;

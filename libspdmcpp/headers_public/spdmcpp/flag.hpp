@@ -42,6 +42,8 @@ std::string to_string_hex(T v)
     return stream.str();
 }
 
+// clang-format off
+
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define FLAG_START(T, UT)                                                      \
     enum class T : UT                                                          \
@@ -149,6 +151,8 @@ std::string to_string_hex(T v)
 #undef FLAG_START
 #undef FLAG_VALUE
 #undef FLAG_END
+
+// clang-format on
 
 inline uint16_t getHashSize(BaseHashAlgoFlags flags)
 {

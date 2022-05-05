@@ -221,7 +221,7 @@ inline std::pair<int, mbedtls_x509_crt*>
     }
 
     size_t asn1Len = 0;
-    {
+    { // clang-format off
         const uint8_t* s = &buf[off];
         uint8_t* p = const_cast<uint8_t*>(s); // NOLINT cppcoreguidelines-pro-type-const-cast
         ret = mbedtls_asn1_get_tag(&p,
@@ -229,7 +229,7 @@ inline std::pair<int, mbedtls_x509_crt*>
             &asn1Len, MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE);
         SPDMCPP_ASSERT(ret == 0);
         asn1Len += (p - s);
-    }
+    } // clang-format on
     off += asn1Len;
     return std::make_pair(ret, cert);
 }

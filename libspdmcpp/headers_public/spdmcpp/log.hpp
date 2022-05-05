@@ -282,6 +282,8 @@ class TraceHelper
     std::string Function;
 }; // class TraceHelper
 
+// clang-format off
+
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define SPDMCPP_LOG_TRACE_FUNC(log)                                               \
     if ((log).logLevel >= spdmcpp::LogClass::Level::Debug)                        \
@@ -314,5 +316,7 @@ class TraceHelper
         (log).print(" : ");                                                      \
         (log).println(__LINE__);                                                 \
     }
+
+// clang-format on
 
 } // namespace spdmcpp

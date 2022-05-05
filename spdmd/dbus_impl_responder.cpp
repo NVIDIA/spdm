@@ -191,8 +191,11 @@ spdmcpp::RetStat Responder::handleRecv(std::vector<uint8_t>& buf)
         }
         switch (connection.getSignatureEnum())
         {
-//NOLINTNEXTLINE cppcoreguidelines-macro-usage,-warnings-as-errors
-#define DTYPE(name) case SignatureEnum::name: signingAlgorithm(SigningAlgorithms::name); break;
+// NOLINTNEXTLINE cppcoreguidelines-macro-usage,-warnings-as-errors
+#define DTYPE(name)                                                            \
+    case SignatureEnum::name:                                                  \
+        signingAlgorithm(SigningAlgorithms::name);                             \
+        break;
             DTYPE(RSASSA_2048)
             DTYPE(RSAPSS_2048)
             DTYPE(RSASSA_3072)

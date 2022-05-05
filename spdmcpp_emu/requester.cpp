@@ -24,8 +24,10 @@ struct ProgramOptions
 
         for (;;)
         {
+            // clang-format off
             // NOLINTNEXTLINE cppcoreguidelines-pro-bounds-array-to-pointer-decay
             auto argflag = getopt_long(argc, argv, "v:", longOptions, nullptr);
+            // clang-format on
 
             if (argflag == -1)
             {
