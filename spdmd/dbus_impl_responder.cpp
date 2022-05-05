@@ -58,8 +58,8 @@ void Responder::syncSlotsInfo()
     {
         if (connection.slotHasInfo(idx, SlotInfoEnum::CERTIFICATES))
         {
-            std::vector<uint8_t> cert;
-            if (connection.getCertificatesDER(cert, idx))
+            std::string cert;
+            if (connection.getCertificatesPEM(cert, idx))
             {
                 certs.emplace_back(idx, std::move(cert));
             }

@@ -293,6 +293,16 @@ class ConnectionClass : public NonCopyable
      */
     bool getCertificatesDER(std::vector<uint8_t>& buf, SlotIdx slotidx) const;
 
+    /** @brief Returns the certificate chain for the given slot index
+     *  @details Note this function will return false if the certificate chain
+     * was not fetched for the given slot (even if it is available on the device
+     * itself) or if there was an unexpected error encoding it
+     *  @param[out] str - the string into which the certificate chain is written
+     *  @returns true if the certificate chain was available and written into
+     * buf, false otherwise
+     */
+    bool getCertificatesPEM(std::string& str, SlotIdx slotidx) const;
+
     /** @brief The buffer containing measurements communication, used for
      * computing the L1/L2 hash
      *  @details Contains all the GET_MEASUREMENTS requests and corresponding

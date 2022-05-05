@@ -128,35 +128,37 @@ bool ConnectionClass::getCertificatesDER(std::vector<uint8_t>& buf,
     return true;
 }
 
-#if 0
-bool ConnectionClass::getCertificatesPEM(
-    std::string& str, uint8_t slotidx) const // TODO change for slotidx
+bool ConnectionClass::getCertificatesPEM(std::string& str,
+                                         SlotIdx slotidx) const
 {
     SPDMCPP_LOG_TRACE_FUNC(Log);
-    if (!hasInfo(ConnectionInfoEnum::CERTIFICATES))
-        return false;
-
     str.clear();
 
-    const SlotClass& slot = Slots[slotidx];
-    if (!slot.Valid)
+    if (!slotHasInfo(slotidx, SlotInfoEnum::CERTIFICATES))
+    {
         return false;
+    }
 
-    if (auto cert = slot.getLeafCert())
+    const SlotClass& slot = Slots[slotidx];
+
+    for (auto cert : slot.MCertificates)
     {
         size_t off = str.size();
-        size_t size = 1024;
+        size_t size = 4096;
         str.resize(off + size);
         int ret = mbedtls_pem_write_buffer(
-            "", "", (const unsigned char*)cert->raw.p, cert->raw.len,
+            "-----BEGIN CERTIFICATE-----\n", "-----END CERTIFICATE-----\n", (const unsigned char*)cert->raw.p, cert->raw.len,
             (unsigned char*)str.data() + off, size, &size);
-        SPDMCPP_ASSERT(ret == 0); // TODO make it robust
-        str.resize(off + size);
-        return true;
+        if (ret)
+        {
+            Log.iprint("ConnectionClass::getCertificatesPEM() mbedtls_pem_write_buffer failed with: ");
+            Log.println(ret);
+            return false;
+        }
+        str.resize(off + size - 1); //-1 because mbedtls_pem_write_buffer counts the null byte
     }
-    return false;
+    return true;
 }
-#endif
 
 RetStat ConnectionClass::parseCertChain(SlotClass& slot,
                                         const std::vector<uint8_t>& cert)

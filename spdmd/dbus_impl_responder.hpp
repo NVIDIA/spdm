@@ -95,7 +95,7 @@ class Responder : public ResponderIntf
     using MeasurementsContainerType =
         std::vector<std::tuple<uint8_t, uint8_t, std::vector<uint8_t>>>;
     using CertificatesContainerType =
-        std::vector<std::tuple<uint8_t, std::vector<uint8_t>>>;
+        std::vector<std::tuple<uint8_t, std::string>>;
 
     SpdmdAppContext& appContext;
 
