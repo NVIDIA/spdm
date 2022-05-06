@@ -1,7 +1,7 @@
 
-#include "../../packet.hpp"
-
 #pragma once
+
+#include "../../packet.hpp"
 
 #ifdef SPDMCPP_PACKET_HPP
 
