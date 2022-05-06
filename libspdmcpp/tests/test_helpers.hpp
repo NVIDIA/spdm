@@ -81,27 +81,21 @@ inline int computeSignature(mbedtls_pk_context* pkctx,
 
     mbedtls_ecp_keypair* ctx = mbedtls_pk_ec(*pkctx);
 
-    mbedtls_mpi sigR, sigS;
-    mbedtls_mpi_init(&sigR);
-    mbedtls_mpi_init(&sigS);
+    spdmcpp::mbedtls_mpi_raii sigR, sigS;
 
-    int ret = mbedtls_ecdsa_sign(&ctx->grp, &sigR, &sigS, &ctx->d,
-                                 message.data(), message.size(), fRng, nullptr);
+    int ret = mbedtls_ecdsa_sign(&ctx->grp, sigR, sigS, &ctx->d, message.data(),
+                                 message.size(), fRng, nullptr);
     if (ret)
     {
-        mbedtls_mpi_free(&sigR);
-        mbedtls_mpi_free(&sigS);
         return ret;
     }
-    size_t halfSize = spdmcpp::getHalfSize(ctx);
+    size_t halfSize = spdmcpp::getHalfSize(*ctx);
     signature.resize(halfSize * 2);
-    ret = mbedtls_mpi_write_binary(&sigR, signature.data(), halfSize);
+    ret = mbedtls_mpi_write_binary(sigR, signature.data(), halfSize);
     SPDMCPP_ASSERT(!ret);
-    ret = mbedtls_mpi_write_binary(&sigS, &signature[halfSize], halfSize);
+    ret = mbedtls_mpi_write_binary(sigS, &signature[halfSize], halfSize);
     SPDMCPP_ASSERT(!ret);
 
-    mbedtls_mpi_free(&sigR);
-    mbedtls_mpi_free(&sigS);
     return ret;
 }
 

@@ -423,7 +423,7 @@ class ConnectionClass : public NonCopyable
         /** @brief SPDM parsed certificates decoded from the certificate_chain
          * ordered root, intermediate, leaf
          */
-        std::vector<mbedtls_x509_crt*> MCertificates;
+        std::vector<std::unique_ptr<mbedtls_x509_crt_raii>> MCertificates;
         // TODO mbedtls_x509_crt should be abstracted to CertificateClass
 
         /** @brief Offset into Certificates[] where the DER data starts
@@ -456,7 +456,7 @@ class ConnectionClass : public NonCopyable
             {
                 return nullptr;
             }
-            return MCertificates[0];
+            return *MCertificates[0];
         }
         /** @brief Gets the last certificate from the chain, pressumed to be the
          * Responder leaf certificate
@@ -468,7 +468,7 @@ class ConnectionClass : public NonCopyable
             {
                 return nullptr;
             }
-            return MCertificates[MCertificates.size() - 1];
+            return *MCertificates[MCertificates.size() - 1];
         }
 
         /** @brief clears all the fields of the given slot
@@ -480,12 +480,6 @@ class ConnectionClass : public NonCopyable
 
             Digest.clear();
             Certificates.clear();
-
-            for (auto cert : MCertificates)
-            {
-                mbedtls_x509_crt_free(cert);
-                delete cert;
-            }
             MCertificates.clear();
         }
 

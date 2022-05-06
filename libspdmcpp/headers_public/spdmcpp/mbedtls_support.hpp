@@ -107,18 +107,66 @@ inline size_t getHalfSize(mbedtls_ecp_group_id id)
             return 0;
     }
 }
-inline size_t getHalfSize(const mbedtls_ecp_group* grp)
+inline size_t getHalfSize(const mbedtls_ecp_group& grp)
 {
-    return getHalfSize(grp->id);
+    return getHalfSize(grp.id);
 }
-inline size_t getHalfSize(const mbedtls_ecp_keypair* ctx)
+inline size_t getHalfSize(const mbedtls_ecp_keypair& ctx)
 {
-    return getHalfSize(&ctx->grp);
+    return getHalfSize(ctx.grp);
 }
-inline size_t getHalfSize(const mbedtls_ecdh_context* ctx)
+inline size_t getHalfSize(const mbedtls_ecdh_context& ctx)
 {
-    return getHalfSize(&ctx->grp);
+    return getHalfSize(ctx.grp);
 }
+
+template <class T, auto INIT, auto FREE>
+struct MbedtlsStructWrapper
+{
+    T obj;
+
+    MbedtlsStructWrapper()
+    {
+        INIT(&obj);
+    }
+    ~MbedtlsStructWrapper()
+    {
+        FREE(&obj);
+    }
+
+    MbedtlsStructWrapper(const MbedtlsStructWrapper& other) = delete;
+    MbedtlsStructWrapper& operator=(const MbedtlsStructWrapper&) = delete;
+
+    MbedtlsStructWrapper(MbedtlsStructWrapper&&) = delete;
+    MbedtlsStructWrapper& operator=(MbedtlsStructWrapper&&) = delete;
+
+    T* get()
+    {
+        return &obj;
+    }
+
+    operator T&()
+    {
+        return obj;
+    }
+    operator T*()
+    {
+        return &obj;
+    }
+    T* operator->()
+    {
+        return &obj;
+    }
+};
+
+using mbedtls_mpi_raii =
+    MbedtlsStructWrapper<mbedtls_mpi, mbedtls_mpi_init, mbedtls_mpi_free>;
+using mbedtls_x509_crt_raii =
+    MbedtlsStructWrapper<mbedtls_x509_crt, mbedtls_x509_crt_init,
+                         mbedtls_x509_crt_free>;
+using mbedtls_ecdh_context_raii =
+    MbedtlsStructWrapper<mbedtls_ecdh_context, mbedtls_ecdh_init,
+                         mbedtls_ecdh_free>;
 
 inline int verifySignature(mbedtls_x509_crt* cert,
                            const std::vector<uint8_t>& signature,
@@ -144,54 +192,40 @@ inline int verifySignature(mbedtls_x509_crt* cert,
     {
         SPDMCPP_ASSERT(false);
     }
-    mbedtls_ecdh_context ctx;
-    mbedtls_ecdh_init(&ctx);
+    mbedtls_ecdh_context_raii ctx;
 
-    int ret = mbedtls_ecdh_get_params(&ctx, mbedtls_pk_ec(cert->pk),
+    int ret = mbedtls_ecdh_get_params(ctx, mbedtls_pk_ec(cert->pk),
                                       MBEDTLS_ECDH_OURS);
     if (ret != 0)
     {
-        mbedtls_ecdh_free(&ctx);
         SPDMCPP_ASSERT(false);
         return ret;
     }
 
-    size_t halfSize = getHalfSize(&ctx);
+    size_t halfSize = getHalfSize(ctx);
     if (signature.size() != halfSize * 2)
     {
         SPDMCPP_ASSERT(false);
-        mbedtls_ecdh_free(&ctx);
         return -1;
     }
 
-    mbedtls_mpi bnR, bnS;
-    mbedtls_mpi_init(&bnR);
-    mbedtls_mpi_init(&bnS);
+    mbedtls_mpi_raii bnR, bnS;
 
-    ret = mbedtls_mpi_read_binary(&bnR, signature.data(), halfSize);
+    ret = mbedtls_mpi_read_binary(bnR, signature.data(), halfSize);
     if (ret != 0)
     {
-        mbedtls_mpi_free(&bnR);
-        mbedtls_mpi_free(&bnS);
         SPDMCPP_ASSERT(false);
-        mbedtls_ecdh_free(&ctx);
         return ret;
     }
-    ret = mbedtls_mpi_read_binary(&bnS, &signature[halfSize], halfSize);
+    ret = mbedtls_mpi_read_binary(bnS, &signature[halfSize], halfSize);
     if (ret != 0)
     {
-        mbedtls_mpi_free(&bnR);
-        mbedtls_mpi_free(&bnS);
         SPDMCPP_ASSERT(false);
-        mbedtls_ecdh_free(&ctx);
         return ret;
     }
-    ret = mbedtls_ecdsa_verify(&ctx.grp, hash.data(), hash.size(), &ctx.Q, &bnR,
-                               &bnS);
-    mbedtls_mpi_free(&bnR);
-    mbedtls_mpi_free(&bnS);
+    ret = mbedtls_ecdsa_verify(&ctx->grp, hash.data(), hash.size(), &ctx->Q,
+                               bnR.get(), bnS.get());
 
-    mbedtls_ecdh_free(&ctx);
     return ret;
 #endif
 }
@@ -206,17 +240,14 @@ inline int verifySignature(mbedtls_x509_crt* cert,
  * mbedtls_x509_crt or nullptr on error
  */
 
-inline std::pair<int, mbedtls_x509_crt*>
+inline std::pair<int, std::unique_ptr<mbedtls_x509_crt_raii>>
     mbedtlsCertParseDer(const std::vector<uint8_t>& buf, size_t& off)
 {
-    auto* cert = new mbedtls_x509_crt;
-    mbedtls_x509_crt_init(cert);
+    auto cert = std::make_unique<mbedtls_x509_crt_raii>();
 
-    int ret = mbedtls_x509_crt_parse_der(cert, &buf[off], buf.size() - off);
+    int ret = mbedtls_x509_crt_parse_der(*cert, &buf[off], buf.size() - off);
     if (ret)
     {
-        mbedtls_x509_crt_free(cert);
-        delete cert;
         return std::make_pair(ret, nullptr);
     }
 
@@ -231,7 +262,7 @@ inline std::pair<int, mbedtls_x509_crt*>
         asn1Len += (p - s);
     } // clang-format on
     off += asn1Len;
-    return std::make_pair(ret, cert);
+    return std::make_pair(ret, std::move(cert));
 }
 
 } // namespace spdmcpp

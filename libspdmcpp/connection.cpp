@@ -143,7 +143,7 @@ bool ConnectionClass::getCertificatesPEM(std::string& str,
 
     const SlotClass& slot = Slots[slotidx];
 
-    for (auto cert : slot.MCertificates)
+    for (auto& cert : slot.MCertificates)
     {
         size_t off = str.size();
         size_t size = 4096;
@@ -151,7 +151,7 @@ bool ConnectionClass::getCertificatesPEM(std::string& str,
         auto span = std::span(str).subspan(off);
         int ret = mbedtls_pem_write_buffer(
             "-----BEGIN CERTIFICATE-----\n", "-----END CERTIFICATE-----\n",
-            (const unsigned char*)cert->raw.p, cert->raw.len,
+            (const unsigned char*)(*cert)->raw.p, (*cert)->raw.len,
             // NOLINTNEXTLINE cppcoreguidelines-pro-type-reinterpret-cast
             reinterpret_cast<unsigned char*>(span.data()), span.size(), &size);
         if (ret)
@@ -192,15 +192,15 @@ RetStat ConnectionClass::parseCertChain(SlotClass& slot,
     do
     {
         size_t start = off;
-        auto [ret, c] = mbedtlsCertParseDer(cert, off);
-        if (ret)
         {
-            mbedtlsPrintErrorLine(Log, "mbedtls_x509_crt_parse_der()", ret);
-            return RetStat::ERROR_CERTIFICATE_PARSING_ERROR;
+            auto [ret, c] = mbedtlsCertParseDer(cert, off);
+            if (ret)
+            {
+                mbedtlsPrintErrorLine(Log, "mbedtls_x509_crt_parse_der()", ret);
+                return RetStat::ERROR_CERTIFICATE_PARSING_ERROR;
+            }
+            slot.MCertificates.push_back(std::move(c));
         }
-        // NOLINTNEXTLINE clang-analyzer-cplusplus.NewDeleteLeaks
-        slot.MCertificates.push_back(c);
-
         if (slot.MCertificates.size() == 1)
         {
             std::vector<uint8_t> hash;
@@ -225,10 +225,10 @@ RetStat ConnectionClass::verifyCertificateChain(const SlotClass& slot)
     SPDMCPP_LOG_TRACE_FUNC(Log);
     for (size_t i = 1; i < slot.MCertificates.size(); ++i)
     {
-        slot.MCertificates[i]->next = slot.MCertificates[i - 1];
+        (*slot.MCertificates[i])->next = *slot.MCertificates[i - 1];
         uint32_t rflags = 0;
-        int ret = mbedtls_x509_crt_verify(slot.MCertificates[i - 1],
-                                          slot.MCertificates[i], nullptr,
+        int ret = mbedtls_x509_crt_verify(*slot.MCertificates[i - 1],
+                                          *slot.MCertificates[i], nullptr,
                                           nullptr, &rflags, nullptr, nullptr);
         Log.iprint("mbedtls_x509_crt_verify ret = ");
         Log.println(ret);
@@ -571,9 +571,9 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
 
     if (Log.logLevel >= LogClass::Level::Informational)
     {
-        for (mbedtls_x509_crt* c : slot.MCertificates)
+        for (auto& c : slot.MCertificates)
         {
-            Log.print(mbedtlsToInfoString(c));
+            Log.print(mbedtlsToInfoString(*c));
         }
     }
 
