@@ -39,9 +39,9 @@ inline void endianHostSpdmCopy(const PacketGetCapabilitiesRequest& src,
                                PacketGetCapabilitiesRequest& dst)
 {
     endianHostSpdmCopy(src.Header, dst.Header);
-    dst.Reserved0 = src.Reserved0;
+    endianHostSpdmCopy(src.Reserved0, dst.Reserved0);
     endianHostSpdmCopy(src.CTExponent, dst.CTExponent);
-    dst.Reserved1 = src.Reserved1;
+    endianHostSpdmCopy(src.Reserved1, dst.Reserved1);
     endianHostSpdmCopy(src.Flags, dst.Flags);
 }
 

@@ -36,7 +36,7 @@ inline void endianHostSpdmCopy(const PacketVersionResponseMin& src,
                                PacketVersionResponseMin& dst)
 {
     endianHostSpdmCopy(src.Header, dst.Header);
-    dst.Reserved = src.Reserved;
+    endianHostSpdmCopy(src.Reserved, dst.Reserved);
     // endianHostSpdmCopy(src.VersionNumberEntryCount,
     //   dst.VersionNumberEntryCount);
 }

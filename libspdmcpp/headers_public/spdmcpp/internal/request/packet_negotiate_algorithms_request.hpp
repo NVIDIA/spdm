@@ -218,15 +218,15 @@ inline void endianHostSpdmCopy(const PacketNegotiateAlgorithmsRequestMin& src,
     endianHostSpdmCopy(src.Length, dst.Length);
     endianHostSpdmCopy(src.MeasurementSpecification,
                        dst.MeasurementSpecification);
-    dst.Reserved0 = src.Reserved0;
+    endianHostSpdmCopy(src.Reserved0, dst.Reserved0);
     endianHostSpdmCopy(src.BaseAsymAlgo, dst.BaseAsymAlgo);
     endianHostSpdmCopy(src.BaseHashAlgo, dst.BaseHashAlgo);
-    dst.Reserved1 = src.Reserved1;
-    dst.Reserved2 = src.Reserved2;
-    dst.Reserved3 = src.Reserved3;
+    endianHostSpdmCopy(src.Reserved1, dst.Reserved1);
+    endianHostSpdmCopy(src.Reserved2, dst.Reserved2);
+    endianHostSpdmCopy(src.Reserved3, dst.Reserved3);
     endianHostSpdmCopy(src.ExtAsymCount, dst.ExtAsymCount);
     endianHostSpdmCopy(src.ExtHashCount, dst.ExtHashCount);
-    dst.Reserved4 = src.Reserved4;
+    endianHostSpdmCopy(src.Reserved4, dst.Reserved4);
 }
 
 struct PacketNegotiateAlgorithmsRequestVar

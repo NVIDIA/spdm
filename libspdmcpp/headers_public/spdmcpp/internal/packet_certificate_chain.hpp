@@ -27,7 +27,7 @@ inline void endianHostSpdmCopy(const PacketCertificateChain& src,
                                PacketCertificateChain& dst)
 {
     endianHostSpdmCopy(src.Length, dst.Length);
-    dst.Reserved = src.Reserved;
+    endianHostSpdmCopy(src.Reserved, dst.Reserved);
 }
 
 #endif
