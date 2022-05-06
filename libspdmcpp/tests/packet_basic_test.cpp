@@ -300,12 +300,12 @@ TEST(packet_pseudorandom_encode_decode, PacketNegotiateAlgorithmsRequestVar)
     fillPseudoRandomPacket(p.Min);
 
     p.PacketReqAlgVector.push_back(
-        PacketReqAlgStruct::buildSupported2(AlgTypeEnum::DHE, 0x1b, 0x00));
-    p.PacketReqAlgVector.push_back(PacketReqAlgStruct::buildSupported2(
+        PacketReqAlgStruct::buildAlgSupported(AlgTypeEnum::DHE, 0x1b, 0x00));
+    p.PacketReqAlgVector.push_back(PacketReqAlgStruct::buildAlgSupported(
         AlgTypeEnum::AEADCipherSuite, 0x06, 0x00));
-    p.PacketReqAlgVector.push_back(PacketReqAlgStruct::buildSupported2(
+    p.PacketReqAlgVector.push_back(PacketReqAlgStruct::buildAlgSupported(
         AlgTypeEnum::ReqBaseAsymAlg, 0x0F, 0x00));
-    p.PacketReqAlgVector.push_back(PacketReqAlgStruct::buildSupported2(
+    p.PacketReqAlgVector.push_back(PacketReqAlgStruct::buildAlgSupported(
         AlgTypeEnum::KeySchedule, 0x01, 0x00));
 
     EXPECT_EQ(p.finalize(), RetStat::OK);
@@ -319,12 +319,12 @@ TEST(packet_pseudorandom_encode_decode, PacketAlgorithmsResponseVar)
     fillPseudoRandomPacket(p.Min);
 
     p.PacketReqAlgVector.push_back(
-        PacketReqAlgStruct::buildSupported2(AlgTypeEnum::DHE, 0x1b, 0x00));
-    p.PacketReqAlgVector.push_back(PacketReqAlgStruct::buildSupported2(
+        PacketReqAlgStruct::buildAlgSupported(AlgTypeEnum::DHE, 0x1b, 0x00));
+    p.PacketReqAlgVector.push_back(PacketReqAlgStruct::buildAlgSupported(
         AlgTypeEnum::AEADCipherSuite, 0x06, 0x00));
-    p.PacketReqAlgVector.push_back(PacketReqAlgStruct::buildSupported2(
+    p.PacketReqAlgVector.push_back(PacketReqAlgStruct::buildAlgSupported(
         AlgTypeEnum::ReqBaseAsymAlg, 0x0F, 0x00));
-    p.PacketReqAlgVector.push_back(PacketReqAlgStruct::buildSupported2(
+    p.PacketReqAlgVector.push_back(PacketReqAlgStruct::buildAlgSupported(
         AlgTypeEnum::KeySchedule, 0x01, 0x00));
 
     EXPECT_EQ(p.finalize(), RetStat::OK);

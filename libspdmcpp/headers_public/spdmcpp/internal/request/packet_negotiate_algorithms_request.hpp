@@ -15,8 +15,8 @@ struct PacketReqAlgStruct
     std::array<uint8_t, 14> AlgSupported = {0};
     std::array<uint32_t, 15> AlgExternal = {0};
 
-    static PacketReqAlgStruct buildSupported2(AlgTypeEnum type, uint8_t algsup0,
-                                              uint8_t algsup1)
+    static PacketReqAlgStruct
+        buildAlgSupported(AlgTypeEnum type, uint8_t algsup0, uint8_t algsup1)
     {
         PacketReqAlgStruct ret;
         ret.AlgType = type;
