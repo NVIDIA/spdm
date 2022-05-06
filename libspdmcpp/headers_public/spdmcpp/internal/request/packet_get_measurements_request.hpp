@@ -7,11 +7,11 @@
 
 struct PacketGetMeasurementsRequestMin
 {
-    PacketMessageHeader Header = PacketMessageHeader(requestResponseCode);
-
     static constexpr RequestResponseEnum requestResponseCode =
         RequestResponseEnum::REQUEST_GET_MEASUREMENTS;
     static constexpr bool sizeIsConstant = true;
+
+    PacketMessageHeader Header = PacketMessageHeader(requestResponseCode);
 
     bool hasNonce() const
     {
@@ -42,13 +42,13 @@ inline void endianHostSpdmCopy(const PacketGetMeasurementsRequestMin& src,
 
 struct PacketGetMeasurementsRequestVar
 {
-    PacketGetMeasurementsRequestMin Min;
-    nonce_array_32 Nonce = {0};
-    uint8_t SlotIDParam = 0;
-
     static constexpr RequestResponseEnum requestResponseCode =
         RequestResponseEnum::REQUEST_GET_MEASUREMENTS;
     static constexpr bool sizeIsConstant = false;
+
+    PacketGetMeasurementsRequestMin Min;
+    nonce_array_32 Nonce = {0};
+    uint8_t SlotIDParam = 0;
 
     bool hasNonce() const
     {

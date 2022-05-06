@@ -7,13 +7,13 @@
 
 struct PacketGetCertificateRequest
 {
-    PacketMessageHeader Header = PacketMessageHeader(requestResponseCode);
-    uint16_t Offset = 0;
-    uint16_t Length = 0;
-
     static constexpr RequestResponseEnum requestResponseCode =
         RequestResponseEnum::REQUEST_GET_CERTIFICATE;
     static constexpr bool sizeIsConstant = true;
+
+    PacketMessageHeader Header = PacketMessageHeader(requestResponseCode);
+    uint16_t Offset = 0;
+    uint16_t Length = 0;
 
     void printMl(LogClass& log) const
     {

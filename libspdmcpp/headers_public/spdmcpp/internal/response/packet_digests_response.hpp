@@ -7,11 +7,11 @@
 
 struct PacketDigestsResponseMin
 {
-    PacketMessageHeader Header = PacketMessageHeader(requestResponseCode);
-
     static constexpr RequestResponseEnum requestResponseCode =
         RequestResponseEnum::RESPONSE_DIGESTS;
     static constexpr bool sizeIsConstant = true;
+
+    PacketMessageHeader Header = PacketMessageHeader(requestResponseCode);
 
     void printMl(LogClass& log) const
     {
@@ -33,14 +33,14 @@ inline void endianHostSpdmCopy(const PacketDigestsResponseMin& src,
 
 struct PacketDigestsResponseVar
 {
+    static constexpr RequestResponseEnum requestResponseCode =
+        RequestResponseEnum::RESPONSE_DIGESTS;
+    static constexpr bool sizeIsConstant = false;
+
     PacketDigestsResponseMin Min;
 
     static constexpr uint8_t digestsNum = 8;
     std::array<std::vector<uint8_t>, digestsNum> Digests;
-
-    static constexpr RequestResponseEnum requestResponseCode =
-        RequestResponseEnum::RESPONSE_DIGESTS;
-    static constexpr bool sizeIsConstant = false;
 
     RetStat finalize()
     {

@@ -7,11 +7,11 @@
 
 struct PacketErrorResponseMin
 {
-    PacketMessageHeader Header = PacketMessageHeader(requestResponseCode);
-
     static constexpr RequestResponseEnum requestResponseCode =
         RequestResponseEnum::RESPONSE_ERROR;
     static constexpr bool sizeIsConstant = true;
+
+    PacketMessageHeader Header = PacketMessageHeader(requestResponseCode);
 
     void print(LogClass& log) const
     {
@@ -39,12 +39,12 @@ inline void endianHostSpdmCopy(const PacketErrorResponseMin& src,
 
 struct PacketErrorResponseVar
 {
-    PacketErrorResponseMin Min;
-    // TODO handle custom data
-
     static constexpr RequestResponseEnum requestResponseCode =
         RequestResponseEnum::RESPONSE_ERROR;
     static constexpr bool sizeIsConstant = false;
+
+    PacketErrorResponseMin Min;
+    // TODO handle custom data
 
     bool operator==(const PacketErrorResponseVar& other) const
     {

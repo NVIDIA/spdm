@@ -7,15 +7,15 @@
 
 struct PacketGetCapabilitiesRequest
 {
+    static constexpr RequestResponseEnum requestResponseCode =
+        RequestResponseEnum::REQUEST_GET_CAPABILITIES;
+    static constexpr bool sizeIsConstant = true;
+
     PacketMessageHeader Header = PacketMessageHeader(requestResponseCode);
     uint8_t Reserved0 = 0;
     uint8_t CTExponent = 0;
     uint16_t Reserved1 = 0;
     RequesterCapabilitiesFlags Flags = RequesterCapabilitiesFlags::NIL;
-
-    static constexpr RequestResponseEnum requestResponseCode =
-        RequestResponseEnum::REQUEST_GET_CAPABILITIES;
-    static constexpr bool sizeIsConstant = true;
 
     PacketGetCapabilitiesRequest() = default;
     PacketGetCapabilitiesRequest(uint8_t ctExponent,

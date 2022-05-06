@@ -7,11 +7,11 @@
 
 struct PacketChallengeAuthResponseMin
 {
-    PacketMessageHeader Header = PacketMessageHeader(requestResponseCode);
-
     static constexpr RequestResponseEnum requestResponseCode =
         RequestResponseEnum::RESPONSE_CHALLENGE_AUTH;
     static constexpr bool sizeIsConstant = true;
+
+    PacketMessageHeader Header = PacketMessageHeader(requestResponseCode);
 
     void printMl(LogClass& log) const
     {
@@ -33,16 +33,16 @@ inline void endianHostSpdmCopy(const PacketChallengeAuthResponseMin& src,
 
 struct PacketChallengeAuthResponseVar
 {
+    static constexpr RequestResponseEnum requestResponseCode =
+        RequestResponseEnum::RESPONSE_CHALLENGE_AUTH;
+    static constexpr bool sizeIsConstant = false;
+
     PacketChallengeAuthResponseMin Min;
     nonce_array_32 Nonce = {0};
     std::vector<uint8_t> CertChainHashVector;
     std::vector<uint8_t> MeasurementSummaryHashVector;
     std::vector<uint8_t> OpaqueDataVector;
     std::vector<uint8_t> SignatureVector;
-
-    static constexpr RequestResponseEnum requestResponseCode =
-        RequestResponseEnum::RESPONSE_CHALLENGE_AUTH;
-    static constexpr bool sizeIsConstant = false;
 
     RetStat finalize()
     {

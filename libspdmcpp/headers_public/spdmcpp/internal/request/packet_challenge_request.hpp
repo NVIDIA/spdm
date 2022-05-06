@@ -7,12 +7,12 @@
 
 struct PacketChallengeRequest
 {
-    PacketMessageHeader Header = PacketMessageHeader(requestResponseCode);
-    nonce_array_32 Nonce = {0};
-
     static constexpr RequestResponseEnum requestResponseCode =
         RequestResponseEnum::REQUEST_CHALLENGE;
     static constexpr bool sizeIsConstant = true;
+
+    PacketMessageHeader Header = PacketMessageHeader(requestResponseCode);
+    nonce_array_32 Nonce = {0};
 
     void printMl(LogClass& log) const
     {

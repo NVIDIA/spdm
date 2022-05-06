@@ -7,6 +7,10 @@
 
 struct PacketAlgorithmsResponseMin
 {
+    static constexpr RequestResponseEnum requestResponseCode =
+        RequestResponseEnum::RESPONSE_ALGORITHMS;
+    static constexpr bool sizeIsConstant = true;
+
     PacketMessageHeader Header = PacketMessageHeader(requestResponseCode);
     uint16_t Length = 0;
     uint8_t MeasurementSpecification = 0;
@@ -21,10 +25,6 @@ struct PacketAlgorithmsResponseMin
     uint8_t ExtAsymCount = 0;
     uint8_t ExtHashCount = 0;
     uint16_t Reserved4 = 0;
-
-    static constexpr RequestResponseEnum requestResponseCode =
-        RequestResponseEnum::RESPONSE_ALGORITHMS;
-    static constexpr bool sizeIsConstant = true;
 
     void printMl(LogClass& log) const
     {
@@ -71,12 +71,12 @@ inline void endianHostSpdmCopy(const PacketAlgorithmsResponseMin& src,
 
 struct PacketAlgorithmsResponseVar
 {
-    PacketAlgorithmsResponseMin Min;
-    std::vector<PacketReqAlgStruct> PacketReqAlgVector;
-
     static constexpr RequestResponseEnum requestResponseCode =
         RequestResponseEnum::RESPONSE_ALGORITHMS;
     static constexpr bool sizeIsConstant = false;
+
+    PacketAlgorithmsResponseMin Min;
+    std::vector<PacketReqAlgStruct> PacketReqAlgVector;
 
     uint16_t getSize() const
     {

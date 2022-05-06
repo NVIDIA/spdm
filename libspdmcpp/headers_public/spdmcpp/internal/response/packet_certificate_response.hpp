@@ -7,13 +7,13 @@
 
 struct PacketCertificateResponseMin
 {
-    PacketMessageHeader Header = PacketMessageHeader(requestResponseCode);
-    uint16_t PortionLength = 0;
-    uint16_t RemainderLength = 0;
-
     static constexpr RequestResponseEnum requestResponseCode =
         RequestResponseEnum::RESPONSE_CERTIFICATE;
     static constexpr bool sizeIsConstant = true;
+
+    PacketMessageHeader Header = PacketMessageHeader(requestResponseCode);
+    uint16_t PortionLength = 0;
+    uint16_t RemainderLength = 0;
 
     void printMl(LogClass& log) const
     {
@@ -39,12 +39,12 @@ inline void endianHostSpdmCopy(const PacketCertificateResponseMin& src,
 
 struct PacketCertificateResponseVar
 {
-    PacketCertificateResponseMin Min;
-    std::vector<uint8_t> CertificateVector;
-
     static constexpr RequestResponseEnum requestResponseCode =
         RequestResponseEnum::RESPONSE_CERTIFICATE;
     static constexpr bool sizeIsConstant = false;
+
+    PacketCertificateResponseMin Min;
+    std::vector<uint8_t> CertificateVector;
 
     bool operator==(const PacketCertificateResponseVar& other) const
     {

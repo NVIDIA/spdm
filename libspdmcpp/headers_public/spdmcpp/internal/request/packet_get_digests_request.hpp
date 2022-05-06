@@ -7,11 +7,11 @@
 
 struct PacketGetDigestsRequest
 {
-    PacketMessageHeader Header = PacketMessageHeader(requestResponseCode);
-
     static constexpr RequestResponseEnum requestResponseCode =
         RequestResponseEnum::REQUEST_GET_DIGESTS;
     static constexpr bool sizeIsConstant = true;
+
+    PacketMessageHeader Header = PacketMessageHeader(requestResponseCode);
 
     void printMl(LogClass& log) const
     {

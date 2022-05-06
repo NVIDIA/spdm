@@ -171,6 +171,10 @@ struct PacketReqAlgStruct
 
 struct PacketNegotiateAlgorithmsRequestMin
 {
+    static constexpr RequestResponseEnum requestResponseCode =
+        RequestResponseEnum::REQUEST_NEGOTIATE_ALGORITHMS;
+    static constexpr bool sizeIsConstant = true;
+
     PacketMessageHeader Header = PacketMessageHeader(requestResponseCode);
     uint16_t Length = 0;
     uint8_t MeasurementSpecification = 0;
@@ -183,10 +187,6 @@ struct PacketNegotiateAlgorithmsRequestMin
     uint8_t ExtAsymCount = 0;
     uint8_t ExtHashCount = 0;
     uint16_t Reserved4 = 0;
-
-    static constexpr RequestResponseEnum requestResponseCode =
-        RequestResponseEnum::REQUEST_NEGOTIATE_ALGORITHMS;
-    static constexpr bool sizeIsConstant = true;
 
     void printMl(LogClass& log) const
     {

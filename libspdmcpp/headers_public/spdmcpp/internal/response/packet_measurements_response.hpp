@@ -7,13 +7,13 @@
 
 struct PacketMeasurementsResponseMin
 {
-    PacketMessageHeader Header = PacketMessageHeader(requestResponseCode);
-    uint8_t NumberOfBlocks = 0;
-    std::array<uint8_t, 3> MeasurementRecordLength = {0, 0, 0}; // wtf dmtf...
-
     static constexpr RequestResponseEnum requestResponseCode =
         RequestResponseEnum::RESPONSE_MEASUREMENTS;
     static constexpr bool sizeIsConstant = true;
+
+    PacketMessageHeader Header = PacketMessageHeader(requestResponseCode);
+    uint8_t NumberOfBlocks = 0;
+    std::array<uint8_t, 3> MeasurementRecordLength = {0, 0, 0}; // wtf dmtf...
 
     uint32_t getMeasurementRecordLength() const
     {
@@ -65,15 +65,15 @@ inline void endianHostSpdmCopy(const PacketMeasurementsResponseMin& src,
 struct PacketMeasurementsResponseVar // TODO all variable packets don't need
                                      // to be packed
 {
+    static constexpr RequestResponseEnum requestResponseCode =
+        RequestResponseEnum::RESPONSE_MEASUREMENTS;
+    static constexpr bool sizeIsConstant = false;
+
     PacketMeasurementsResponseMin Min;
     nonce_array_32 Nonce = {0};
     std::vector<PacketMeasurementBlockVar> MeasurementBlockVector;
     std::vector<uint8_t> OpaqueDataVector;
     std::vector<uint8_t> SignatureVector;
-
-    static constexpr RequestResponseEnum requestResponseCode =
-        RequestResponseEnum::RESPONSE_MEASUREMENTS;
-    static constexpr bool sizeIsConstant = false;
 
     RetStat finalize()
     {

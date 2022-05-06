@@ -7,10 +7,11 @@
 
 struct PacketGetVersionRequest
 {
-    PacketMessageHeader Header = PacketMessageHeader(requestResponseCode);
     static constexpr RequestResponseEnum requestResponseCode =
         RequestResponseEnum::REQUEST_GET_VERSION;
     static constexpr bool sizeIsConstant = true;
+
+    PacketMessageHeader Header = PacketMessageHeader(requestResponseCode);
 
     void printMl(LogClass& log) const
     {

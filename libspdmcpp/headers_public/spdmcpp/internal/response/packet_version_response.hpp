@@ -7,14 +7,14 @@
 
 struct PacketVersionResponseMin
 {
-    PacketMessageHeader Header = PacketMessageHeader(requestResponseCode);
-    uint8_t Reserved = 0;
-    //    uint8_t VersionNumberEntryCount = 0;
-
     static constexpr RequestResponseEnum requestResponseCode =
         RequestResponseEnum::RESPONSE_VERSION;
     static constexpr bool sizeIsConstant =
         true; // TODO decide how we need/want to handle such packets
+
+    PacketMessageHeader Header = PacketMessageHeader(requestResponseCode);
+    uint8_t Reserved = 0;
+    //    uint8_t VersionNumberEntryCount = 0;
 
     void printMl(LogClass& log) const
     {
@@ -43,12 +43,12 @@ inline void endianHostSpdmCopy(const PacketVersionResponseMin& src,
 
 struct PacketVersionResponseVar
 {
-    PacketVersionResponseMin Min;
-    std::vector<PacketVersionNumber> VersionNumberEntries;
-
     static constexpr RequestResponseEnum requestResponseCode =
         RequestResponseEnum::RESPONSE_VERSION;
     static constexpr bool sizeIsConstant = false;
+
+    PacketVersionResponseMin Min;
+    std::vector<PacketVersionNumber> VersionNumberEntries;
 
     void printMl(LogClass& log) const
     {
