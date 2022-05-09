@@ -153,9 +153,9 @@ class MctpIoClass : public IOClass
     }
 
     RetStat write(const std::vector<uint8_t>& buf,
-                  timeout_us_t timeout = TIMEOUT_US_INFINITE) override;
+                  timeout_us_t timeout = timeoutUsInfinite) override;
     RetStat read(std::vector<uint8_t>& buf,
-                 timeout_us_t timeout = TIMEOUT_US_INFINITE) override;
+                 timeout_us_t timeout = timeoutUsInfinite) override;
 
     int isSocketOpen() const
     {

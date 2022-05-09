@@ -17,21 +17,14 @@
 namespace spdmcpp
 {
 using timeout_us_t = uint64_t; /// in units of 1 micro second
-enum : timeout_us_t
-{
-    TIMEOUT_US_INFINITE = std::numeric_limits<timeout_us_t>::max(),
-    TIMEOUT_US_MAXIMUM = TIMEOUT_US_INFINITE - 1
-};
+constexpr timeout_us_t timeoutUsInfinite =
+    std::numeric_limits<timeout_us_t>::max();
+constexpr timeout_us_t timeoutUsMaximum = timeoutUsInfinite - 1;
 
 using timeout_ms_t = uint64_t; /// in units of 1 milli second
-enum : timeout_ms_t
-{
-    TIMEOUT_MS_INFINITE = std::numeric_limits<timeout_ms_t>::max(),
-    TIMEOUT_MS_MAXIMUM = TIMEOUT_MS_INFINITE - 1
-};
-
-class ConnectionClass;
-class ContextClass;
+constexpr timeout_ms_t timeoutMsInfinite =
+    std::numeric_limits<timeout_ms_t>::max();
+constexpr timeout_ms_t timeoutMsMaximum = timeoutMsInfinite - 1;
 
 /** @struct NonCopyable
  *  @brief Helper class for deleting copy ops
@@ -113,9 +106,10 @@ class IOClass : NonCopyable
   public:
     virtual ~IOClass() = default;
     virtual RetStat write(const std::vector<uint8_t>& buf,
-                          timeout_us_t timeout = TIMEOUT_US_INFINITE) = 0;
+                          timeout_us_t timeout = timeoutUsInfinite) = 0;
+
     virtual RetStat read(std::vector<uint8_t>& buf,
-                         timeout_us_t timeout = TIMEOUT_US_INFINITE) = 0;
+                         timeout_us_t timeout = timeoutUsInfinite) = 0;
 };
 
 } // namespace spdmcpp

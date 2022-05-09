@@ -97,7 +97,7 @@ class TimingClass
         ctexp -= 10;
         if (ctexp >= sizeof(CT) * 8) // exceeds value range, cap to max
         {
-            CT = TIMEOUT_MS_MAXIMUM;
+            CT = timeoutMsMaximum;
             return;
         }
         CT = static_cast<timeout_ms_t>(1) << ctexp;
@@ -522,7 +522,7 @@ class ConnectionClass : public NonCopyable
     template <typename R, typename T>
     RetStat sendRequestSetupResponse(const T& request,
                                      BufEnum bufidx = BufEnum::NUM,
-                                     timeout_ms_t timeout = TIMEOUT_MS_INFINITE,
+                                     timeout_ms_t timeout = timeoutMsInfinite,
                                      uint16_t retry = 4);
 
     /** @brief This is the common implementation for all the public
@@ -537,12 +537,12 @@ class ConnectionClass : public NonCopyable
 
     /** @brief Low-level, typically shouldn't be used, sets up information that
      * we're waiting for a response packet of the given type and setups a
-     * timeout if it isn't TIMEOUT_MS_INFINITE
+     * timeout if it isn't timeoutMsInfinite
      *  @param[in] timeout - The response timeout
      *  @param[in] retry - The number of times the request should be
      */
     template <typename T>
-    RetStat setupResponseWait(timeout_ms_t timeout = TIMEOUT_MS_INFINITE,
+    RetStat setupResponseWait(timeout_ms_t timeout = timeoutMsInfinite,
                               uint16_t retry = 4);
 
     /** @brief Clears a previously setup response timeout

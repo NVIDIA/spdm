@@ -45,13 +45,13 @@ class FixtureIOClass : public IOClass
 {
   public:
     RetStat write(const std::vector<uint8_t>& buf,
-                  timeout_us_t /*timeout*/ = TIMEOUT_US_INFINITE) override
+                  timeout_us_t /*timeout*/ = timeoutUsInfinite) override
     {
         WriteQueue.push_back(buf);
         return RetStat::OK;
     }
     RetStat read(std::vector<uint8_t>& buf,
-                 timeout_us_t /*timeout*/ = TIMEOUT_US_INFINITE) override
+                 timeout_us_t /*timeout*/ = timeoutUsInfinite) override
     {
         if (ReadQueue.empty())
         {

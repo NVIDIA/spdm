@@ -92,7 +92,7 @@ RetStat ConnectionClass::setupResponseWait(timeout_ms_t timeout, uint16_t retry)
     SPDMCPP_STATIC_ASSERT(isResponse(T::requestResponseCode));
     WaitingForResponse = T::requestResponseCode;
 
-    if (timeout != TIMEOUT_MS_INFINITE)
+    if (timeout != timeoutMsInfinite)
     {
         auto rs = transport->setupTimeout(timeout);
         if (isError(rs))
