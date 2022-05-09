@@ -67,6 +67,8 @@ class Responder : public ResponderIntf
     /** @brief Constructor to put object onto bus at a dbus path.
      *  @param[in] bus - Bus to attach to.
      *  @param[in] path - Path to attach at.
+     *  @param[in] eid - MCTP EndpointID of the responder
+     *  @param[in] inventoryPath - Used for the object-manager association
      */
     Responder(SpdmdAppContext& appCtx, const std::string& path, uint8_t eid,
               const sdbusplus::message::object_path& mctpPath,
@@ -87,7 +89,14 @@ class Responder : public ResponderIntf
         return appContext.event;
     }
 
+    /** @brief Event callback for receiving an SPDM packet from the responder
+     *  @param[inout] bus - Buffer containing the data, note that after the call
+     * the contents of buf will be effectively clobbered
+     */
     spdmcpp::RetStat handleRecv(std::vector<uint8_t>& buf);
+
+    /** @brief Event callback in case the timeout was reached
+     */
     spdmcpp::RetStat handleTimeout()
     {
         return connection.handleTimeout();

@@ -26,19 +26,18 @@ constexpr size_t mctpMaxMessageSize = 4096;
 
 /** @class MctpTransportClass
  *  @brief Support class for transport through the mctp-demux-daemon
- *  @details This class should be further derived to add timeout support
+ *  @details This class should be further derived to add timeout support.
+ *  Most of the interface is documented in TransportClass
  */
 class MctpTransportClass : public TransportClass
 {
   public:
+    /** @brief The constructor
+     *  @param[in] eid - The EndpointID that this instance communicates with,
+     * it's checked when decoding written into the packet when encoding
+     */
     explicit MctpTransportClass(uint8_t eid) : EID(eid)
     {}
-
-    void setEid(uint8_t eid)
-    {
-        SPDMCPP_ASSERT(EID == 0);
-        EID = eid;
-    }
 
     RetStat encodePre(std::vector<uint8_t>& /*buf*/, LayerState& lay) override
     {
@@ -56,21 +55,32 @@ class MctpTransportClass : public TransportClass
     RetStat decode(std::vector<uint8_t>& buf, LayerState& lay) override
     {
         setLayerSize(lay, sizeof(HeaderType));
+        if (!doesHeaderFit(buf, lay))
+        {
+            return RetStat::ERROR_BUFFER_TOO_SMALL;
+        }
         const auto& header = getHeaderRef<HeaderType>(buf, lay);
         if (header.type != MCTPMessageTypeEnum::SPDM)
         {
-            return RetStat::ERROR_UNKNOWN;
+            return RetStat::ERROR_WRONG_MCTP_TYPE;
+        }
+        if (header.eid != EID)
+        {
+            return RetStat::ERROR_WRONG_EID;
         }
         return RetStat::OK;
     }
 
-    /** @brief helper for checking if the buffer is large enough
+    /** @brief Static helper for quickly fetching the EnpointID, typically for
+     * routing
+     *  @details The function also checks buffer bounds
+     *  @param[in] buf - buffer containing the full received data
+     *  @param[inout] lay - lay.Offset specifies where the transport layer
+     * starts, lay.Size  will be set to the size of the transport data
+     *  @param[out] eid - the EndpointID will be written to this parameter
+     *  @returns OK if there were no errors and eid was written, or
+     * ERROR_BUFFER_TOO_SMALL, or ERROR_WRONG_MCTP_TYPE
      */
-    static bool doesHeaderFit(std::vector<uint8_t>& buf, LayerState& lay)
-    {
-        return TransportClass::doesHeaderFit<HeaderType>(buf, lay);
-    }
-
     static RetStat peekEid(std::vector<uint8_t>& buf, LayerState& lay,
                            uint8_t& eid)
     {
@@ -88,13 +98,34 @@ class MctpTransportClass : public TransportClass
         return RetStat::OK;
     }
 
+    /** @brief Static helper for checking if the buffer is large enough to fit
+     * the header
+     */
+    static bool doesHeaderFit(std::vector<uint8_t>& buf, LayerState& lay)
+    {
+        return TransportClass::doesHeaderFit<HeaderType>(buf, lay);
+    }
+
   protected:
+    /** @brief Transport header matching the mctp-demux-daemon requirements
+     */
     struct HeaderType
     {
+        /** @brief Either source or the destination EndpointID, depending on
+         * whether the packet is being sent or received. Regandless though it
+         * should always
+         */
         uint8_t eid;
+
+        /** @brief Type of the message, this should always be
+         * MCTPMessageTypeEnum::SPDM
+         */
         MCTPMessageTypeEnum type;
     };
 
+    /** @brief The EndpointID that this instance communicates with, it's checked
+     * when decoding written into the packet when encoding
+     */
     uint8_t EID = 0;
 };
 
