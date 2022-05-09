@@ -59,5 +59,3 @@ endif
 
 subdir('libspdmcpp')
 subdir('spdmd')
-
-subdir('spdmcpp_emu')	#TODO separate repo
