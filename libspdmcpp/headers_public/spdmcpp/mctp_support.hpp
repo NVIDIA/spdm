@@ -64,14 +64,25 @@ class MctpTransportClass : public TransportClass
         return RetStat::OK;
     }
 
+    /** @brief helper for checking if the buffer is large enough
+     */
+    static bool doesHeaderFit(std::vector<uint8_t>& buf, LayerState& lay)
+    {
+        return TransportClass::doesHeaderFit<HeaderType>(buf, lay);
+    }
+
     static RetStat peekEid(std::vector<uint8_t>& buf, LayerState& lay,
                            uint8_t& eid)
     {
         setLayerSize(lay, sizeof(HeaderType));
+        if (!doesHeaderFit(buf, lay))
+        {
+            return RetStat::ERROR_BUFFER_TOO_SMALL;
+        }
         const auto& header = getHeaderRef<HeaderType>(buf, lay);
         if (header.type != MCTPMessageTypeEnum::SPDM)
         {
-            return RetStat::ERROR_UNKNOWN;
+            return RetStat::ERROR_WRONG_MCTP_TYPE;
         }
         eid = header.eid;
         return RetStat::OK;

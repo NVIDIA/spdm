@@ -143,6 +143,14 @@ class TransportClass : public NonCopyable
         return *reinterpret_cast<T*>(&buf[lay.getOffset()]);
     }
 
+    /** @brief helper for checking if the buffer is large enough
+     */
+    template <class T>
+    static bool doesHeaderFit(std::vector<uint8_t>& buf, LayerState& lay)
+    {
+        return lay.getOffset() + sizeof(T) <= buf.size();
+    }
+
     /** @brief helper for setting layer value
      */
     static void setLayerOffset(LayerState& lay, size_t v)

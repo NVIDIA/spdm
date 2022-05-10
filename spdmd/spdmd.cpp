@@ -124,8 +124,15 @@ void SpdmdApp::connectMCTP()
                 spdmcpp::MctpTransportClass::peekEid(packetBuffer, lay, eid);
 
             SPDMCPP_LOG_TRACE_RS(log, rs);
-            if (rs != spdmcpp::RetStat::OK)
-            {
+            switch (rs) {
+            case spdmcpp::RetStat::OK:
+                break;
+            case spdmcpp::RetStat::ERROR_BUFFER_TOO_SMALL:
+                log.print("SpdmdApp::IO: packet size = ");
+                log.print(packetBuffer.size());
+                log.println(" is too small to be a valid SPDM packet");
+                return;
+            default:
                 log.print("SpdmdApp::IO peekEid returned unexpected error: ");
                 log.println(rs);
                 return;
