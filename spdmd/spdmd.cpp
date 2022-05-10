@@ -95,7 +95,6 @@ void SpdmdApp::setupCli(int argc, char** argv)
 void SpdmdApp::connectDBus()
 {
     SPDMCPP_LOG_TRACE_FUNC(log);
-    sdbusplus::server::manager_t objManager(bus, spdmRootObjectPath);
     bus.attach_event(event.get(), SD_EVENT_PRIORITY_NORMAL);
     bus.request_name(spdmDefaultService);
 }
@@ -259,6 +258,8 @@ int main(int argc, char** argv)
             std::make_unique<MctpDiscovery>(spdmApp);
 
         spdmApp.setupMeasurementDelay();
+
+        sdbusplus::server::manager_t objManager(spdmApp.getBus(), spdmRootObjectPath);
 
         returnCode = spdmApp.loop();
     }
