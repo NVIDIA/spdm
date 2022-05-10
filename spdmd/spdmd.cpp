@@ -96,7 +96,6 @@ void SpdmdApp::connectDBus()
 {
     SPDMCPP_LOG_TRACE_FUNC(log);
     bus.attach_event(event.get(), SD_EVENT_PRIORITY_NORMAL);
-    bus.request_name(spdmDefaultService);
 }
 
 void SpdmdApp::connectMCTP()
@@ -259,7 +258,9 @@ int main(int argc, char** argv)
 
         spdmApp.setupMeasurementDelay();
 
-        sdbusplus::server::manager_t objManager(spdmApp.getBus(), spdmRootObjectPath);
+        auto& bus = spdmApp.getBus();
+        sdbusplus::server::manager_t objManager(bus, spdmRootObjectPath);
+        bus.request_name(spdmDefaultService);
 
         returnCode = spdmApp.loop();
     }
