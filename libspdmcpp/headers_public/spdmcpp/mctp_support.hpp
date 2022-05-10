@@ -210,7 +210,7 @@ inline RetStat MctpIoClass::read(std::vector<uint8_t>& buf,
     if (result == -1 || result == 0)
     {
         buf.clear();
-        Log.iprint("Receive error:");
+        Log.iprint("Receive error: ");
         Log.println(errno);
         return RetStat::ERROR_UNKNOWN;
     }

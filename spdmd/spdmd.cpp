@@ -115,7 +115,14 @@ void SpdmdApp::connectMCTP()
             return;
         }
 
-        mctpIo.read(packetBuffer);
+        {
+            auto rs = mctpIo.read(packetBuffer);
+            if (rs != spdmcpp::RetStat::OK) {
+                log.println("SpdmdApp::IO read failed likely due to broken socket connection, quitting!");
+                event.exit(1);
+                return;
+            }
+        }
 
         uint8_t eid = 0;
         {
