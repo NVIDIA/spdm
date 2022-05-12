@@ -73,7 +73,7 @@ struct PacketReqAlgStruct
     }
     void setReqBaseAsymAlg(BaseAsymAlgoFlags flags)
     {
-        auto bits = static_cast<std::underlying_type_t<flags>>(flags);
+        auto bits = static_cast<std::underlying_type_t<BaseAsymAlgoFlags>>(flags);
         AlgSupported[0] = bits;
         AlgSupported[1] = (bits >> 16);
     }
