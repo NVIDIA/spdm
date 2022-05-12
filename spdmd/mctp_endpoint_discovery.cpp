@@ -150,7 +150,14 @@ std::string MctpDiscovery::getUUID(const dbus::InterfaceMap& interfaces)
         auto uuid = properties.find(uuidIntfPropertyUUID);
         if (uuid != properties.end())
         {
-            return std::get<std::string>(uuid->second);
+            try
+            {
+                return std::get<std::string>(uuid->second);
+            }
+            catch (const std::bad_variant_access& e)
+            {
+                spdmApp.getLog().println(e.what());
+            }
         }
     }
     return {};
