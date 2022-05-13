@@ -405,7 +405,16 @@ RetStat ConnectionClass::tryNegotiateAlgorithms()
     if (MessageVersion != MessageVersionEnum::SPDM_1_0)
     {
         request.PacketReqAlgVector.push_back(
+            PacketReqAlgStruct::buildAlgSupported(AlgTypeEnum::DHE, 0x01,
+                                                  0x00));
+        request.PacketReqAlgVector.push_back(
+            PacketReqAlgStruct::buildAlgSupported(AlgTypeEnum::AEADCipherSuite,
+                                                  0x02, 0x00));
+        request.PacketReqAlgVector.push_back(
             PacketReqAlgStruct::buildReqBaseAsymAlg(request.Min.BaseAsymAlgo));
+        request.PacketReqAlgVector.push_back(
+            PacketReqAlgStruct::buildAlgSupported(AlgTypeEnum::KeySchedule,
+                                                  0x01, 0x00));
     }
 
     request.finalize();
