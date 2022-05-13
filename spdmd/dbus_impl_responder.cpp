@@ -234,6 +234,22 @@ void Responder::refresh(uint8_t slotIndex, std::vector<uint8_t> nonc,
             "WARNING - refresh ignored because previous one is still processing!");
         return;
     }
+
+    if (slotIndex >= ConnectionClass::slotNum)
+    {
+        getLog().iprintln(
+            "WARNING - refresh ignored because slotIndex is invalid!");
+        status(SPDMStatus::Error_InvalidArguments);
+        return;
+    }
+    if (!nonc.empty() && nonc.size() != 32)
+    {
+        getLog().iprint(
+            "WARNING - refresh ignored because nonc has invalid size = ");
+        getLog().println(nonc.size());
+        status(SPDMStatus::Error_InvalidArguments);
+        return;
+    }
     status(SPDMStatus::Initializing);
 
     slot(slotIndex);
@@ -285,11 +301,6 @@ void Responder::refresh(uint8_t slotIndex, std::vector<uint8_t> nonc,
     }
     else
     {
-        if (!nonc.empty())
-        {
-            getLog().iprint("WARNING - nonce has invalid size = ");
-            getLog().println(nonc.size());
-        }
         auto rs = connection.refreshMeasurements(slotIndex, meas);
         SPDMCPP_LOG_TRACE_RS(getLog(), rs);
     }
