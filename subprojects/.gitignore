@@ -1,0 +1,7 @@
+
+#TODO getting errors with meson build and don't have time to figure out details
+#so ignore for now
+/fmt.wrap
+/function2.wrap
+/stdplus.wrap
+/span-lite.wrap
