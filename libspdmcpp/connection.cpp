@@ -191,7 +191,6 @@ RetStat ConnectionClass::parseCertChain(SlotClass& slot,
 
     do
     {
-        size_t start = off;
         {
             auto [ret, c] = mbedtlsCertParseDer(cert, off);
             if (ret)
@@ -200,20 +199,6 @@ RetStat ConnectionClass::parseCertChain(SlotClass& slot,
                 return RetStat::ERROR_CERTIFICATE_PARSING_ERROR;
             }
             slot.MCertificates.push_back(std::move(c));
-        }
-        if (slot.MCertificates.size() == 1)
-        {
-            std::vector<uint8_t> hash;
-            HashClass::compute(hash, getSignatureHashEnum(), cert, start,
-                               off - start);
-            Log.iprint("computed root certificate hash = ");
-            Log.println(hash);
-
-            if (!std::equal(hash.begin(), hash.end(), rootCertHash.begin()))
-            {
-                Log.iprintln("root certificate DIGEST verify FAILED!");
-                return RetStat::ERROR_ROOT_CERTIFICATE_HASH_INVALID;
-            }
         }
     } while (off < cert.size());
 
@@ -559,20 +544,6 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
         SPDMCPP_LOG_TRACE_RS(Log, rs);
         return rs;
     }
-    // else this was the final chunk so:
-
-    { // verify certificate_chain hash matches previously fetched digest
-        std::vector<uint8_t> hash;
-        HashClass::compute(hash, getSignatureHashEnum(), cert);
-        Log.iprint("computed certificate digest hash = ");
-        Log.println(hash);
-
-        if (!std::equal(hash.begin(), hash.end(), slot.Digest.begin()))
-        {
-            Log.iprintln("certificate chain DIGEST verify FAILED!");
-            return RetStat::ERROR_CERTIFICATE_CHAIN_DIGEST_INVALID;
-        }
-    }
 
     // parse chain and store in the respective SlotClass
     rs = parseCertChain(slot, cert);
@@ -586,7 +557,7 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
         }
     }
 
-    rs = verifyCertificateChain(slot);
+    //rs = verifyCertificateChain(slot);
     SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
 
     slot.markInfo(SlotInfoEnum::CERTIFICATES);
