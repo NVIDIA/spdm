@@ -18,7 +18,7 @@ dbus::ServiceHelper mctpControlService("/xyz/openbmc_project/mctp",
                                        "xyz.openbmc_project.MCTP.Control");
 dbus::ServiceHelper inventoryService("/xyz/openbmc_project/inventory",
                                      "org.freedesktop.DBus.ObjectManager",
-                                     "xyz.openbmc_project.Inventory.Manager");
+                                     "xyz.openbmc_project.PLDM");
 
 MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
     bus(spdmApp.getBus()), spdmApp(spdmApp),
@@ -42,7 +42,7 @@ MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
     catch (const std::exception& e)
     {
         spdmApp.getLog().iprintln(e.what());
-        throw;
+        return;
     }
 
     for ([[maybe_unused]] const auto& [objectPath, interfaces] : objects)
