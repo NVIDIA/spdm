@@ -64,6 +64,16 @@ struct ServiceHelper
      *
      *  @throw sdbusplus::exception::exception when it fails
      */
+#if 1
+    // TODO this is a workaround for issues with the
+    // xyz.openbmc_project.ObjectMapper throwing "Call failed: path or object
+    // not found" instead of returning the correct values (even though the
+    // services are running, and it seems to work in qemu)
+    std::string getService(sdbusplus::bus::bus& /*bus*/) const
+    {
+        return defaultService;
+    }
+#else
     std::string getService(sdbusplus::bus::bus& bus) const
     {
         constexpr auto mapperService = "xyz.openbmc_project.ObjectMapper";
@@ -83,6 +93,7 @@ struct ServiceHelper
         // TODO shouldn't this response be cached? though looking at pldm it
         // doesn't seem to be done?
     }
+#endif
 
     /**
      *  @brief Get the DBUS Service name for the path and interface that was

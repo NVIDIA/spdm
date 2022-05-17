@@ -1,7 +1,10 @@
 [Unit]
 Description=Phosphor SPDM Daemon
-After=obmc-mapper.target
+Wants=mctp-ctrl.service
 After=mctp-ctrl.service
+Wants=pldmd.service
+After=pldmd.service
+
 [Service]
 Restart=always
 Type=dbus
