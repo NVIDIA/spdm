@@ -20,7 +20,9 @@ namespace dbus_api
 {
 
 Responder::Responder(SpdmdAppContext& appCtx, const std::string& path,
-                     uint8_t eid, const std::string& inventoryPath) :
+                     uint8_t eid,
+                     const sdbusplus::message::object_path& mctpPath,
+                     const sdbusplus::message::object_path& inventoryPath) :
     ResponderIntf(appCtx.bus, path.c_str(), action::defer_emit),
     appContext(appCtx), log(std::cerr), connection(appCtx.context, log),
     transport(eid, *this)
@@ -28,14 +30,10 @@ Responder::Responder(SpdmdAppContext& appCtx, const std::string& path,
     {
         std::vector<std::tuple<std::string, std::string, std::string>> prop;
 
-        prop.emplace_back(
-            "transport_object", "spdm_responder_object",
-            sdbusplus::message::object_path(
-                std::string(mctpDefaultPath) + "/0/" +
-                std::to_string(eid))); // TODO proper value for the 0?!
-
+        prop.emplace_back("transport_object", "spdm_responder_object",
+                          mctpPath);
         prop.emplace_back("inventory_object", "spdm_responder_object",
-                          sdbusplus::message::object_path(inventoryPath));
+                          inventoryPath);
 
         associations(std::move(prop));
     }
