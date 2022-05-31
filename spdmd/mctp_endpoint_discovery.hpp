@@ -1,6 +1,7 @@
 #pragma once
 
 #include "spdmd_app.hpp"
+#include "utils.hpp"
 
 #include <sdbusplus/bus/match.hpp>
 
@@ -30,6 +31,16 @@ class MctpDiscovery
     explicit MctpDiscovery(SpdmdApp& spdmApp);
 
   private:
+    struct Object
+    {
+        sdbusplus::message::object_path path;
+        dbus::InterfaceMap interfaces;
+        bool isValid() const
+        {
+            return !path.filename().empty();
+        }
+    };
+
     /** @brief reference to the systemd bus */
     sdbusplus::bus::bus& bus;
 
@@ -44,10 +55,8 @@ class MctpDiscovery
 
     /** @brief Common function for creating a responder object, either on start
      * or later when a new endpoint is discovered */
-    void addNewEndpoint(
-        const sdbusplus::message::object_path& objectPath,
-        const std::map<std::string, std::map<std::string, dbus::Value>>&
-            interfaces);
+    void addNewEndpoint(const sdbusplus::message::object_path& objectPath,
+                        const dbus::InterfaceMap& interfaces);
 
     /** @brief SPDM type of an MCTP message */
     static constexpr uint8_t mctpTypeSPDM = 5;
@@ -63,6 +72,9 @@ class MctpDiscovery
     static constexpr auto mctpEndpointIntfPropertySupportedMessageTypes =
         "SupportedMessageTypes";
 
+    static constexpr auto inventorySPDMResponderIntfName =
+        "xyz.openbmc_project.Inventory.Item.SPDMResponder";
+
     static constexpr auto uuidIntfName = "xyz.openbmc_project.Common.UUID";
 
     static constexpr auto uuidIntfPropertyUUID = "UUID";
@@ -72,14 +84,23 @@ class MctpDiscovery
     /** @brief Get EID value from MCTP objects, which implement SPDM
      *  @returns EID or invalidEid (256) in case of error
      */
+    size_t getEid(const dbus::InterfaceMap& interfaces);
+
+    /** @brief Get EID value from MCTP objects, which implement SPDM
+     *  @returns EID or invalidEid (256) in case of error
+     */
     size_t getEid(const std::map<std::string, dbus::Value>& properties);
 
     /** @brief Extract UUID value from the object's interfaces */
     std::string getUUID(const dbus::InterfaceMap& interfaces);
 
+    /** @brief get an object from MCTP.Control with the provided uuid
+     */
+    Object getMCTP(const std::string& uuid);
+
     /** @brief get a path from the inventory to an object with the provided uuid
      */
-    std::string getInventoryPath(const std::string& uuid);
+    sdbusplus::message::object_path getInventoryPath(const std::string& uuid);
 };
 
 } // namespace spdmd

@@ -68,7 +68,8 @@ class Responder : public ResponderIntf
      *  @param[in] path - Path to attach at.
      */
     Responder(SpdmdAppContext& appCtx, const std::string& path, uint8_t eid,
-              const std::string& inventoryPath);
+              const sdbusplus::message::object_path& mctpPath,
+              const sdbusplus::message::object_path& inventoryPath);
 
     ~Responder() override;
 

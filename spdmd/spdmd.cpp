@@ -170,7 +170,9 @@ void SpdmdApp::connectMCTP()
                                             std::move(callback));
 }
 
-void SpdmdApp::createResponder(uint8_t eid, const std::string& inventoryPath)
+void SpdmdApp::createResponder(
+    uint8_t eid, const sdbusplus::message::object_path& mctpPath,
+    const sdbusplus::message::object_path& inventoryPath)
 {
     SPDMCPP_LOG_TRACE_FUNC(log);
     if (eid >= responders.size())
@@ -194,7 +196,7 @@ void SpdmdApp::createResponder(uint8_t eid, const std::string& inventoryPath)
     std::string path(spdmRootObjectPath);
     { // construct responder path
         path += '/';
-        auto sub = sdbusplus::message::object_path(inventoryPath).filename();
+        auto sub = inventoryPath.filename();
         if (!sub.empty())
         {
             path += sub;
@@ -204,7 +206,8 @@ void SpdmdApp::createResponder(uint8_t eid, const std::string& inventoryPath)
             path += std::to_string(eid);
         }
     }
-    responders[eid] = new dbus_api::Responder(*this, path, eid, inventoryPath);
+    responders[eid] =
+        new dbus_api::Responder(*this, path, eid, mctpPath, inventoryPath);
 
     if (shouldMeasureEID(eid))
     {

@@ -50,7 +50,9 @@ class SpdmdApp : public SpdmdAppContext
     /** @brief Create new Responder object
      *
      */
-    void createResponder(uint8_t eid, const std::string& inventoryPath);
+    void createResponder(uint8_t eid,
+                         const sdbusplus::message::object_path& mctpPath,
+                         const sdbusplus::message::object_path& inventoryPath);
 
     /** @brief Sets up the automatic measurement delay according to commandline
      * parameters

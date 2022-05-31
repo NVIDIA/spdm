@@ -1,12 +1,12 @@
 #include "mctp_endpoint_discovery.hpp"
 
-#include "utils.hpp"
-
 #include <algorithm>
 #include <map>
 #include <string>
 #include <string_view>
 #include <vector>
+
+// #define MCTP_EID_PATH
 
 namespace spdmd
 {
@@ -25,7 +25,12 @@ MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
     mctpEndpointSignal(
         spdmApp.getBus(),
         sdbusplus::bus::match::rules::interfacesAdded(
-            mctpControlService.getPath()),
+#ifdef MCTP_EID_PATH
+            mctpControlService.getPath()
+#else
+            inventoryService.getPath()
+#endif
+                ),
         std::bind_front(&MctpDiscovery::newEndpointDiscovered, this))
 {
     dbus::ObjectValueTree objects;
@@ -34,8 +39,12 @@ MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
 
     try
     {
-        auto method =
-            mctpControlService.new_method_call(bus, "GetManagedObjects");
+#ifdef MCTP_EID_PATH
+        auto& service = mctpControlService;
+#else
+        auto& service = inventoryService;
+#endif
+        auto method = service.new_method_call(bus, "GetManagedObjects");
         auto reply = bus.call(method);
         reply.read(objects);
     }
@@ -54,40 +63,76 @@ MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
 void MctpDiscovery::newEndpointDiscovered(sdbusplus::message::message& msg)
 {
     sdbusplus::message::object_path objPath;
-    std::map<std::string, std::map<std::string, dbus::Value>> interfaces;
+    dbus::InterfaceMap interfaces;
     msg.read(objPath, interfaces);
 
     addNewEndpoint(objPath, interfaces);
 }
 
+#ifdef MCTP_EID_PATH
 void MctpDiscovery::addNewEndpoint(
     const sdbusplus::message::object_path& objectPath,
-    const std::map<std::string, std::map<std::string, dbus::Value>>& interfaces)
+    const dbus::InterfaceMap& interfaces)
 {
-    for (const auto& intf : interfaces)
+    size_t eid = getEid(interfaces);
+    if (eid < invalidEid)
     {
-        if (intf.first == mctpEndpointIntfName)
+        auto uuid = getUUID(interfaces);
+        if (!uuid.empty())
         {
-            size_t eid = getEid(intf.second);
-            if (eid < invalidEid)
-            {
-                auto uuid = getUUID(interfaces);
-                if (!uuid.empty())
-                {
-                    spdmApp.createResponder((mctp_eid_t)eid,
-                                            getInventoryPath(uuid));
-                }
-                else
-                {
-                    spdmApp.reportError(
-                        std::string(
-                            "SPDM MctpDiscovery couldn't get UUID for path '") +
-                        std::string(objectPath) + '\'');
-                    spdmApp.createResponder((mctp_eid_t)eid, std::string());
-                }
-            }
+            spdmApp.createResponder((mctp_eid_t)eid, objectPath,
+                                    getInventoryPath(uuid));
+        }
+        else
+        {
+            spdmApp.reportError(
+                std::string("SPDM MctpDiscovery couldn't get UUID for path '") +
+                std::string(objectPath) + '\'');
+            spdmApp.createResponder((mctp_eid_t)eid, objectPath, {});
         }
     }
+}
+#else
+void MctpDiscovery::addNewEndpoint(
+    const sdbusplus::message::object_path& objectPath,
+    const dbus::InterfaceMap& interfaces)
+{
+    if (!interfaces.contains(inventorySPDMResponderIntfName))
+    {
+        return;
+    }
+    auto uuid = getUUID(interfaces);
+    if (uuid.empty())
+    {
+        spdmApp.reportError(
+            std::string("SPDM MctpDiscovery couldn't get UUID for path '") +
+            std::string(objectPath) + '\'');
+        return;
+    }
+
+    auto mctp = getMCTP(uuid);
+    size_t eid = getEid(mctp.interfaces);
+    if (eid < invalidEid)
+    {
+        spdmApp.createResponder((mctp_eid_t)eid, mctp.path, objectPath);
+    }
+    else
+    {
+        spdmApp.reportError(
+            std::string("SPDM MctpDiscovery couldn't get EID for UUID '") +
+            uuid + '\'');
+    }
+}
+#endif
+
+size_t MctpDiscovery::getEid(const dbus::InterfaceMap& interfaces)
+{
+    auto intf = interfaces.find(mctpEndpointIntfName);
+    if (intf != interfaces.end())
+    {
+        return getEid(intf->second);
+    }
+    return invalidEid;
 }
 
 size_t
@@ -163,7 +208,39 @@ std::string MctpDiscovery::getUUID(const dbus::InterfaceMap& interfaces)
     return {};
 }
 
-std::string MctpDiscovery::getInventoryPath(const std::string& uuid)
+MctpDiscovery::Object MctpDiscovery::getMCTP(const std::string& uuid)
+{
+    dbus::ObjectValueTree objects;
+
+    SPDMCPP_LOG_TRACE_FUNC(spdmApp.getLog());
+
+    try
+    {
+        auto method =
+            mctpControlService.new_method_call(bus, "GetManagedObjects");
+        auto reply = bus.call(method);
+        reply.read(objects);
+
+        for (const auto& [objectPath, interfaces] : objects)
+        {
+            if (uuid == getUUID(interfaces))
+            {
+                return {objectPath, interfaces};
+            }
+        }
+    }
+    catch (const std::exception& e)
+    {
+        spdmApp.getLog().print(e.what());
+    }
+    spdmApp.reportError(
+        std::string("SPDM MctpDiscovery couldn't get MCTP path for UUID '") +
+        uuid + '\'');
+    return {};
+}
+
+sdbusplus::message::object_path
+    MctpDiscovery::getInventoryPath(const std::string& uuid)
 {
     dbus::ObjectValueTree objects;
 
@@ -179,13 +256,12 @@ std::string MctpDiscovery::getInventoryPath(const std::string& uuid)
 
         for (const auto& [objectPath, interfaces] : objects)
         {
-            if (interfaces.contains(
-                    "xyz.openbmc_project.Inventory.Item.SPDMResponder"))
+            if (interfaces.contains(inventorySPDMResponderIntfName))
             {
                 auto id = getUUID(interfaces);
                 if (id == uuid)
                 {
-                    return {objectPath};
+                    return objectPath;
                 }
             }
         }
