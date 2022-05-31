@@ -16,6 +16,9 @@ using namespace sdbusplus;
 using namespace xyz;
 using namespace openbmc_project;
 
+/* Define USE_PHOSPHOR_LOGGING to log error messages to phosphor logging module. */
+#define notUSE_PHOSPHOR_LOGGING
+
 namespace spdmd
 {
 
@@ -99,6 +102,18 @@ class SpdmdAppContext
     bool reportLog(Logging::server::Entry::Level severity,
                    const string& message)
     {
+        if ((severity == Logging::server::Entry::Level::Error) &&
+            (log.logLevel >= spdmcpp::LogClass::Level::Error))
+        {
+            std::cerr << message;
+        }
+        else if ((severity == Logging::server::Entry::Level::Notice) &&
+                 (log.logLevel >= spdmcpp::LogClass::Level::Notice))
+        {
+            log.getOstream() << message;
+        }
+
+#ifdef USE_PHOSPHOR_LOGGING
         auto method = bus.new_method_call(
             "xyz.openbmc_project.Logging", "/xyz/openbmc_project/logging",
             "xyz.openbmc_project.Logging.Create", "Create");
@@ -134,13 +149,15 @@ class SpdmdAppContext
             {
                 std::cerr << std::get<std::string>(user) << "\n";
             }
-            return true;
         }
         catch (const sdbusplus::exception::SdBusError& e)
         {
             std::cerr << "ERROR CREATING LOG " << e.what() << "\n";
             return false;
         }
+#endif
+
+        return true;
     }
 };
 
