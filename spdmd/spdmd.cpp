@@ -182,11 +182,12 @@ void SpdmdApp::createResponder(
 
     if (responders[eid])
     {
-        std::string msg("responder for EID" + to_string(eid) +
-                        " already exists!");
-        log.iprint("Error: ");
-        log.println(msg);
-        throw std::invalid_argument(msg);
+        // The device is already created.
+        // It's been decided this is not an error and should be silently
+        // ignored. In part because it happens when pldmd is restarted.
+        // In general device removal and hot-plug is not supported by pldm or
+        // spdm.
+        return;
     }
 
     string msg =
