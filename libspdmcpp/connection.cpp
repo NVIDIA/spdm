@@ -387,6 +387,8 @@ RetStat ConnectionClass::tryNegotiateAlgorithms()
                                BaseHashAlgoFlags::TPM_ALG_SHA_384 |
                                BaseHashAlgoFlags::TPM_ALG_SHA_512;
 
+#if 0 // workaround for responders requiring the algorithm structure information
+      // in addition to the above flags
     if (MessageVersion != MessageVersionEnum::SPDM_1_0)
     {
         request.PacketReqAlgVector.push_back(
@@ -401,6 +403,7 @@ RetStat ConnectionClass::tryNegotiateAlgorithms()
             PacketReqAlgStruct::buildAlgSupported(AlgTypeEnum::KeySchedule,
                                                   0x01, 0x00));
     }
+#endif
 
     request.finalize();
 
