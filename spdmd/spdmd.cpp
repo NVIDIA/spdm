@@ -54,7 +54,14 @@ void SpdmdApp::setupCli(int argc, char** argv)
         "--cached_measurements_delay", measureOnDiscoveryDelay,
         "[seconds]; The initial communication should be performed after running the daemon with a delay configured by this param. Default value: 60.");
 
-    app.parse(argc, argv);
+    try
+    {
+        (app).parse((argc), (argv));
+    }
+    catch (const CLI::ParseError& e)
+    {
+        exit((app).exit(e));
+    }
 
     if (verbose > spdmcpp::LogClass::Level::Emergency)
     {
