@@ -1,0 +1,5 @@
+
+#pragma once
+
+//NOLINTNEXTLINE cppcoreguidelines-macro-usage
+#define SPDMD_VERSION @SPDMD_VERSION@

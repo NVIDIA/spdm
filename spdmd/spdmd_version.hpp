@@ -9,6 +9,6 @@ namespace spdmd
 namespace description
 {
 const string name = "SPDM deamon for OpenBMC";
-const string version = "0.1.0.0";
+const string version = SPDMD_VERSION;
 } // namespace description
 } // namespace spdmd
