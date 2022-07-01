@@ -107,6 +107,11 @@ class SpdmdApp : public SpdmdAppContext
     /** @brief Callback for the automatic measurement delay
      */
     void measurementDelayCallback();
+
+    /** @brief checks if the given eid should be measured and issues a refresh
+     *  @returns true if refresh was called, false otherwise
+     */
+    bool autoMeasure(uint8_t eid) const;
 };
 
 } // namespace spdmd

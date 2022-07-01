@@ -20,6 +20,29 @@ using namespace std;
 namespace spdmd
 {
 
+inline std::string toEscapedString(const std::vector<uint8_t>& vec)
+{
+    constexpr std::array<char, 16> hex{{'0', '1', '2', '3', '4', '5', '6', '7',
+                                        '8', '9', 'a', 'b', 'c', 'd', 'e',
+                                        'f'}};
+    std::string ret;
+    ret.reserve(vec.size());
+    for (auto ch : vec)
+    {
+        if (std::isprint(ch))
+        {
+            ret.push_back(static_cast<char>(ch));
+        }
+        else
+        {
+            ret.append("\\x");
+            ret.push_back(hex[(ch & 0xF0) >> 4]);
+            ret.push_back(hex[(ch & 0x0F)]);
+        }
+    }
+    return ret;
+}
+
 namespace dbus
 {
 using Interface = std::string;
@@ -126,11 +149,35 @@ struct ServiceHelper
     /**
      *  @brief Helper for bus.new_method_call() filling out the Service, Path,
      * Interface parameters
-     *
      *  @throw sdbusplus::exception::exception when it fails
      */
     // NOLINTNEXTLINE readability-identifier-naming
     auto new_method_call(sdbusplus::bus::bus& bus, const char* method) const
+    {
+        return bus.new_method_call(getServiceWithFallback(bus).c_str(), path,
+                                   interface, method);
+    }
+
+    /**
+     *  @brief Helper for bus.new_method_call() filling out the Service, Path,
+     * parameters
+     *  @throw sdbusplus::exception::exception when it fails
+     */
+    // NOLINTNEXTLINE readability-identifier-naming
+    auto new_method_call(sdbusplus::bus::bus& bus, const char* interface,
+                         const char* method) const
+    {
+        return bus.new_method_call(getServiceWithFallback(bus).c_str(), path,
+                                   interface, method);
+    }
+    /**
+     *  @brief Helper for bus.new_method_call() filling out the Service
+     * parameter
+     *  @throw sdbusplus::exception::exception when it fails
+     */
+    // NOLINTNEXTLINE readability-identifier-naming
+    auto new_method_call(sdbusplus::bus::bus& bus, const char* path,
+                         const char* interface, const char* method) const
     {
         return bus.new_method_call(getServiceWithFallback(bus).c_str(), path,
                                    interface, method);

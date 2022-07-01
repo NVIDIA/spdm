@@ -816,11 +816,17 @@ RetStat ConnectionClass::handleRecv<PacketMeasurementsResponseVar>()
     return rs;
 }
 
-RetStat ConnectionClass::handleRecv()
+RetStat ConnectionClass::handleRecv(EventReceiveClass& event)
 {
     SPDMCPP_LOG_TRACE_FUNC(Log);
 
     clearTimeout();
+
+    // swap to avoid copy, this is currently safe because nothing else would
+    // want to access the data afterwards
+    // TODO however it's error prone, so we should pass the event to each
+    // function that needs it instead (via const references)
+    std::swap(event.buffer, ResponseBuffer);
 
     Log.iprint("ResponseBuffer.size() = ");
     Log.println(ResponseBuffer.size());
@@ -916,7 +922,20 @@ RetStat ConnectionClass::handleRecv()
     return rs;
 }
 
-RetStat ConnectionClass::handleTimeout()
+[[nodiscard]] RetStat ConnectionClass::handleEvent(EventClass& event)
+{
+    if (auto e = event.getAs<EventReceiveClass>())
+    {
+        return handleRecv(*e);
+    }
+    if (auto e = event.getAs<EventTimeoutClass>())
+    {
+        return handleTimeout(*e);
+    }
+    return RetStat::ERROR_UNKNOWN;
+}
+
+RetStat ConnectionClass::handleTimeout(EventTimeoutClass& /*event*/)
 {
     SPDMCPP_LOG_TRACE_FUNC(Log);
     if (SendRetry)

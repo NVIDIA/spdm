@@ -1,5 +1,7 @@
 #pragma once
 
+#include "config.h"
+
 #include "spdmd_app_context.hpp"
 #include "xyz/openbmc_project/Association/Definitions/server.hpp"
 #include "xyz/openbmc_project/SPDM/Responder/server.hpp"
@@ -72,13 +74,17 @@ class Responder : public ResponderIntf
      */
     Responder(SpdmdAppContext& appCtx, const std::string& path, uint8_t eid,
               const sdbusplus::message::object_path& mctpPath,
-              const sdbusplus::message::object_path& inventoryPath);
+              const sdbusplus::message::object_path& inventPath);
 
     ~Responder() override;
 
     void refresh(uint8_t slot, std::vector<uint8_t> nonc,
                  std::vector<uint8_t> measurementIndices,
                  uint32_t sessionId) override;
+
+#if FETCH_SERIALNUMBER_FROM_RESPONDER != 0
+    void refreshSerialNumber();
+#endif
 
     spdmcpp::LogClass& getLog()
     {
@@ -89,17 +95,14 @@ class Responder : public ResponderIntf
         return appContext.event;
     }
 
-    /** @brief Event callback for receiving an SPDM packet from the responder
+    /** @brief Event callback for receiving events
      *  @param[inout] bus - Buffer containing the data, note that after the call
      * the contents of buf will be effectively clobbered
      */
-    spdmcpp::RetStat handleRecv(std::vector<uint8_t>& buf);
-
-    /** @brief Event callback in case the timeout was reached
-     */
-    spdmcpp::RetStat handleTimeout()
+    spdmcpp::RetStat handleEvent(
+        spdmcpp::EventClass& event) // cppcheck-suppress constParameter
     {
-        return connection.handleTimeout();
+        return (this->*eventHandler)(event);
     }
 
   protected:
@@ -113,11 +116,19 @@ class Responder : public ResponderIntf
     spdmcpp::LogClass log;
     spdmcpp::ConnectionClass connection;
     MctpTransportClass transport;
+    sdbusplus::message::object_path inventoryPath;
+
+    spdmcpp::RetStat (Responder::*eventHandler)(spdmcpp::EventClass& event) =
+        nullptr;
 
     void updateLastUpdateTime();
     void syncSlotsInfo();
 
     void handleError(spdmcpp::RetStat rs);
+    spdmcpp::RetStat handleEventForRefresh(spdmcpp::EventClass& event);
+#if FETCH_SERIALNUMBER_FROM_RESPONDER != 0
+    spdmcpp::RetStat handleEventForSerialNumber(spdmcpp::EventClass& event);
+#endif
 };
 
 } // namespace dbus_api

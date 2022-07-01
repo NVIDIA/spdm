@@ -1,7 +1,6 @@
 #pragma once
 
 #include "spdmd_app.hpp"
-#include "utils.hpp"
 
 #include <sdbusplus/bus/match.hpp>
 

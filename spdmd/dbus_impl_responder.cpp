@@ -22,10 +22,10 @@ namespace dbus_api
 Responder::Responder(SpdmdAppContext& appCtx, const std::string& path,
                      uint8_t eid,
                      const sdbusplus::message::object_path& mctpPath,
-                     const sdbusplus::message::object_path& inventoryPath) :
+                     const sdbusplus::message::object_path& invPath) :
     ResponderIntf(appCtx.bus, path.c_str(), action::defer_emit),
     appContext(appCtx), log(std::cerr), connection(appCtx.context, log),
-    transport(eid, *this)
+    transport(eid, *this), inventoryPath(invPath)
 {
     {
         std::vector<std::tuple<std::string, std::string, std::string>> prop;
@@ -33,7 +33,7 @@ Responder::Responder(SpdmdAppContext& appCtx, const std::string& path,
         prop.emplace_back("transport_object", "spdm_responder_object",
                           mctpPath);
         prop.emplace_back("inventory_object", "spdm_responder_object",
-                          inventoryPath);
+                          invPath);
 
         associations(std::move(prop));
     }
@@ -132,6 +132,10 @@ void Responder::handleError(spdmcpp::RetStat rs)
             appContext.reportError(
                 "SPDM measurements signature verification fail");
             break;
+        case RetStat::ERROR_TIMEOUT:
+            status(Responder::SPDMStatus::Error_ConnectionTimeout);
+            appContext.reportError("SPDM timeout");
+            break;
         default:
             status(SPDMStatus::Error_Other);
             appContext.reportError(std::string("SPDM other error: ") +
@@ -140,11 +144,9 @@ void Responder::handleError(spdmcpp::RetStat rs)
     SPDMCPP_ASSERT(!connection.isWaitingForResponse());
 }
 
-spdmcpp::RetStat Responder::handleRecv(std::vector<uint8_t>& buf)
+spdmcpp::RetStat Responder::handleEventForRefresh(spdmcpp::EventClass& ev)
 {
-    std::swap(buf, connection.getResponseBufferRef());
-
-    auto rs = connection.handleRecv();
+    auto rs = connection.handleEvent(ev);
 
     if (isError(rs))
     {
@@ -152,8 +154,12 @@ spdmcpp::RetStat Responder::handleRecv(std::vector<uint8_t>& buf)
         return rs;
     }
 
-    ConnectionClass::SlotIdx slotidx =
-        connection.getCurrentCertificateSlotIdx();
+    if (!ev.is<EventReceiveClass>())
+    {
+        return rs;
+    }
+
+    ConnectionClass::SlotIdx slotidx = connection.getCurrentCertificateSlotIdx();
 
     if (!connection.isWaitingForResponse())
     {
@@ -250,16 +256,6 @@ void Responder::refresh(uint8_t slotIndex, std::vector<uint8_t> nonc,
         status(SPDMStatus::Error_InvalidArguments);
         return;
     }
-    status(SPDMStatus::Initializing);
-
-    slot(slotIndex);
-
-    updateLastUpdateTime();
-
-    if (sessionId)
-    {
-        getLog().iprintln("WARNING - sessionId unsupported!");
-    }
 
     std::bitset<256> meas;
     if (measurementIndices.empty() ||
@@ -281,14 +277,23 @@ void Responder::refresh(uint8_t slotIndex, std::vector<uint8_t> nonc,
                 getLog().print(ind);
                 getLog().println(
                     "' when specifying multiple indices, ignoring this value!");
+                status(SPDMStatus::Error_InvalidArguments);
+                return;
             }
         }
-        if (meas.none())
-        {
-            // this would happen if all values in the array were incorrect,
-            // fallback to the default of 255
-            meas.set(255);
-        }
+    }
+
+    eventHandler = &spdmd::dbus_api::Responder::handleEventForRefresh;
+
+    status(SPDMStatus::Initializing);
+
+    slot(slotIndex);
+
+    updateLastUpdateTime();
+
+    if (sessionId)
+    {
+        getLog().iprintln("WARNING - sessionId unsupported!");
     }
 
     if (nonc.size() == 32)
@@ -305,6 +310,64 @@ void Responder::refresh(uint8_t slotIndex, std::vector<uint8_t> nonc,
         SPDMCPP_LOG_TRACE_RS(getLog(), rs);
     }
 }
+
+#if FETCH_SERIALNUMBER_FROM_RESPONDER != 0
+
+void Responder::refreshSerialNumber()
+{
+    if (connection.isWaitingForResponse())
+    {
+        // if we're busy processing ignore the refresh call
+        getLog().iprintln(
+            "WARNING - refreshSerialNumber() ignored because a previous refresh is still processing!");
+        return;
+    }
+    eventHandler = &spdmd::dbus_api::Responder::handleEventForSerialNumber;
+
+    std::bitset<256> meas;
+    meas.set(FETCH_SERIALNUMBER_FROM_RESPONDER);
+
+    auto rs = connection.refreshMeasurements(0, meas);
+    SPDMCPP_LOG_TRACE_RS(getLog(), rs);
+}
+
+spdmcpp::RetStat
+    Responder::handleEventForSerialNumber(spdmcpp::EventClass& event)
+{
+    auto rs = connection.handleEvent(event);
+
+    if (isError(rs))
+    {
+        return rs;
+    }
+    if (connection.isWaitingForResponse())
+    {
+        return rs;
+    }
+    if (connection.hasInfo(ConnectionInfoEnum::MEASUREMENTS))
+    {
+        const ConnectionClass::DMTFMeasurementsContainer& src =
+            connection.getDMTFMeasurements();
+        auto iter = src.find(FETCH_SERIALNUMBER_FROM_RESPONDER);
+        if (iter != src.end() && iter->second.Min.Type == 0x82)
+        {
+            // if available and has the correct type:
+            // 0x80 "Raw bit stream"
+            // 0x02 "Hardware configuration, such as straps, debug modes."
+            auto method = inventoryService.new_method_call(
+                appContext.bus, std::string(inventoryPath).c_str(),
+                "org.freedesktop.DBus.Properties", "Set");
+
+            method.append(
+                "xyz.openbmc_project.Inventory.Decorator.Asset", "SerialNumber",
+                std::variant<std::string>(toEscapedString(iter->second.ValueVector)));
+
+            appContext.bus.call_noreply(method);
+        }
+    }
+    return rs;
+}
+#endif
 
 void Responder::updateLastUpdateTime()
 {
@@ -336,17 +399,8 @@ spdmcpp::RetStat MctpTransportClass::setupTimeout(spdmcpp::timeout_ms_t timeout)
 void MctpTransportClass::timeoutCallback()
 {
     time.reset(nullptr);
-
-    auto rs = responder.handleTimeout();
-    if (rs == spdmcpp::RetStat::ERROR_TIMEOUT)
-    {
-        // no retry attempted, fail with timeout
-        responder.status(Responder::SPDMStatus::Error_ConnectionTimeout);
-    }
-    else if (isError(rs))
-    {
-        responder.status(Responder::SPDMStatus::Error_Other);
-    }
+    spdmcpp::EventTimeoutClass ev;
+    responder.handleEvent(ev);
 }
 
 bool MctpTransportClass::clearTimeout()

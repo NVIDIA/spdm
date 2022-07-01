@@ -161,9 +161,10 @@ class ConnectionFixture
 
     RetStat handleRecv()
     {
-        IO.read(Connection.getResponseBufferRef());
-
-        return Connection.handleRecv();
+        std::vector<uint8_t> buf;
+        IO.read(buf);
+        EventReceiveClass ev(buf);
+        return Connection.handleEvent(ev);
     }
 
   private:

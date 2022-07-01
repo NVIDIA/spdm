@@ -4,6 +4,7 @@
 #include "assert.hpp"
 #include "common.hpp"
 #include "context.hpp"
+#include "event.hpp"
 #include "hash.hpp"
 #include "mbedtls_support.hpp"
 #include "signature.hpp"
@@ -361,16 +362,9 @@ class ConnectionClass : public NonCopyable
         return ResponseBuffer;
     }
 
-    /** @brief Callback for handling incomming packets
-     *  @details TODO this interface is likely quite confusing and should be
-     * refactored
+    /** @brief Callback for handling incomming events
      */
-    [[nodiscard]] RetStat handleRecv();
-
-    /** @brief Callback for handling a timeout event instead of the expected
-     * response
-     */
-    [[nodiscard]] RetStat handleTimeout();
+    [[nodiscard]] RetStat handleEvent(EventClass& event);
 
   protected:
     [[nodiscard]] RetStat tryGetVersion();
@@ -387,6 +381,8 @@ class ConnectionClass : public NonCopyable
 
     template <class T>
     [[nodiscard]] RetStat handleRecv();
+    [[nodiscard]] RetStat handleRecv(EventReceiveClass& event);
+    [[nodiscard]] RetStat handleTimeout(EventTimeoutClass& event);
 
     /** @brief This enum is used for selecting the buffer for computing the
      * M1/M2 and L1/L2 hash

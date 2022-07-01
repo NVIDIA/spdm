@@ -19,6 +19,10 @@ constexpr auto spdmDefaultService = "xyz.openbmc_project.SPDM";
 namespace spdmd
 {
 
+dbus::ServiceHelper inventoryService("/xyz/openbmc_project/inventory",
+                                     "org.freedesktop.DBus.ObjectManager",
+                                     "xyz.openbmc_project.PLDM");
+
 SpdmdApp::SpdmdApp() :
     SpdmdAppContext(sdeventplus::Event::get_default(), bus::new_system(),
                     std::cout),
@@ -169,7 +173,8 @@ void SpdmdApp::connectMCTP()
         }
         else
         {
-            resp->handleRecv(packetBuffer);
+            spdmcpp::EventReceiveClass ev(packetBuffer);
+            resp->handleEvent(ev);
         }
     };
 
@@ -217,11 +222,10 @@ void SpdmdApp::createResponder(
     responders[eid] =
         new dbus_api::Responder(*this, path, eid, mctpPath, inventoryPath);
 
-    if (shouldMeasureEID(eid))
-    {
-        responders[eid]->refresh(0, std::vector<uint8_t>(),
-                                 std::vector<uint8_t>(), 0);
-    }
+#if FETCH_SERIALNUMBER_FROM_RESPONDER != 0
+    responders[eid]->refreshSerialNumber();
+#endif
+    autoMeasure(eid);
 }
 
 void SpdmdApp::setupMeasurementDelay()
@@ -250,12 +254,22 @@ void SpdmdApp::measurementDelayCallback()
     measureOnDiscoveryActive = true;
     for (size_t eid = 0; eid < responders.size(); ++eid)
     {
-        if (responders[eid] && shouldMeasureEID(eid))
+        if (responders[eid])
         {
-            responders[eid]->refresh(0, std::vector<uint8_t>(),
-                                     std::vector<uint8_t>(), 0);
+            autoMeasure(eid);
         }
     }
+}
+
+bool SpdmdApp::autoMeasure(uint8_t eid) const
+{
+    if (!shouldMeasureEID(eid))
+    {
+        return false;
+    }
+    responders[eid]->refresh(0, std::vector<uint8_t>(), std::vector<uint8_t>(),
+                             0);
+    return true;
 }
 
 int SpdmdApp::loop()

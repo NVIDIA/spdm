@@ -3,3 +3,6 @@
 
 //NOLINTNEXTLINE cppcoreguidelines-macro-usage
 #define SPDMD_VERSION @SPDMD_VERSION@
+
+//NOLINTNEXTLINE cppcoreguidelines-macro-usage
+#mesondefine FETCH_SERIALNUMBER_FROM_RESPONDER

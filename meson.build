@@ -21,6 +21,7 @@ add_project_arguments('-Wno-psabi', language: 'cpp')
 
 conf_data = configuration_data()
 conf_data.set_quoted('SPDMD_VERSION', meson.project_version())
+conf_data.set('FETCH_SERIALNUMBER_FROM_RESPONDER', get_option('fetch_serialnumber_from_responder'))
 configure_file(
   input: 'config.h.in',
   output: 'config.h',

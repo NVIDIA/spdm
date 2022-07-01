@@ -16,9 +16,6 @@ constexpr size_t invalidEid = 256;
 dbus::ServiceHelper mctpControlService("/xyz/openbmc_project/mctp",
                                        "org.freedesktop.DBus.ObjectManager",
                                        "xyz.openbmc_project.MCTP.Control");
-dbus::ServiceHelper inventoryService("/xyz/openbmc_project/inventory",
-                                     "org.freedesktop.DBus.ObjectManager",
-                                     "xyz.openbmc_project.PLDM");
 
 MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
     bus(spdmApp.getBus()), spdmApp(spdmApp),

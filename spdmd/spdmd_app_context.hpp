@@ -2,6 +2,7 @@
 
 #include "spdmcpp/context.hpp"
 #include "spdmcpp/log.hpp"
+#include "utils.hpp"
 
 #include <sdbusplus/bus.hpp>
 #include <sdeventplus/event.hpp>
@@ -21,6 +22,8 @@ using namespace openbmc_project;
 
 namespace spdmd
 {
+
+extern dbus::ServiceHelper inventoryService;
 
 class SpdmdAppContext
 {
