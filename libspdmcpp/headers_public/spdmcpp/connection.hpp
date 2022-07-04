@@ -17,6 +17,7 @@
 #include <limits>
 #include <map>
 #include <vector>
+#include <memory>
 
 namespace spdmcpp
 {

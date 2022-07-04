@@ -12,6 +12,7 @@
 #include <spdmcpp/mctp_support.hpp>
 
 #include <map>
+#include <memory>
 
 namespace spdmd
 {

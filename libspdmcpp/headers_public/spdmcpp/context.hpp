@@ -11,6 +11,7 @@
 #include <iostream>
 #include <limits>
 #include <vector>
+#include <algorithm>
 
 namespace spdmcpp
 {

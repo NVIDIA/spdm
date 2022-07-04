@@ -10,6 +10,8 @@
 #include <sdeventplus/event.hpp>
 #include <sdeventplus/source/io.hpp>
 
+#include <memory>
+
 using namespace std;
 using namespace spdmd;
 using namespace spdmcpp;

@@ -18,6 +18,7 @@
 #include <cstring>
 #include <limits>
 #include <vector>
+#include <memory>
 
 namespace spdmcpp
 {
