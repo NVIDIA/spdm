@@ -512,13 +512,8 @@ RetStat ConnectionClass::tryGetCertificateChunk(SlotIdx slotidx)
     request.Header.MessageVersion = MessageVersion;
     request.Header.Param1 = slotidx;
     request.Offset = cert.size();
-#if 1 // workaround for responders which can't handle length being 0xFFFF (even
-      // though this is allowed according to DSP0274_1.1.1 page 57)
-    request.Length = 0x1000;
-#else
     request.Length = std::numeric_limits<uint16_t>::max();
-#endif
-    // TODO according to spec DSP0274_1.1.1 page 57 this code isn't entirely
+    // TODO according to spec DSP0274_1.1.1 page 57 above code isn't entirely
     // correct. Because it should be capped to no more than "The RemainderLength
     // of the preceding GET_CERTIFICATE response."
 
