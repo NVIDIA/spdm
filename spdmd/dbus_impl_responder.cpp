@@ -47,11 +47,53 @@ Responder::~Responder()
     connection.unregisterTransport(transport);
 }
 
-void Responder::syncSlotsInfo()
+void Responder::updateAlgorithmsInfo()
+{
+    switch (connection.getMeasurementHashEnum())
+    {
+        case HashEnum::SHA_256:
+            hashingAlgorithm(HashingAlgorithms::SHA_256);
+            break;
+        case HashEnum::SHA_384:
+            hashingAlgorithm(HashingAlgorithms::SHA_384);
+            break;
+        case HashEnum::SHA_512:
+            hashingAlgorithm(HashingAlgorithms::SHA_512);
+            break;
+        case HashEnum::NONE:
+        case HashEnum::INVALID:
+        default:
+            hashingAlgorithm(HashingAlgorithms::None);
+            break;
+    }
+    switch (connection.getSignatureEnum())
+    {
+// NOLINTNEXTLINE cppcoreguidelines-macro-usage,-warnings-as-errors
+#define DTYPE(name)                                                            \
+        case SignatureEnum::name:                                                  \
+            signingAlgorithm(SigningAlgorithms::name);                             \
+            break;
+                DTYPE(RSASSA_2048)
+                DTYPE(RSAPSS_2048)
+                DTYPE(RSASSA_3072)
+                DTYPE(RSAPSS_3072)
+                DTYPE(RSASSA_4096)
+                DTYPE(RSAPSS_4096)
+                DTYPE(ECDSA_ECC_NIST_P256)
+                DTYPE(ECDSA_ECC_NIST_P384)
+                DTYPE(ECDSA_ECC_NIST_P521)
+#undef DTYPE
+        case SignatureEnum::NONE:
+        case SignatureEnum::INVALID:
+        default:
+            signingAlgorithm(SigningAlgorithms::None);
+            break;
+    }
+}
+
+void Responder::updateCertificatesInfo()
 {
     CertificatesContainerType certs;
-    MeasurementsContainerType meas;
-
     for (ConnectionClass::SlotIdx idx = 0; idx < ConnectionClass::slotNum;
          ++idx)
     {
@@ -64,6 +106,16 @@ void Responder::syncSlotsInfo()
             }
         }
     }
+    certificate(std::move(certs));
+}
+
+void Responder::syncSlotsInfo()
+{
+    MeasurementsContainerType meas;
+
+    updateAlgorithmsInfo();
+    updateCertificatesInfo();
+
     if (connection.hasInfo(ConnectionInfoEnum::MEASUREMENTS))
     {
         const ConnectionClass::DMTFMeasurementsContainer& src =
@@ -98,13 +150,13 @@ void Responder::syncSlotsInfo()
         nonc.insert(nonc.end(), arr.begin(), arr.end());
         nonce(std::move(nonc));
     }
-    certificate(std::move(certs));
     measurements(std::move(meas));
     updateLastUpdateTime();
 }
 
 void Responder::handleError(spdmcpp::RetStat rs)
 {
+    updateLastUpdateTime();
     switch (rs)
     {
         case RetStat::ERROR_BUFFER_TOO_SMALL:
@@ -169,53 +221,12 @@ spdmcpp::RetStat Responder::handleEventForRefresh(spdmcpp::EventClass& ev)
     }
     else if (connection.slotHasInfo(slotidx, SlotInfoEnum::CERTIFICATES))
     {
-        syncSlotsInfo();
+        updateCertificatesInfo();
         status(SPDMStatus::GettingMeasurements);
     }
     else if (connection.hasInfo(ConnectionInfoEnum::ALGORITHMS))
     {
-        switch (connection.getMeasurementHashEnum())
-        {
-            case HashEnum::SHA_256:
-                hashingAlgorithm(HashingAlgorithms::SHA_256);
-                break;
-            case HashEnum::SHA_384:
-                hashingAlgorithm(HashingAlgorithms::SHA_384);
-                break;
-            case HashEnum::SHA_512:
-                hashingAlgorithm(HashingAlgorithms::SHA_512);
-                break;
-                //	case HashEnum::SHA3_:
-                // hashingAlgorithm(HashingAlgorithms::SHA_);		break;
-            case HashEnum::NONE:
-            case HashEnum::INVALID:
-            default:
-                hashingAlgorithm(HashingAlgorithms::None);
-                break;
-        }
-        switch (connection.getSignatureEnum())
-        {
-// NOLINTNEXTLINE cppcoreguidelines-macro-usage,-warnings-as-errors
-#define DTYPE(name)                                                            \
-    case SignatureEnum::name:                                                  \
-        signingAlgorithm(SigningAlgorithms::name);                             \
-        break;
-            DTYPE(RSASSA_2048)
-            DTYPE(RSAPSS_2048)
-            DTYPE(RSASSA_3072)
-            DTYPE(RSAPSS_3072)
-            DTYPE(RSASSA_4096)
-            DTYPE(RSAPSS_4096)
-            DTYPE(ECDSA_ECC_NIST_P256)
-            DTYPE(ECDSA_ECC_NIST_P384)
-            DTYPE(ECDSA_ECC_NIST_P521)
-#undef DTYPE
-            case SignatureEnum::NONE:
-            case SignatureEnum::INVALID:
-            default:
-                signingAlgorithm(SigningAlgorithms::None);
-                break;
-        }
+        updateAlgorithmsInfo();
         status(SPDMStatus::GettingCertificates);
     }
     else if (connection.hasInfo(ConnectionInfoEnum::CHOOSEN_VERSION))
@@ -336,14 +347,17 @@ spdmcpp::RetStat
 {
     auto rs = connection.handleEvent(event);
 
-    if (isError(rs))
+    if (isError(rs) || connection.isWaitingForResponse())
     {
+        if (connection.slotHasInfo(connection.getCurrentCertificateSlotIdx(),
+                                SlotInfoEnum::CERTIFICATES))
+        {
+            updateCertificatesInfo();
+            updateLastUpdateTime();
+        }
         return rs;
     }
-    if (connection.isWaitingForResponse())
-    {
-        return rs;
-    }
+    
     if (connection.hasInfo(ConnectionInfoEnum::MEASUREMENTS))
     {
         const ConnectionClass::DMTFMeasurementsContainer& src =
