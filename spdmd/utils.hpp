@@ -43,6 +43,23 @@ inline std::string toEscapedString(const std::vector<uint8_t>& vec)
     return ret;
 }
 
+inline std::string toBigEndianHexString(const std::vector<uint8_t>& vec)
+{
+    constexpr std::array<char, 16> hex{{'0', '1', '2', '3', '4', '5', '6', '7',
+                                        '8', '9', 'A', 'B', 'C', 'D', 'E',
+                                        'F'}};
+    std::string ret;
+    ret.reserve(2 + vec.size());
+    ret.push_back('0');
+    ret.push_back('x');
+    for (auto ch : vec)
+    {
+        ret.push_back(hex[(ch & 0xF0) >> 4]);
+        ret.push_back(hex[(ch & 0x0F)]);
+    }
+    return ret;
+}
+
 namespace dbus
 {
 using Interface = std::string;

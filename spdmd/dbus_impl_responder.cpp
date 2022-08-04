@@ -380,7 +380,7 @@ spdmcpp::RetStat
 
             method.append(
                 "xyz.openbmc_project.Inventory.Decorator.Asset", "SerialNumber",
-                std::variant<std::string>(toEscapedString(iter->second.ValueVector)));
+                std::variant<std::string>(toBigEndianHexString(iter->second.ValueVector)));
 
             appContext.bus.call_noreply(method);
         }
