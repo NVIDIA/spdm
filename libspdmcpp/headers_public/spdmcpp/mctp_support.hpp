@@ -154,7 +154,7 @@ class MctpIoClass : public IOClass
         }
 
         // NOLINTNEXTLINE cppcoreguidelines-avoid-c-arrays
-        const char path[] = "\0mctp-mux";
+        const char path[] = "\0mctp-pcie-mux";
         struct sockaddr_un addr
         {};
         addr.sun_family = AF_UNIX;
