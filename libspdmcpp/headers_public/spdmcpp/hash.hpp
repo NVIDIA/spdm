@@ -24,17 +24,17 @@ inline HashEnum toHash(BaseHashAlgoFlags flags)
     switch (flags)
     {
         case BaseHashAlgoFlags::TPM_ALG_SHA_256:
-            return HashEnum::SHA_256;
+            return HashEnum::TPM_ALG_SHA_256;
         case BaseHashAlgoFlags::TPM_ALG_SHA_384:
-            return HashEnum::SHA_384;
+            return HashEnum::TPM_ALG_SHA_384;
         case BaseHashAlgoFlags::TPM_ALG_SHA_512:
-            return HashEnum::SHA_512;
+            return HashEnum::TPM_ALG_SHA_512;
             // 			case BaseHashAlgoFlags::TPM_ALG_SHA3_256:	return
-            // HashEnum::SHA_;	//TODO support for SHA3 missing from mbedtls...
+            // HashEnum::TPM_ALG_SHA_;	//TODO support for SHA3 missing from mbedtls...
             // 			case BaseHashAlgoFlags::TPM_ALG_SHA3_384:	return
-            // HashEnum::SHA_;
+            // HashEnum::TPM_ALG_SHA_;
             // 			case BaseHashAlgoFlags::TPM_ALG_SHA3_512:	return
-            // HashEnum::SHA_;
+            // HashEnum::TPM_ALG_SHA_;
         default:
             return HashEnum::INVALID;
     }
@@ -48,18 +48,18 @@ inline HashEnum toHash(MeasurementHashAlgoFlags flags)
         case MeasurementHashAlgoFlags::RAW_BIT_STREAM_ONLY:
             return HashEnum::NONE;
         case MeasurementHashAlgoFlags::TPM_ALG_SHA_256:
-            return HashEnum::SHA_256;
+            return HashEnum::TPM_ALG_SHA_256;
         case MeasurementHashAlgoFlags::TPM_ALG_SHA_384:
-            return HashEnum::SHA_384;
+            return HashEnum::TPM_ALG_SHA_384;
         case MeasurementHashAlgoFlags::TPM_ALG_SHA_512:
-            return HashEnum::SHA_512;
+            return HashEnum::TPM_ALG_SHA_512;
             // 			case MeasurementHashAlgoFlags::TPM_ALG_SHA3_256:
-            // return HashEnum::SHA_;	//TODO support for SHA3 missing from
+            // return HashEnum::TPM_ALG_SHA_;	//TODO support for SHA3 missing from
             // mbedtls... 			case
             // MeasurementHashAlgoFlags::TPM_ALG_SHA3_384: return
-            // HashEnum::SHA_; 			case
+            // HashEnum::TPM_ALG_SHA_; 			case
             // MeasurementHashAlgoFlags::TPM_ALG_SHA3_512: return
-            // HashEnum::SHA_;
+            // HashEnum::TPM_ALG_SHA_;
         default:
             return HashEnum::INVALID;
     }
@@ -69,11 +69,11 @@ inline mbedtls_md_type_t toMbedtls(HashEnum algo)
 {
     switch (algo)
     {
-        case HashEnum::SHA_256:
+        case HashEnum::TPM_ALG_SHA_256:
             return MBEDTLS_MD_SHA256;
-        case HashEnum::SHA_384:
+        case HashEnum::TPM_ALG_SHA_384:
             return MBEDTLS_MD_SHA384;
-        case HashEnum::SHA_512:
+        case HashEnum::TPM_ALG_SHA_512:
             return MBEDTLS_MD_SHA512;
         // TODO support for SHA3 missing from mbedtls...
         default:
@@ -86,7 +86,7 @@ inline mbedtls_md_type_t toMbedtls(HashEnum algo)
  *  @details For trivial cases HashClass::compute() can be used directly.
  *  For more complicated usage patterns the following flow should be used:
  *    HashClass hc;
- *    hc.setup(HashEnum::SHA_256);
+ *    hc.setup(HashEnum::TPM_ALG_SHA_256);
  *    hc.update(data);
  *    ...
  *    hc.update(data);

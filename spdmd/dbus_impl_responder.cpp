@@ -47,18 +47,23 @@ Responder::~Responder()
     connection.unregisterTransport(transport);
 }
 
+void Responder::updateVersionInfo()
+{
+    version(static_cast<uint8_t>(connection.getMessageVersion()));
+}
+
 void Responder::updateAlgorithmsInfo()
 {
     switch (connection.getMeasurementHashEnum())
     {
-        case HashEnum::SHA_256:
-            hashingAlgorithm(HashingAlgorithms::SHA_256);
+        case HashEnum::TPM_ALG_SHA_256:
+            hashingAlgorithm(HashingAlgorithms::TPM_ALG_SHA_256);
             break;
-        case HashEnum::SHA_384:
-            hashingAlgorithm(HashingAlgorithms::SHA_384);
+        case HashEnum::TPM_ALG_SHA_384:
+            hashingAlgorithm(HashingAlgorithms::TPM_ALG_SHA_384);
             break;
-        case HashEnum::SHA_512:
-            hashingAlgorithm(HashingAlgorithms::SHA_512);
+        case HashEnum::TPM_ALG_SHA_512:
+            hashingAlgorithm(HashingAlgorithms::TPM_ALG_SHA_512);
             break;
         case HashEnum::NONE:
         case HashEnum::INVALID:
@@ -73,15 +78,15 @@ void Responder::updateAlgorithmsInfo()
         case SignatureEnum::name:                                                  \
             signingAlgorithm(SigningAlgorithms::name);                             \
             break;
-                DTYPE(RSASSA_2048)
-                DTYPE(RSAPSS_2048)
-                DTYPE(RSASSA_3072)
-                DTYPE(RSAPSS_3072)
-                DTYPE(RSASSA_4096)
-                DTYPE(RSAPSS_4096)
-                DTYPE(ECDSA_ECC_NIST_P256)
-                DTYPE(ECDSA_ECC_NIST_P384)
-                DTYPE(ECDSA_ECC_NIST_P521)
+                DTYPE(TPM_ALG_RSASSA_2048)
+                DTYPE(TPM_ALG_RSAPSS_2048)
+                DTYPE(TPM_ALG_RSASSA_3072)
+                DTYPE(TPM_ALG_RSAPSS_3072)
+                DTYPE(TPM_ALG_RSASSA_4096)
+                DTYPE(TPM_ALG_RSAPSS_4096)
+                DTYPE(TPM_ALG_ECDSA_ECC_NIST_P256)
+                DTYPE(TPM_ALG_ECDSA_ECC_NIST_P384)
+                DTYPE(TPM_ALG_ECDSA_ECC_NIST_P521)
 #undef DTYPE
         case SignatureEnum::NONE:
         case SignatureEnum::INVALID:
@@ -113,6 +118,7 @@ void Responder::syncSlotsInfo()
 {
     MeasurementsContainerType meas;
 
+    updateVersionInfo();
     updateAlgorithmsInfo();
     updateCertificatesInfo();
 
@@ -231,7 +237,7 @@ spdmcpp::RetStat Responder::handleEventForRefresh(spdmcpp::EventClass& ev)
     }
     else if (connection.hasInfo(ConnectionInfoEnum::CHOOSEN_VERSION))
     {
-        version(static_cast<uint8_t>(connection.getMessageVersion()));
+        updateVersionInfo();
         status(SPDMStatus::GettingCertificates);
     }
     return rs;

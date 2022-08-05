@@ -121,6 +121,7 @@ class Responder : public ResponderIntf
     spdmcpp::RetStat (Responder::*eventHandler)(spdmcpp::EventClass& event) =
         nullptr;
 
+    void updateVersionInfo();
     void updateAlgorithmsInfo();
     void updateCertificatesInfo();
     void updateLastUpdateTime();

@@ -74,11 +74,11 @@ inline mbedtls_ecp_group_id toMbedtlsGroupID(SignatureEnum algo)
     // configurable etc
     switch (algo)
     {
-        case SignatureEnum::ECDSA_ECC_NIST_P256:
+        case SignatureEnum::TPM_ALG_ECDSA_ECC_NIST_P256:
             return MBEDTLS_ECP_DP_SECP256R1;
-        case SignatureEnum::ECDSA_ECC_NIST_P384:
+        case SignatureEnum::TPM_ALG_ECDSA_ECC_NIST_P384:
             return MBEDTLS_ECP_DP_SECP384R1;
-        case SignatureEnum::ECDSA_ECC_NIST_P521:
+        case SignatureEnum::TPM_ALG_ECDSA_ECC_NIST_P521:
             return MBEDTLS_ECP_DP_BP512R1;
         default:
             return MBEDTLS_ECP_DP_NONE;

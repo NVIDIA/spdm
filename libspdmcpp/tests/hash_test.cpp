@@ -115,7 +115,7 @@ TEST(Hash, SHA256)
 
     std::vector<uint8_t> hash;
     {
-        HashEnum en = HashEnum::SHA_256;
+        HashEnum en = HashEnum::TPM_ALG_SHA_256;
         EXPECT_EQ(en, toHash(BaseHashAlgoFlags::TPM_ALG_SHA_256));
         EXPECT_EQ(en, toHash(MeasurementHashAlgoFlags::TPM_ALG_SHA_256));
         HashClass::compute(hash, en, refBuf.data(), refBuf.size());
@@ -134,7 +134,7 @@ TEST(Hash, SHA384)
 
     std::vector<uint8_t> hash;
     {
-        HashEnum en = HashEnum::SHA_384;
+        HashEnum en = HashEnum::TPM_ALG_SHA_384;
         EXPECT_EQ(en, toHash(BaseHashAlgoFlags::TPM_ALG_SHA_384));
         EXPECT_EQ(en, toHash(MeasurementHashAlgoFlags::TPM_ALG_SHA_384));
         HashClass::compute(hash, en, refBuf.data(), refBuf.size());
@@ -154,7 +154,7 @@ TEST(Hash, SHA512)
 
     std::vector<uint8_t> hash;
     {
-        HashEnum en = HashEnum::SHA_512;
+        HashEnum en = HashEnum::TPM_ALG_SHA_512;
         EXPECT_EQ(en, toHash(BaseHashAlgoFlags::TPM_ALG_SHA_512));
         EXPECT_EQ(en, toHash(MeasurementHashAlgoFlags::TPM_ALG_SHA_512));
         HashClass::compute(hash, en, refBuf.data(), refBuf.size());
