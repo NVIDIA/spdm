@@ -82,6 +82,8 @@ class SpdmdApp : public SpdmdAppContext
         return SpdmdAppContext::log;
     }
 
+    /** @brief Array of all responder objects, managed by SPDM daemon */
+    std::vector<dbus_api::Responder*> responders;
   private:
     /** @brief verbose - debug level for SPDM daemon */
     spdmcpp::LogClass::Level verbose = spdmcpp::LogClass::Level::Emergency;
@@ -94,8 +96,6 @@ class SpdmdApp : public SpdmdAppContext
      * over MCTP */
     sdeventplus::source::IO* mctpEvent = nullptr;
 
-    /** @brief Array of all responder objects, managed by SPDM daemon */
-    std::vector<dbus_api::Responder*> responders;
 
     /** @brief Buffer for packets received from responders over MCTP */
     std::vector<uint8_t> packetBuffer;

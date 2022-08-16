@@ -1,7 +1,5 @@
 [Unit]
 Description=Phosphor SPDM Daemon
-Wants=mctp-ctrl.service
-After=mctp-ctrl.service
 Wants=pldmd.service
 After=pldmd.service
 

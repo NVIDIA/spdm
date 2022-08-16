@@ -286,11 +286,10 @@ int main(int argc, char** argv)
     try
     {
         SpdmdApp spdmApp;
+
         spdmApp.setupCli(argc, argv);
 
         spdmApp.connectDBus();
-
-        spdmApp.connectMCTP();
 
         std::unique_ptr<MctpDiscovery> mctpDiscoveryHandler =
             std::make_unique<MctpDiscovery>(spdmApp);
