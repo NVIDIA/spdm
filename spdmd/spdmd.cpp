@@ -112,6 +112,13 @@ void SpdmdApp::connectDBus()
 void SpdmdApp::connectMCTP()
 {
     SPDMCPP_LOG_TRACE_FUNC(log);
+    if (mctpIo.isSocketOpen())
+    {
+        // return if socket is already created because we call this function
+        // redundantly on discovery due to some startup issues,
+        // see comment in MctpDiscovery::addNewEndpoint()
+        return;
+    }
     if (!mctpIo.createSocket())
     {
         throw std::runtime_error("Couldn't create mctp socket");

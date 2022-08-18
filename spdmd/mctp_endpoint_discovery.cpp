@@ -75,18 +75,15 @@ void MctpDiscovery::addNewEndpoint(
     // SPDM service gets started and after a moment MCTP daemon fails which is
     // causing the SPDM daemon to fail when it tries to connect the MCTP daemon
     // through the unix socket.
-    if (spdmApp.responders.size() == 0)
+    try
     {
-        try
-        {
-            spdmApp.connectMCTP();
-        }
-        catch (const std::exception& e)
-        {
-            std::cerr << "exception occured during MCTP connect '" << e.what()
-                      << std::endl;
-            throw; // let the application crash
-        }
+        spdmApp.connectMCTP();
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "exception occured during MCTP connect '" << e.what()
+                  << std::endl;
+        throw; // let the application crash
     }
 
     size_t eid = getEid(interfaces);
@@ -116,18 +113,16 @@ void MctpDiscovery::addNewEndpoint(
     {
         return;
     }
-    if (spdmApp.responders.size() == 0)
+
+    try
     {
-        try
-        {
-            spdmApp.connectMCTP();
-        }
-        catch (const std::exception& e)
-        {
-            std::cerr << "exception occured during MCTP connect '" << e.what()
-                      << std::endl;
-            throw; // let the application crash
-        }
+        spdmApp.connectMCTP();
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "exception occured during MCTP connect '" << e.what()
+                  << std::endl;
+        throw; // let the application crash
     }
 
     auto uuid = getUUID(interfaces);

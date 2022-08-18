@@ -17,7 +17,8 @@ using namespace sdbusplus;
 using namespace xyz;
 using namespace openbmc_project;
 
-/* Define USE_PHOSPHOR_LOGGING to log error messages to phosphor logging module. */
+/* Define USE_PHOSPHOR_LOGGING to log error messages to phosphor logging module.
+ */
 #define notUSE_PHOSPHOR_LOGGING
 
 namespace spdmd
