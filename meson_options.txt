@@ -2,6 +2,8 @@ option('tests', type: 'feature', description: 'Build tests', value: 'enabled')
 option('spdmd', type: 'feature', description: 'Build spdmd daemon', value: 'enabled')
 option('systemd', type: 'feature', description: 'Include systemd support', value: 'enabled')
 
+option('discovery_only_from_mctp_control', type: 'feature', description: 'Build with discovery being based only on MCTP Control daemon, the EID will be used for the responder dbus path name.', value: 'disabled')
+
 option('fetch_serialnumber_from_responder', type: 'integer', min : 0, max : 254, value : 0, description: 'If not 0 will enable custom code to feth the serial number measurement and write it to the pldm inventory')
 
 option('emu', type: 'feature', description: 'Build spdmcpp_emu for testing', value: 'enabled')	#TODO disable before release

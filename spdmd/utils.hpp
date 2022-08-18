@@ -209,6 +209,39 @@ struct ServiceHelper
     {
         return interface;
     }
+    auto getDefaultService() const
+    {
+        return defaultService;
+    }
+
+    void waitForService(sdbusplus::bus::bus& bus) const
+    {
+        bool wait = true;
+        sdbusplus::bus::match_t match(
+            bus,
+            sdbusplus::bus::match::rules::nameOwnerChanged(getService(bus)),
+            [&wait](sdbusplus::message::message&) { wait = false; });
+        auto method = new_method_call(bus, "GetManagedObjects");
+        try
+        {
+            auto reply = bus.call(method);
+        }
+        catch (sdbusplus::exception::SdBusError& e)
+        {
+            if (strcmp(e.name(), SD_BUS_ERROR_SERVICE_UNKNOWN) != 0)
+            {
+                // if we got unexpected error pass it through
+                throw;
+            }
+            // if service is missing we wait for it to show up
+            while (wait)
+            {
+                bus.wait();
+                bus.process();
+            }
+        }
+        return;
+    }
 
   private:
     const char* path = nullptr;

@@ -6,3 +6,6 @@
 
 //NOLINTNEXTLINE cppcoreguidelines-macro-usage
 #mesondefine FETCH_SERIALNUMBER_FROM_RESPONDER
+
+//NOLINTNEXTLINE cppcoreguidelines-macro-usage
+#mesondefine DISCOVERY_ONLY_FROM_MCTP_CONTROL

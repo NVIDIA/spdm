@@ -7,6 +7,8 @@
 namespace spdmd
 {
 
+extern dbus::ServiceHelper mctpControlService;
+
 using mctp_eid_t = uint8_t;
 using createResponder_t = bool (*)(mctp_eid_t);
 class SpdmdApp;
@@ -46,16 +48,23 @@ class MctpDiscovery
     /** @brief reference to the SPDM app, used to create responder */
     SpdmdApp& spdmApp;
 
+#ifndef DISCOVERY_ONLY_FROM_MCTP_CONTROL
+    /** @brief Used to watch for new PLDM inventory objects */
+    sdbusplus::bus::match_t inventoryMatch;
+#endif
     /** @brief Used to watch for new MCTP endpoints */
-    sdbusplus::bus::match_t mctpEndpointSignal;
+    sdbusplus::bus::match_t mctpMatch;
 
     /** @brief Called when a new mctp endpoint is discovered */
-    void newEndpointDiscovered(sdbusplus::message::message& msg);
+    void mctpNewObjectSignal(const sdbusplus::message::object_path& objectPath, const dbus::InterfaceMap& interfaces);
 
-    /** @brief Common function for creating a responder object, either on start
-     * or later when a new endpoint is discovered */
-    void addNewEndpoint(const sdbusplus::message::object_path& objectPath,
-                        const dbus::InterfaceMap& interfaces);
+#ifndef DISCOVERY_ONLY_FROM_MCTP_CONTROL
+    /** @brief Called when a new PLDM inventory object is discovered */
+    void inventoryNewObjectSignal(const sdbusplus::message::object_path& objectPath, const dbus::InterfaceMap& interfaces);
+#endif
+    
+    /** @brief Try calling spdmApp.ConnectMCTP() */
+    void tryConnectMCTP();
 
     /** @brief SPDM type of an MCTP message */
     static constexpr uint8_t mctpTypeSPDM = 5;

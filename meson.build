@@ -22,6 +22,7 @@ add_project_arguments('-Wno-psabi', language: 'cpp')
 conf_data = configuration_data()
 conf_data.set_quoted('SPDMD_VERSION', meson.project_version())
 conf_data.set('FETCH_SERIALNUMBER_FROM_RESPONDER', get_option('fetch_serialnumber_from_responder'))
+conf_data.set('DISCOVERY_ONLY_FROM_MCTP_CONTROL', get_option('discovery_only_from_mctp_control').enabled())
 configure_file(
   input: 'config.h.in',
   output: 'config.h',
