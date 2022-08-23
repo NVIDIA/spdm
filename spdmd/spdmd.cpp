@@ -19,7 +19,7 @@ constexpr auto spdmDefaultService = "xyz.openbmc_project.SPDM";
 namespace spdmd
 {
 
-dbus::ServiceHelper inventoryService("/xyz/openbmc_project/inventory",
+dbus::ServiceHelper inventoryService("/",
                                      "org.freedesktop.DBus.ObjectManager",
                                      "xyz.openbmc_project.PLDM");
 
