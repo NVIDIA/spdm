@@ -258,6 +258,10 @@ void Responder::refresh(uint8_t slotIndex, std::vector<uint8_t> nonc,
         return;
     }
 
+    // Need to first set initializing, because otherwise setting an error status
+    // would not trigger a signal if the previous refresh set the same error.
+    status(SPDMStatus::Initializing);
+
     if (slotIndex >= ConnectionClass::slotNum)
     {
         getLog().iprintln(
@@ -286,6 +290,13 @@ void Responder::refresh(uint8_t slotIndex, std::vector<uint8_t> nonc,
         {
             if (ind >= 1 && ind < 255)
             {
+                if (meas[ind])
+                {
+                    getLog().iprint("WARNING - duplicate measurement index: ");
+                    getLog().println(ind);
+                    status(SPDMStatus::Error_InvalidArguments);
+                    return;
+                }
                 meas.set(ind);
             }
             else
@@ -293,7 +304,7 @@ void Responder::refresh(uint8_t slotIndex, std::vector<uint8_t> nonc,
                 getLog().iprint("WARNING - invalid measurement index value '");
                 getLog().print(ind);
                 getLog().println(
-                    "' when specifying multiple indices, ignoring this value!");
+                    "' when specifying multiple indices!");
                 status(SPDMStatus::Error_InvalidArguments);
                 return;
             }
@@ -301,8 +312,6 @@ void Responder::refresh(uint8_t slotIndex, std::vector<uint8_t> nonc,
     }
 
     eventHandler = &spdmd::dbus_api::Responder::handleEventForRefresh;
-
-    status(SPDMStatus::Initializing);
 
     slot(slotIndex);
 
