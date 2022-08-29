@@ -189,6 +189,9 @@ RetStat ConnectionClass::parseCertChain(SlotClass& slot,
 
     slot.CertificateOffset = off;
 
+    Log.iprint("Full Certificate Chain: ");
+    Log.println(std::span{cert.begin() + static_cast<ptrdiff_t>(off), cert.end()});
+
     do
     {
         {
