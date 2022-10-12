@@ -1,0 +1,5 @@
+*.fwpkg
+*.json
+measurementdata
+output-*
+!requests*/*.json

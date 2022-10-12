@@ -1,0 +1,62 @@
+[
+    {
+        "Chassis" : "HGX_ERoT_FPGA_0",
+        "MeasurementIndices" : [ 15 ]
+    },
+    {
+        "Chassis" : "HGX_ERoT_GPU_SXM_1",
+        "MeasurementIndices" : [ 15 ]
+    },
+    {
+        "Chassis" : "HGX_ERoT_GPU_SXM_2",
+        "MeasurementIndices" : [ 15 ]
+    },
+    {
+        "Chassis" : "HGX_ERoT_GPU_SXM_3",
+        "MeasurementIndices" : [ 15 ]
+    },
+    {
+        "Chassis" : "HGX_ERoT_GPU_SXM_4",
+        "MeasurementIndices" : [ 15 ]
+    },
+    {
+        "Chassis" : "HGX_ERoT_GPU_SXM_5",
+        "MeasurementIndices" : [ 15 ]
+    },
+    {
+        "Chassis" : "HGX_ERoT_GPU_SXM_6",
+        "MeasurementIndices" : [ 15 ]
+    },
+    {
+        "Chassis" : "HGX_ERoT_GPU_SXM_7",
+        "MeasurementIndices" : [ 15 ]
+    },
+    {
+        "Chassis" : "HGX_ERoT_GPU_SXM_8",
+        "MeasurementIndices" : [ 15 ]
+    },
+    {
+        "Chassis" : "HGX_ERoT_HMC_0",
+        "MeasurementIndices" : [ 15 ]
+    },
+    {
+        "Chassis" : "HGX_ERoT_NVSwitch_0",
+        "MeasurementIndices" : [ 15 ]
+    },
+    {
+        "Chassis" : "HGX_ERoT_NVSwitch_1",
+        "MeasurementIndices" : [ 15 ]
+    },
+    {
+        "Chassis" : "HGX_ERoT_NVSwitch_2",
+        "MeasurementIndices" : [ 15 ]
+    },
+    {
+        "Chassis" : "HGX_ERoT_NVSwitch_3",
+        "MeasurementIndices" : [ 15 ]
+    },
+    {
+        "Chassis" : "HGX_ERoT_PCIeSwitch_0",
+        "MeasurementIndices" : [ 15 ]
+    }
+]
