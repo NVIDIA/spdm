@@ -14,7 +14,7 @@ CHASSIS=("HGX_ERoT_FPGA_0" \
     "HGX_ERoT_GPU_SXM_6" \
     "HGX_ERoT_GPU_SXM_7" \
     "HGX_ERoT_GPU_SXM_8" \
-    "HGX_ERoT_HMC_0" \
+    "HGX_ERoT_BMC_0" \
     "HGX_ERoT_NVSwitch_0" \
     "HGX_ERoT_NVSwitch_1" \
     "HGX_ERoT_NVSwitch_2" \

@@ -1,0 +1,5 @@
+*.fwpkg
+*.json
+*.csv
+output-*
+!requests*/*
