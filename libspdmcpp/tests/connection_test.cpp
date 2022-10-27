@@ -282,11 +282,13 @@ void testConnectionFlow(BaseAsymAlgoFlags asymAlgo, BaseHashAlgoFlags hashAlgo)
 
         std::vector<uint8_t> buf;
         buf.resize(1024);
+        std::fill(buf.begin(), buf.end(), 0);
 
         log.iprint("der: ");
-        log.print(buf);
         int ret = mbedtls_x509write_crt_der(&ctx, buf.data(), buf.size(), fRng,
                                             nullptr);
+        std::vector<uint8_t> bufDer(std::prev(buf.end(), ret), std::end(buf));
+        log.print(bufDer);
         if (ret < 0)
         {
             mbedtlsPrintErrorLine(log, "mbedtls_x509write_crt_der()", ret);

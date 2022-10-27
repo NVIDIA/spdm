@@ -65,6 +65,13 @@ class LogClass
     // TODO definitely more helpers needed, time-stamping?!
 
     /** Various print variants */
+    template <typename T, typename... Targs>
+    void print(T value, Targs... fargs)
+    {
+        print(value);
+        print(fargs...);
+    }
+
     void print(char* str)
     {
         getOstream() << str;

@@ -21,6 +21,7 @@ add_project_arguments('-Wno-psabi', language: 'cpp')
 
 conf_data = configuration_data()
 conf_data.set_quoted('SPDMD_VERSION', meson.project_version())
+conf_data.set_quoted('SPDM_WRAPPER_VERSION', meson.project_version())
 conf_data.set('FETCH_SERIALNUMBER_FROM_RESPONDER', get_option('fetch_serialnumber_from_responder'))
 conf_data.set('DISCOVERY_ONLY_FROM_MCTP_CONTROL', get_option('discovery_only_from_mctp_control').enabled())
 conf_data.set('SPDM_JSON_CONF_FILE_NAME', get_option('conf_file_name'))
@@ -42,18 +43,22 @@ crypto_deps = declare_dependency(
 	]
 )
 
+if not get_option('use_fuzz').enabled()
 sdbusplus = dependency(
   'sdbusplus',
   fallback: ['sdbusplus', 'sdbusplus_dep'],
-)
-sdeventplus = dependency(
-  'sdeventplus',
-  fallback: ['sdeventplus', 'sdeventplus_dep'],
 )
 phosphor_dbus_interfaces = dependency(
   'phosphor-dbus-interfaces',
   fallback: ['phosphor-dbus-interfaces', 'phosphor_dbus_interfaces_dep'],
 )
+endif
+
+sdeventplus = dependency(
+  'sdeventplus',
+  fallback: ['sdeventplus', 'sdeventplus_dep'],
+)
+
 
 if comp.has_header('CLI/CLI.hpp')
   CLI11_dep = declare_dependency()
@@ -73,4 +78,9 @@ else
 endif
 
 subdir('libspdmcpp')
-subdir('spdmd')
+
+if get_option('use_fuzz').enabled()
+  subdir('fuzzer')
+else
+  subdir('spdmd')
+endif

@@ -1,0 +1,268 @@
+sendRequest(N7spdmcpp23PacketGetVersionRequestE):
+        Header:
+                MessageVersion: MessageVersionEnum::SPDM_1_0
+                requestResponseCode:    RequestResponseEnum::REQUEST_GET_VERSION
+                Param1: 0
+                Param2: 0
+Context->IO->write() buf.size() = 6
+buf = 60 05 10 84 00 00 
+asyncResponse(N7spdmcpp24PacketVersionResponseVarE):
+ResponseBuffer.size() = 10
+ResponseBuffer = 60 05 10 04 00 00 00 01 00 11 
+interpretResponse(N7spdmcpp24PacketVersionResponseVarE):
+        Min:
+                Header:
+                        MessageVersion: MessageVersionEnum::SPDM_1_0
+                        requestResponseCode:    RequestResponseEnum::RESPONSE_VERSION
+                        Param1: 0
+                        Param2: 0
+                Reserved:       0
+        VersionNumberEntries[0]: <getMajor(): 1   getMinor(): 1   getUpdateVersionNumber(): 0   getAlpha(): 0>
+chosen MessageVersion: MessageVersionEnum::SPDM_1_1
+sendRequest(N7spdmcpp28PacketGetCapabilitiesRequestE):
+        Header:
+                MessageVersion: MessageVersionEnum::SPDM_1_1
+                requestResponseCode:    RequestResponseEnum::REQUEST_GET_CAPABILITIES
+                Param1: 0
+                Param2: 0
+        Reserved0:      0
+        CTExponent:     0
+        Reserved1:      0
+        Flags:  (0x00000004 RequesterCapabilitiesFlags::CHAL_CAP)
+Context->IO->write() buf.size() = 14
+buf = 60 05 11 e1 00 00 00 00 00 00 04 00 00 00 
+asyncResponse(N7spdmcpp26PacketCapabilitiesResponseE):
+ResponseBuffer.size() = 14
+ResponseBuffer = 60 05 11 61 00 00 00 00 00 00 f7 fb 00 00 
+interpretResponse(N7spdmcpp26PacketCapabilitiesResponseE):
+        Header:
+                MessageVersion: MessageVersionEnum::SPDM_1_1
+                requestResponseCode:    RequestResponseEnum::RESPONSE_CAPABILITIES
+                Param1: 0
+                Param2: 0
+        Reserved0:      0
+        CTExponent:     0
+        Reserved1:      0
+        Flags:  (0x0000fbf7 ResponderCapabilitiesFlags::CACHE_CAP | ResponderCapabilitiesFlags::CERT_CAP | ResponderCapabilitiesFlags::CHAL_CAP | ResponderCapabilitiesFlags::MEAS_CAP_10 | ResponderCapabilitiesFlags::MEAS_FRESH_CAP | ResponderCapabilitiesFlags::ENCRYPT_CAP | ResponderCapabilitiesFlags::MAC_CAP | ResponderCapabilitiesFlags::MUT_AUTH_CAP | ResponderCapabilitiesFlags::KEY_EX_CAP | ResponderCapabilitiesFlags::PSK_CAP_10 | ResponderCapabilitiesFlags::ENCAP_CAP | ResponderCapabilitiesFlags::HBEAT_CAP | ResponderCapabilitiesFlags::KEY_UPD_CAP | ResponderCapabilitiesFlags::HANDSHAKE_IN_THE_CLEAR_CAP)
+sendRequest(N7spdmcpp35PacketNegotiateAlgorithmsRequestVarE):
+        Min:
+                Header:
+                        MessageVersion: MessageVersionEnum::SPDM_1_1
+                        requestResponseCode:    RequestResponseEnum::REQUEST_NEGOTIATE_ALGORITHMS
+                        Param1: 0
+                        Param2: 0
+                Length: 32
+                MeasurementSpecification:       1
+                Reserved0:      0
+                BaseAsymAlgo:   (0x00000190 BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P256 | BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P384 | BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P521)
+                BaseHashAlgo:   (0x00000007 BaseHashAlgoFlags::TPM_ALG_SHA_256 | BaseHashAlgoFlags::TPM_ALG_SHA_384 | BaseHashAlgoFlags::TPM_ALG_SHA_512)
+                Reserved1:      0
+                Reserved2:      0
+                Reserved3:      0
+                ExtAsymCount:   0
+                ExtHashCount:   0
+                Reserved4:      0
+        PacketReqAlgVector.size():      0
+Context->IO->write() buf.size() = 34
+buf = 60 05 11 e3 00 00 20 00 01 00 90 01 00 00 07 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
+asyncResponse(N7spdmcpp27PacketAlgorithmsResponseVarE):
+ResponseBuffer.size() = 54
+ResponseBuffer = 60 05 11 63 04 00 34 00 01 00 08 00 00 00 80 00 00 00 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 02 20 00 00 03 20 00 00 04 20 00 00 05 20 00 00 
+interpretResponse(N7spdmcpp27PacketAlgorithmsResponseVarE):
+        Min:
+                Header:
+                        MessageVersion: MessageVersionEnum::SPDM_1_1
+                        requestResponseCode:    RequestResponseEnum::RESPONSE_ALGORITHMS
+                        Param1: 4
+                        Param2: 0
+                Length: 52
+                MeasurementSpecification:       1
+                Reserved0:      0
+                MeasurementHashAlgo:    (0x00000008 MeasurementHashAlgoFlags::TPM_ALG_SHA_512)
+                BaseAsymAlgo:   (0x00000080 BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P384)
+                BaseHashAlgo:   (0x00000002 BaseHashAlgoFlags::TPM_ALG_SHA_384)
+                Reserved1:      0
+                Reserved2:      0
+                Reserved3:      0
+                ExtAsymCount:   0
+                ExtHashCount:   0
+                Reserved4:      0
+        PacketReqAlgVector.size():      4
+        PacketReqAlgVector[0]: <AlgType: AlgTypeEnum::DHE   FixedAlgCount: 2   ExtAlgCount: 0   UNIMPLEMENTED>
+        PacketReqAlgVector[1]: <AlgType: AlgTypeEnum::AEADCipherSuite   FixedAlgCount: 2   ExtAlgCount: 0   UNIMPLEMENTED>
+        PacketReqAlgVector[2]: <AlgType: AlgTypeEnum::ReqBaseAsymAlg   FixedAlgCount: 2   ExtAlgCount: 0   ReqBaseAsymAlg: (0x00000000 0)>
+        PacketReqAlgVector[3]: <AlgType: AlgTypeEnum::KeySchedule   FixedAlgCount: 2   ExtAlgCount: 0   UNIMPLEMENTED>
+sendRequest(N7spdmcpp23PacketGetDigestsRequestE):
+        Header:
+                MessageVersion: MessageVersionEnum::SPDM_1_1
+                requestResponseCode:    RequestResponseEnum::REQUEST_GET_DIGESTS
+                Param1: 0
+                Param2: 0
+Context->IO->write() buf.size() = 6
+buf = 60 05 11 81 00 00 
+asyncResponse(N7spdmcpp24PacketDigestsResponseVarE):
+ResponseBuffer.size() = 150
+ResponseBuffer = 60 05 11 01 00 07 2c a8 5c 4e 78 52 26 6c f0 3e 8c 7f 0f c6 0a db 58 f3 14 04 71 b5 9b 04 92 51 ae 05 fc f7 99 88 85 16 03 fd 48 8c 9e 6e 74 95 36 7d a2 2a 4c c0 2c a8 5c 4e 78 52 26 6c f0 3e 8c 7f 0f c6 0a db 58 f3 14 04 71 b5 9b 04 92 51 ae 05 fc f7 99 88 85 16 03 fd 48 8c 9e 6e 74 95 36 7d a2 2a 4c c0 2c a8 5c 4e 78 52 26 6c f0 3e 8c 7f 0f c6 0a db 58 f3 14 04 71 b5 9b 04 92 51 ae 05 fc f7 99 88 85 16 03 fd 48 8c 9e 6e 74 95 36 7d a2 2a 4c c0 
+interpretResponse(N7spdmcpp24PacketDigestsResponseVarE):
+        Min:
+                Header:
+                        MessageVersion: MessageVersionEnum::SPDM_1_1
+                        requestResponseCode:    RequestResponseEnum::RESPONSE_DIGESTS
+                        Param1: 0
+                        Param2: 7
+        Digests[0]: 2c a8 5c 4e 78 52 26 6c f0 3e 8c 7f 0f c6 0a db 58 f3 14 04 71 b5 9b 04 92 51 ae 05 fc f7 99 88 85 16 03 fd 48 8c 9e 6e 74 95 36 7d a2 2a 4c c0 
+        Digests[1]: 2c a8 5c 4e 78 52 26 6c f0 3e 8c 7f 0f c6 0a db 58 f3 14 04 71 b5 9b 04 92 51 ae 05 fc f7 99 88 85 16 03 fd 48 8c 9e 6e 74 95 36 7d a2 2a 4c c0 
+        Digests[2]: 2c a8 5c 4e 78 52 26 6c f0 3e 8c 7f 0f c6 0a db 58 f3 14 04 71 b5 9b 04 92 51 ae 05 fc f7 99 88 85 16 03 fd 48 8c 9e 6e 74 95 36 7d a2 2a 4c c0 
+        Digests[3]: 
+        Digests[4]: 
+        Digests[5]: 
+        Digests[6]: 
+        Digests[7]: 
+sendRequest(N7spdmcpp27PacketGetCertificateRequestE):
+        Header:
+                MessageVersion: MessageVersionEnum::SPDM_1_1
+                requestResponseCode:    RequestResponseEnum::REQUEST_GET_CERTIFICATE
+                Param1: 0
+                Param2: 0
+        Offset: 0
+        Length: 65535
+Context->IO->write() buf.size() = 10
+buf = 60 05 11 82 00 00 00 00 ff ff 
+asyncResponse(N7spdmcpp28PacketCertificateResponseVarE):
+ResponseBuffer.size() = 1034
+ResponseBuffer = 60 05 11 02 00 00 00 04 09 02 09 06 00 00 4e 75 0a 31 8a 1c 58 20 15 a2 8c 03 4d b2 96 25 7d 8f ef 31 47 45 3e 40 76 fc 45 92 12 66 a8 6e 27 fc 41 31 7e 72 32 53 54 15 3a 92 54 ff bd cd 30 82 01 d0 30 82 01 56 a0 03 02 01 02 02 14 00 ca 2f 39 e8 fa 16 fd b0 34 0c 85 50 8f 5d 07 e2 6e 48 34 30 0a 06 08 2a 86 48 ce 3d 04 03 03 30 1f 31 1d 30 1b 06 03 55 04 03 0c 14 69 6e 74 65 6c 20 74 65 73 74 20 45 43 50 32 35 36 20 43 41 30 1e 17 0d 32 32 30 31 30 35 30 36 30 38 33 33 5a 17 0d 33 32 30 31 30 33 30 36 30 38 33 33 5a 30 1f 31 1d 30 1b 06 03 55 04 03 0c 14 69 6e 74 65 6c 20 74 65 73 74 20 45 43 50 32 35 36 20 43 41 30 76 30 10 06 07 2a 86 48 ce 3d 02 01 06 05 2b 81 04 00 22 03 62 00 04 92 2f d3 bd 8b 60 bb f7 5e e4 80 25 14 10 47 8c 79 ad 82 fb 41 3a c4 ad 39 f8 01 1a 9d 47 29 90 d6 bb 86 41 07 8d 86 66 11 da 6d c9 ed 9b 0e 2a a1 2a 51 c2 dd 55 ab 3d 1d 7b 3c 3d 38 28 80 72 61 20 3e 25 f9 99 39 82 4e 4a ba 93 d1 ab 1f ce 5a 9b 3d be a5 bc 1b 96 f0 b7 b5 fb 10 f9 23 90 a3 53 30 51 30 1d 06 03 55 1d 0e 04 16 04 14 14 c4 e7 a6 7c 63 3f df 13 f2 b1 36 56 63 f9 c1 ea dd 78 10 30 1f 06 03 55 1d 23 04 18 30 16 80 14 14 c4 e7 a6 7c 63 3f df 13 f2 b1 36 56 63 f9 c1 ea dd 78 10 30 0f 06 03 55 1d 13 01 01 ff 04 05 30 03 01 01 ff 30 0a 06 08 2a 86 48 ce 3d 04 03 03 03 68 00 30 65 02 31 00 d7 9c 7f 26 91 34 a5 2b 79 ea 66 15 00 88 0a 4d e7 ad 71 c6 2e e4 7e 37 e1 86 eb e8 55 b0 2f c5 f3 a9 e0 90 f9 0b 82 c5 df 4a 35 9a 0d 35 38 4b 02 30 40 a7 fe 70 39 7b 4b d7 c2 28 72 93 93 0c 62 12 14 f0 70 74 0f fc b1 21 60 40 6d 13 a3 59 0e 27 06 c1 73 4e ca 40 4c 2d f5 96 48 66 05 b1 a6 08 30 82 01 d7 30 82 01 5d a0 03 02 01 02 02 01 01 30 0a 06 08 2a 86 48 ce 3d 04 03 03 30 1f 31 1d 30 1b 06 03 55 04 03 0c 14 69 6e 74 65 6c 20 74 65 73 74 20 45 43 50 32 35 36 20 43 41 30 1e 17 0d 32 32 30 31 30 35 30 36 30 38 33 34 5a 17 0d 33 32 30 31 30 33 30 36 30 38 33 34 5a 30 2e 31 2c 30 2a 06 03 55 04 03 0c 23 69 6e 74 65 6c 20 74 65 73 74 20 45 43 50 32 35 36 20 69 6e 74 65 72 6d 65 64 69 61 74 65 20 63 65 72 74 30 76 30 10 06 07 2a 86 48 ce 3d 02 01 06 05 2b 81 04 00 22 03 62 00 04 12 af 50 bf af fb c8 03 23 41 27 fa ef ec 35 c4 ae 96 cb f4 ae fb 74 58 6b f5 8f 60 38 28 76 0b 29 a4 ca f4 6c 2d 59 28 f5 ab 92 b7 6b 6f 3a c0 91 9f 45 d1 3c a0 c8 80 67 ff 4b 9f e8 01 17 08 cb 4c 17 23 c2 f0 07 e4 cd 37 26 9f 41 a4 fe 7d 80 1c 23 43 cb 53 6c c1 0f 5f 4a c8 6a 31 e6 ee a3 5e 30 5c 30 0c 06 03 55 1d 13 04 05 30 03 01 01 ff 30 0b 06 03 55 1d 0f 04 04 03 02 01 fe 30 1d 06 03 55 1d 0e 04 16 04 14 42 bc ed ba d1 5a 68 df 71 41 f8 a5 0e 36 ca f5 df 52 50 09 30 20 06 03 55 1d 25 01 01 ff 04 16 30 14 06 08 2b 06 01 05 05 07 03 01 06 08 2b 06 01 05 05 07 03 02 30 0a 06 08 2a 86 48 ce 3d 04 03 03 03 68 00 30 65 02 31 00 9a fd d5 7e 34 74 19 09 e1 26 45 f2 bc 3f 25 d4 47 22 19 68 23 e4 6a e5 35 d6 9a 4e a5 23 b2 d3 c0 9a 68 88 ce 99 59 9d 55 18 96 4d d3 1c 3b 52 02 30 1c 08 de 61 7f 5b a7 c8 6b af 8d 9d f5 3a c1 54 e5 5f 21 c7 69 57 db 63 c4 45 09 66 ab 70 ab c0 bf b2 c0 6a 7f 51 da e8 ae 93 c4 43 33 4a 07 a4 30 82 02 22 30 82 01 a8 a0 03 02 01 02 02 01 03 30 0a 06 08 2a 86 48 ce 3d 04 03 03 30 
+interpretResponse(N7spdmcpp28PacketCertificateResponseVarE):
+        Min:
+                Header:
+                        MessageVersion: MessageVersionEnum::SPDM_1_1
+                        requestResponseCode:    RequestResponseEnum::RESPONSE_CERTIFICATE
+                        Param1: 0
+                        Param2: 0
+                PortionLength:  1024
+                RemainderLength:        521
+        CertificateVector.size():       1024
+        CertificateVector:      09 06 00 00 4e 75 0a 31 8a 1c 58 20 15 a2 8c 03 4d b2 96 25 7d 8f ef 31 47 45 3e 40 76 fc 45 92 12 66 a8 6e 27 fc 41 31 7e 72 32 53 54 15 3a 92 54 ff bd cd 30 82 01 d0 30 82 01 56 a0 03 02 01 02 02 14 00 ca 2f 39 e8 fa 16 fd b0 34 0c 85 50 8f 5d 07 e2 6e 48 34 30 0a 06 08 2a 86 48 ce 3d 04 03 03 30 1f 31 1d 30 1b 06 03 55 04 03 0c 14 69 6e 74 65 6c 20 74 65 73 74 20 45 43 50 32 35 36 20 43 41 30 1e 17 0d 32 32 30 31 30 35 30 36 30 38 33 33 5a 17 0d 33 32 30 31 30 33 30 36 30 38 33 33 5a 30 1f 31 1d 30 1b 06 03 55 04 03 0c 14 69 6e 74 65 6c 20 74 65 73 74 20 45 43 50 32 35 36 20 43 41 30 76 30 10 06 07 2a 86 48 ce 3d 02 01 06 05 2b 81 04 00 22 03 62 00 04 92 2f d3 bd 8b 60 bb f7 5e e4 80 25 14 10 47 8c 79 ad 82 fb 41 3a c4 ad 39 f8 01 1a 9d 47 29 90 d6 bb 86 41 07 8d 86 66 11 da 6d c9 ed 9b 0e 2a a1 2a 51 c2 dd 55 ab 3d 1d 7b 3c 3d 38 28 80 72 61 20 3e 25 f9 99 39 82 4e 4a ba 93 d1 ab 1f ce 5a 9b 3d be a5 bc 1b 96 f0 b7 b5 fb 10 f9 23 90 a3 53 30 51 30 1d 06 03 55 1d 0e 04 16 04 14 14 c4 e7 a6 7c 63 3f df 13 f2 b1 36 56 63 f9 c1 ea dd 78 10 30 1f 06 03 55 1d 23 04 18 30 16 80 14 14 c4 e7 a6 7c 63 3f df 13 f2 b1 36 56 63 f9 c1 ea dd 78 10 30 0f 06 03 55 1d 13 01 01 ff 04 05 30 03 01 01 ff 30 0a 06 08 2a 86 48 ce 3d 04 03 03 03 68 00 30 65 02 31 00 d7 9c 7f 26 91 34 a5 2b 79 ea 66 15 00 88 0a 4d e7 ad 71 c6 2e e4 7e 37 e1 86 eb e8 55 b0 2f c5 f3 a9 e0 90 f9 0b 82 c5 df 4a 35 9a 0d 35 38 4b 02 30 40 a7 fe 70 39 7b 4b d7 c2 28 72 93 93 0c 62 12 14 f0 70 74 0f fc b1 21 60 40 6d 13 a3 59 0e 27 06 c1 73 4e ca 40 4c 2d f5 96 48 66 05 b1 a6 08 30 82 01 d7 30 82 01 5d a0 03 02 01 02 02 01 01 30 0a 06 08 2a 86 48 ce 3d 04 03 03 30 1f 31 1d 30 1b 06 03 55 04 03 0c 14 69 6e 74 65 6c 20 74 65 73 74 20 45 43 50 32 35 36 20 43 41 30 1e 17 0d 32 32 30 31 30 35 30 36 30 38 33 34 5a 17 0d 33 32 30 31 30 33 30 36 30 38 33 34 5a 30 2e 31 2c 30 2a 06 03 55 04 03 0c 23 69 6e 74 65 6c 20 74 65 73 74 20 45 43 50 32 35 36 20 69 6e 74 65 72 6d 65 64 69 61 74 65 20 63 65 72 74 30 76 30 10 06 07 2a 86 48 ce 3d 02 01 06 05 2b 81 04 00 22 03 62 00 04 12 af 50 bf af fb c8 03 23 41 27 fa ef ec 35 c4 ae 96 cb f4 ae fb 74 58 6b f5 8f 60 38 28 76 0b 29 a4 ca f4 6c 2d 59 28 f5 ab 92 b7 6b 6f 3a c0 91 9f 45 d1 3c a0 c8 80 67 ff 4b 9f e8 01 17 08 cb 4c 17 23 c2 f0 07 e4 cd 37 26 9f 41 a4 fe 7d 80 1c 23 43 cb 53 6c c1 0f 5f 4a c8 6a 31 e6 ee a3 5e 30 5c 30 0c 06 03 55 1d 13 04 05 30 03 01 01 ff 30 0b 06 03 55 1d 0f 04 04 03 02 01 fe 30 1d 06 03 55 1d 0e 04 16 04 14 42 bc ed ba d1 5a 68 df 71 41 f8 a5 0e 36 ca f5 df 52 50 09 30 20 06 03 55 1d 25 01 01 ff 04 16 30 14 06 08 2b 06 01 05 05 07 03 01 06 08 2b 06 01 05 05 07 03 02 30 0a 06 08 2a 86 48 ce 3d 04 03 03 03 68 00 30 65 02 31 00 9a fd d5 7e 34 74 19 09 e1 26 45 f2 bc 3f 25 d4 47 22 19 68 23 e4 6a e5 35 d6 9a 4e a5 23 b2 d3 c0 9a 68 88 ce 99 59 9d 55 18 96 4d d3 1c 3b 52 02 30 1c 08 de 61 7f 5b a7 c8 6b af 8d 9d f5 3a c1 54 e5 5f 21 c7 69 57 db 63 c4 45 09 66 ab 70 ab c0 bf b2 c0 6a 7f 51 da e8 ae 93 c4 43 33 4a 07 a4 30 82 02 22 30 82 01 a8 a0 03 02 01 02 02 01 03 30 0a 06 08 2a 86 48 ce 3d 04 03 03 30 
+sendRequest(N7spdmcpp27PacketGetCertificateRequestE):
+        Header:
+                MessageVersion: MessageVersionEnum::SPDM_1_1
+                requestResponseCode:    RequestResponseEnum::REQUEST_GET_CERTIFICATE
+                Param1: 0
+                Param2: 0
+        Offset: 1024
+        Length: 65535
+Context->IO->write() buf.size() = 10
+buf = 60 05 11 82 00 00 00 04 ff ff 
+asyncResponse(N7spdmcpp28PacketCertificateResponseVarE):
+ResponseBuffer.size() = 531
+ResponseBuffer = 60 05 11 02 00 00 09 02 00 00 2e 31 2c 30 2a 06 03 55 04 03 0c 23 69 6e 74 65 6c 20 74 65 73 74 20 45 43 50 32 35 36 20 69 6e 74 65 72 6d 65 64 69 61 74 65 20 63 65 72 74 30 1e 17 0d 32 32 30 31 30 35 30 36 30 38 33 34 5a 17 0d 33 32 30 31 30 33 30 36 30 38 33 34 5a 30 2b 31 29 30 27 06 03 55 04 03 0c 20 69 6e 74 65 6c 20 74 65 73 74 20 45 43 50 32 35 36 20 72 65 73 70 6f 6e 64 65 72 20 63 65 72 74 30 76 30 10 06 07 2a 86 48 ce 3d 02 01 06 05 2b 81 04 00 22 03 62 00 04 8c f8 84 9d 11 07 49 ca 1c d0 b5 11 bc e3 4f 38 3c f0 c5 8d 73 5a a7 63 7e 5f 62 60 7f 10 43 34 c8 4f 2c bc 70 8f 4d a2 fd 4e 03 89 16 49 ca 40 6a 91 18 09 7f 27 ef e4 a6 26 1a fd d4 d1 57 db 5b 1b 75 05 f9 15 9d 33 34 be 90 b7 5e d7 05 b9 73 85 1e 4a d3 00 5b 7d 10 68 bf 4f ca e6 38 4c a3 81 9c 30 81 99 30 0c 06 03 55 1d 13 01 01 ff 04 02 30 00 30 0b 06 03 55 1d 0f 04 04 03 02 05 e0 30 1d 06 03 55 1d 0e 04 16 04 14 1d ee 4b 09 37 82 ed 77 92 71 a7 4e 3c ad 32 ad b8 f7 8e 9b 30 31 06 03 55 1d 11 04 2a 30 28 a0 26 06 0a 2b 06 01 04 01 83 1c 82 12 01 a0 18 0c 16 41 43 4d 45 3a 57 49 44 47 45 54 3a 31 32 33 34 35 36 37 38 39 30 30 2a 06 03 55 1d 25 01 01 ff 04 20 30 1e 06 08 2b 06 01 05 05 07 03 01 06 08 2b 06 01 05 05 07 03 02 06 08 2b 06 01 05 05 07 03 09 30 0a 06 08 2a 86 48 ce 3d 04 03 03 03 68 00 30 65 02 30 09 0d 98 7a d6 d1 9a 43 45 1e bb c1 0b 23 2e a4 8a 10 32 db e1 89 be da 6a 51 36 24 48 1f 2f 66 a2 6b db ab 78 5e 4a 5c 57 36 9e ae 72 80 6e 2d 02 31 00 86 d5 d5 6c 2b 90 fb 3d b6 84 68 93 d3 bd d8 fc 0d 64 77 36 90 8a e4 bb d9 60 3b 78 9b 58 9a 31 71 cb 83 b8 fe 54 6a ab f8 3b 07 8b e0 ce 26 6f 
+interpretResponse(N7spdmcpp28PacketCertificateResponseVarE):
+        Min:
+                Header:
+                        MessageVersion: MessageVersionEnum::SPDM_1_1
+                        requestResponseCode:    RequestResponseEnum::RESPONSE_CERTIFICATE
+                        Param1: 0
+                        Param2: 0
+                PortionLength:  521
+                RemainderLength:        0
+        CertificateVector.size():       521
+        CertificateVector:      2e 31 2c 30 2a 06 03 55 04 03 0c 23 69 6e 74 65 6c 20 74 65 73 74 20 45 43 50 32 35 36 20 69 6e 74 65 72 6d 65 64 69 61 74 65 20 63 65 72 74 30 1e 17 0d 32 32 30 31 30 35 30 36 30 38 33 34 5a 17 0d 33 32 30 31 30 33 30 36 30 38 33 34 5a 30 2b 31 29 30 27 06 03 55 04 03 0c 20 69 6e 74 65 6c 20 74 65 73 74 20 45 43 50 32 35 36 20 72 65 73 70 6f 6e 64 65 72 20 63 65 72 74 30 76 30 10 06 07 2a 86 48 ce 3d 02 01 06 05 2b 81 04 00 22 03 62 00 04 8c f8 84 9d 11 07 49 ca 1c d0 b5 11 bc e3 4f 38 3c f0 c5 8d 73 5a a7 63 7e 5f 62 60 7f 10 43 34 c8 4f 2c bc 70 8f 4d a2 fd 4e 03 89 16 49 ca 40 6a 91 18 09 7f 27 ef e4 a6 26 1a fd d4 d1 57 db 5b 1b 75 05 f9 15 9d 33 34 be 90 b7 5e d7 05 b9 73 85 1e 4a d3 00 5b 7d 10 68 bf 4f ca e6 38 4c a3 81 9c 30 81 99 30 0c 06 03 55 1d 13 01 01 ff 04 02 30 00 30 0b 06 03 55 1d 0f 04 04 03 02 05 e0 30 1d 06 03 55 1d 0e 04 16 04 14 1d ee 4b 09 37 82 ed 77 92 71 a7 4e 3c ad 32 ad b8 f7 8e 9b 30 31 06 03 55 1d 11 04 2a 30 28 a0 26 06 0a 2b 06 01 04 01 83 1c 82 12 01 a0 18 0c 16 41 43 4d 45 3a 57 49 44 47 45 54 3a 31 32 33 34 35 36 37 38 39 30 30 2a 06 03 55 1d 25 01 01 ff 04 20 30 1e 06 08 2b 06 01 05 05 07 03 01 06 08 2b 06 01 05 05 07 03 02 06 08 2b 06 01 05 05 07 03 09 30 0a 06 08 2a 86 48 ce 3d 04 03 03 03 68 00 30 65 02 30 09 0d 98 7a d6 d1 9a 43 45 1e bb c1 0b 23 2e a4 8a 10 32 db e1 89 be da 6a 51 36 24 48 1f 2f 66 a2 6b db ab 78 5e 4a 5c 57 36 9e ae 72 80 6e 2d 02 31 00 86 d5 d5 6c 2b 90 fb 3d b6 84 68 93 d3 bd d8 fc 0d 64 77 36 90 8a e4 bb d9 60 3b 78 9b 58 9a 31 71 cb 83 b8 fe 54 6a ab f8 3b 07 8b e0 ce 26 6f 
+provided root certificate hash = 4e 75 0a 31 8a 1c 58 20 15 a2 8c 03 4d b2 96 25 7d 8f ef 31 47 45 3e 40 76 fc 45 92 12 66 a8 6e 27 fc 41 31 7e 72 32 53 54 15 3a 92 54 ff bd cd 
+Full Certificate Chain: 30 82 01 d0 30 82 01 56 a0 03 02 01 02 02 14 00 ca 2f 39 e8 fa 16 fd b0 34 0c 85 50 8f 5d 07 e2 6e 48 34 30 0a 06 08 2a 86 48 ce 3d 04 03 03 30 1f 31 1d 30 1b 06 03 55 04 03 0c 14 69 6e 74 65 6c 20 74 65 73 74 20 45 43 50 32 35 36 20 43 41 30 1e 17 0d 32 32 30 31 30 35 30 36 30 38 33 33 5a 17 0d 33 32 30 31 30 33 30 36 30 38 33 33 5a 30 1f 31 1d 30 1b 06 03 55 04 03 0c 14 69 6e 74 65 6c 20 74 65 73 74 20 45 43 50 32 35 36 20 43 41 30 76 30 10 06 07 2a 86 48 ce 3d 02 01 06 05 2b 81 04 00 22 03 62 00 04 92 2f d3 bd 8b 60 bb f7 5e e4 80 25 14 10 47 8c 79 ad 82 fb 41 3a c4 ad 39 f8 01 1a 9d 47 29 90 d6 bb 86 41 07 8d 86 66 11 da 6d c9 ed 9b 0e 2a a1 2a 51 c2 dd 55 ab 3d 1d 7b 3c 3d 38 28 80 72 61 20 3e 25 f9 99 39 82 4e 4a ba 93 d1 ab 1f ce 5a 9b 3d be a5 bc 1b 96 f0 b7 b5 fb 10 f9 23 90 a3 53 30 51 30 1d 06 03 55 1d 0e 04 16 04 14 14 c4 e7 a6 7c 63 3f df 13 f2 b1 36 56 63 f9 c1 ea dd 78 10 30 1f 06 03 55 1d 23 04 18 30 16 80 14 14 c4 e7 a6 7c 63 3f df 13 f2 b1 36 56 63 f9 c1 ea dd 78 10 30 0f 06 03 55 1d 13 01 01 ff 04 05 30 03 01 01 ff 30 0a 06 08 2a 86 48 ce 3d 04 03 03 03 68 00 30 65 02 31 00 d7 9c 7f 26 91 34 a5 2b 79 ea 66 15 00 88 0a 4d e7 ad 71 c6 2e e4 7e 37 e1 86 eb e8 55 b0 2f c5 f3 a9 e0 90 f9 0b 82 c5 df 4a 35 9a 0d 35 38 4b 02 30 40 a7 fe 70 39 7b 4b d7 c2 28 72 93 93 0c 62 12 14 f0 70 74 0f fc b1 21 60 40 6d 13 a3 59 0e 27 06 c1 73 4e ca 40 4c 2d f5 96 48 66 05 b1 a6 08 30 82 01 d7 30 82 01 5d a0 03 02 01 02 02 01 01 30 0a 06 08 2a 86 48 ce 3d 04 03 03 30 1f 31 1d 30 1b 06 03 55 04 03 0c 14 69 6e 74 65 6c 20 74 65 73 74 20 45 43 50 32 35 36 20 43 41 30 1e 17 0d 32 32 30 31 30 35 30 36 30 38 33 34 5a 17 0d 33 32 30 31 30 33 30 36 30 38 33 34 5a 30 2e 31 2c 30 2a 06 03 55 04 03 0c 23 69 6e 74 65 6c 20 74 65 73 74 20 45 43 50 32 35 36 20 69 6e 74 65 72 6d 65 64 69 61 74 65 20 63 65 72 74 30 76 30 10 06 07 2a 86 48 ce 3d 02 01 06 05 2b 81 04 00 22 03 62 00 04 12 af 50 bf af fb c8 03 23 41 27 fa ef ec 35 c4 ae 96 cb f4 ae fb 74 58 6b f5 8f 60 38 28 76 0b 29 a4 ca f4 6c 2d 59 28 f5 ab 92 b7 6b 6f 3a c0 91 9f 45 d1 3c a0 c8 80 67 ff 4b 9f e8 01 17 08 cb 4c 17 23 c2 f0 07 e4 cd 37 26 9f 41 a4 fe 7d 80 1c 23 43 cb 53 6c c1 0f 5f 4a c8 6a 31 e6 ee a3 5e 30 5c 30 0c 06 03 55 1d 13 04 05 30 03 01 01 ff 30 0b 06 03 55 1d 0f 04 04 03 02 01 fe 30 1d 06 03 55 1d 0e 04 16 04 14 42 bc ed ba d1 5a 68 df 71 41 f8 a5 0e 36 ca f5 df 52 50 09 30 20 06 03 55 1d 25 01 01 ff 04 16 30 14 06 08 2b 06 01 05 05 07 03 01 06 08 2b 06 01 05 05 07 03 02 30 0a 06 08 2a 86 48 ce 3d 04 03 03 03 68 00 30 65 02 31 00 9a fd d5 7e 34 74 19 09 e1 26 45 f2 bc 3f 25 d4 47 22 19 68 23 e4 6a e5 35 d6 9a 4e a5 23 b2 d3 c0 9a 68 88 ce 99 59 9d 55 18 96 4d d3 1c 3b 52 02 30 1c 08 de 61 7f 5b a7 c8 6b af 8d 9d f5 3a c1 54 e5 5f 21 c7 69 57 db 63 c4 45 09 66 ab 70 ab c0 bf b2 c0 6a 7f 51 da e8 ae 93 c4 43 33 4a 07 a4 30 82 02 22 30 82 01 a8 a0 03 02 01 02 02 01 03 30 0a 06 08 2a 86 48 ce 3d 04 03 03 30 2e 31 2c 30 2a 06 03 55 04 03 0c 23 69 6e 74 65 6c 20 74 65 73 74 20 45 43 50 32 35 36 20 69 6e 74 65 72 6d 65 64 69 61 74 65 20 63 65 72 74 30 1e 17 0d 32 32 30 31 30 35 30 36 30 38 33 34 5a 17 0d 33 32 30 31 30 33 30 36 30 38 33 34 5a 30 2b 31 29 30 27 06 03 55 04 03 0c 20 69 6e 74 65 6c 20 74 65 73 74 20 45 43 50 32 35 36 20 72 65 73 70 6f 6e 64 65 72 20 63 65 72 74 30 76 30 10 06 07 2a 86 48 ce 3d 02 01 06 05 2b 81 04 00 22 03 62 00 04 8c f8 84 9d 11 07 49 ca 1c d0 b5 11 bc e3 4f 38 3c f0 c5 8d 73 5a a7 63 7e 5f 62 60 7f 10 43 34 c8 4f 2c bc 70 8f 4d a2 fd 4e 03 89 16 49 ca 40 6a 91 18 09 7f 27 ef e4 a6 26 1a fd d4 d1 57 db 5b 1b 75 05 f9 15 9d 33 34 be 90 b7 5e d7 05 b9 73 85 1e 4a d3 00 5b 7d 10 68 bf 4f ca e6 38 4c a3 81 9c 30 81 99 30 0c 06 03 55 1d 13 01 01 ff 04 02 30 00 30 0b 06 03 55 1d 0f 04 04 03 02 05 e0 30 1d 06 03 55 1d 0e 04 16 04 14 1d ee 4b 09 37 82 ed 77 92 71 a7 4e 3c ad 32 ad b8 f7 8e 9b 30 31 06 03 55 1d 11 04 2a 30 28 a0 26 06 0a 2b 06 01 04 01 83 1c 82 12 01 a0 18 0c 16 41 43 4d 45 3a 57 49 44 47 45 54 3a 31 32 33 34 35 36 37 38 39 30 30 2a 06 03 55 1d 25 01 01 ff 04 20 30 1e 06 08 2b 06 01 05 05 07 03 01 06 08 2b 06 01 05 05 07 03 02 06 08 2b 06 01 05 05 07 03 09 30 0a 06 08 2a 86 48 ce 3d 04 03 03 03 68 00 30 65 02 30 09 0d 98 7a d6 d1 9a 43 45 1e bb c1 0b 23 2e a4 8a 10 32 db e1 89 be da 6a 51 36 24 48 1f 2f 66 a2 6b db ab 78 5e 4a 5c 57 36 9e ae 72 80 6e 2d 02 31 00 86 d5 d5 6c 2b 90 fb 3d b6 84 68 93 d3 bd d8 fc 0d 64 77 36 90 8a e4 bb d9 60 3b 78 9b 58 9a 31 71 cb 83 b8 fe 54 6a ab f8 3b 07 8b e0 ce 26 6f 
+sendRequest(N7spdmcpp22PacketChallengeRequestE):
+        Header:
+                MessageVersion: MessageVersionEnum::SPDM_1_1
+                requestResponseCode:    RequestResponseEnum::REQUEST_CHALLENGE
+                Param1: 0
+                Param2: 255
+        Nonce:  30 3b 98 e3 f8 59 09 5f 02 d5 43 b4 d1 fe dd 0b 13 58 3a 24 33 42 e6 68 04 f5 b5 28 85 1e 70 d4 
+Context->IO->write() buf.size() = 38
+buf = 60 05 11 83 00 ff 30 3b 98 e3 f8 59 09 5f 02 d5 43 b4 d1 fe dd 0b 13 58 3a 24 33 42 e6 68 04 f5 b5 28 85 1e 70 d4 
+asyncResponse(N7spdmcpp30PacketChallengeAuthResponseVarE):
+ResponseBuffer.size() = 232
+ResponseBuffer = 60 05 11 03 00 01 2c a8 5c 4e 78 52 26 6c f0 3e 8c 7f 0f c6 0a db 58 f3 14 04 71 b5 9b 04 92 51 ae 05 fc f7 99 88 85 16 03 fd 48 8c 9e 6e 74 95 36 7d a2 2a 4c c0 92 2b 19 42 b7 5b 69 ef 2d 5d 5b da 92 df f7 2d 93 bd 84 79 3e 31 64 e3 c1 b5 47 cd 1d 9f 4c ed 4e 74 0d 47 69 a5 22 e3 10 48 85 63 a9 3b 6d b8 bc 95 9a fb e8 5a 3b ac c2 a5 f1 b6 ad 19 da b2 b8 ed e9 17 7b c6 db 5d 4b 96 1e 22 58 65 12 c6 00 00 5b 7b e7 a8 86 fb d8 c1 8f ce 20 6b 8f 7f 04 b9 19 a6 34 86 ed a7 1e 9c 39 1d 56 fd 4c 48 88 c2 be 42 45 ee fd e3 6a a2 95 64 29 fd 47 27 7b d8 41 1c 03 9c 6e b2 35 34 8d 9b b7 30 b6 21 55 8f de cf 81 b9 4b 71 39 63 07 a5 1d 3a ba e5 02 53 f4 14 2b 79 19 a9 16 b7 1a 01 a8 f7 06 a7 3f 03 
+interpretResponse(N7spdmcpp30PacketChallengeAuthResponseVarE):
+        Min:
+                Header:
+                        MessageVersion: MessageVersionEnum::SPDM_1_1
+                        requestResponseCode:    RequestResponseEnum::RESPONSE_CHALLENGE_AUTH
+                        Param1: 0
+                        Param2: 1
+        Nonce:  92 2b 19 42 b7 5b 69 ef 2d 5d 5b da 92 df f7 2d 93 bd 84 79 3e 31 64 e3 c1 b5 47 cd 1d 9f 4c ed 
+        CertChainHashVector:    2c a8 5c 4e 78 52 26 6c f0 3e 8c 7f 0f c6 0a db 58 f3 14 04 71 b5 9b 04 92 51 ae 05 fc f7 99 88 85 16 03 fd 48 8c 9e 6e 74 95 36 7d a2 2a 4c c0 
+        MeasurementSummaryHashVector:   4e 74 0d 47 69 a5 22 e3 10 48 85 63 a9 3b 6d b8 bc 95 9a fb e8 5a 3b ac c2 a5 f1 b6 ad 19 da b2 b8 ed e9 17 7b c6 db 5d 4b 96 1e 22 58 65 12 c6 
+        OpaqueDataVector:
+        SignatureVector:        5b 7b e7 a8 86 fb d8 c1 8f ce 20 6b 8f 7f 04 b9 19 a6 34 86 ed a7 1e 9c 39 1d 56 fd 4c 48 88 c2 be 42 45 ee fd e3 6a a2 95 64 29 fd 47 27 7b d8 41 1c 03 9c 6e b2 35 34 8d 9b b7 30 b6 21 55 8f de cf 81 b9 4b 71 39 63 07 a5 1d 3a ba e5 02 53 f4 14 2b 79 19 a9 16 b7 1a 01 a8 f7 06 a7 3f 03 
+computed m2 hash = 9c 70 8d 22 e2 d9 27 f1 2c 2b 5a e5 00 5d 7e db 60 02 c4 a9 96 48 ef 6c 3d 37 64 eb 24 dd 05 94 12 24 de c9 b5 b0 d7 f5 34 bb 3f bd 48 3e ac 9b 
+resp.SignatureVector = 5b 7b e7 a8 86 fb d8 c1 8f ce 20 6b 8f 7f 04 b9 19 a6 34 86 ed a7 1e 9c 39 1d 56 fd 4c 48 88 c2 be 42 45 ee fd e3 6a a2 95 64 29 fd 47 27 7b d8 41 1c 03 9c 6e b2 35 34 8d 9b b7 30 b6 21 55 8f de cf 81 b9 4b 71 39 63 07 a5 1d 3a ba e5 02 53 f4 14 2b 79 19 a9 16 b7 1a 01 a8 f7 06 a7 3f 03 
+challenge_auth_response SIGNATURE verify PASSED!
+sendRequest(N7spdmcpp31PacketGetMeasurementsRequestVarE):
+        Min:
+                Header:
+                        MessageVersion: MessageVersionEnum::SPDM_1_1
+                        requestResponseCode:    RequestResponseEnum::REQUEST_GET_MEASUREMENTS
+                        Param1: 1
+                        Param2: 255
+        Nonce:  57 3f 22 6c ec 9a cf 8b 4d 0d 52 e8 56 d6 a2 14 3d ee ae fe 39 e1 fa cf 35 b6 d2 ab a0 0b 23 8a 
+        SlotIDParam:    0
+Context->IO->write() buf.size() = 39
+buf = 60 05 11 e0 01 ff 57 3f 22 6c ec 9a cf 8b 4d 0d 52 e8 56 d6 a2 14 3d ee ae fe 39 e1 fa cf 35 b6 d2 ab a0 0b 23 8a 00 
+asyncResponse(N7spdmcpp29PacketMeasurementsResponseVarE):
+ResponseBuffer.size() = 597
+ResponseBuffer = 60 05 11 60 00 00 07 c9 01 00 01 01 43 00 00 40 00 8d 53 1d 77 d8 21 e1 67 11 4d 1e b0 7e 0a e1 9c fb 56 51 52 40 88 43 c7 68 f1 13 5b 54 8f df a1 3a 20 3e 5c 7f 12 9c ea cc 01 7d f2 6c 99 9f 62 da 26 db f2 e1 12 83 45 ec 0f 65 d3 7f 87 ca 41 02 01 43 00 01 40 00 9e ff d8 a6 68 f7 6d 3f ce 35 45 1a 13 6f 8e f6 71 02 60 e9 ca 28 be ef 89 7f 55 9f cd ba 48 a4 c0 66 56 0f b4 90 01 95 ca e4 d4 fa b1 f7 d1 12 43 42 10 08 af 86 14 d9 2a 3f ca bb bf 75 24 8f 03 01 43 00 02 40 00 ff de 42 48 3a 68 7d d4 7d 05 f9 56 a2 d6 20 07 b7 1a 29 88 08 4d a1 09 5e c2 e4 3b ca 15 66 80 ca e0 7d 0b 84 cb c7 fc 9b 1d 4e 80 cd 86 69 aa 95 6a ed 8b b1 7b 0a 20 a5 03 1c 28 8d fa 8b 9f 04 01 43 00 03 40 00 3a 0b d5 b0 84 36 b1 d3 86 12 20 90 cf a0 44 6c f2 57 1b 74 f2 a1 5f 44 df 73 56 95 da b8 4b bb 1b eb b3 ae f3 9a f6 a0 f9 72 79 b5 fb 04 d5 13 a5 2d d1 65 47 fe 88 d0 45 58 15 52 0c 86 1e d4 10 01 0b 00 87 08 00 07 00 00 00 00 00 00 00 fd 01 83 00 84 80 00 fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fe 01 13 00 85 10 00 3f 00 00 00 04 00 00 00 1f 00 00 00 11 00 00 00 0a 63 69 0a 04 e3 7f d3 ab 1b a6 d7 93 6a 30 ad 35 ee 4c 79 16 0f e8 7f f9 75 f3 99 c9 07 10 8f 00 00 7a b0 c5 7c ec 8a b9 48 4b 8b 7d 31 7f 0c 66 c5 92 2c 49 79 12 7f fc 5f 70 f0 5d 76 cf 1d a5 6c 41 a4 45 23 da 0a d9 78 7d f5 1c fb 53 bf 4c 31 38 54 1a 4e 44 bf 3d 20 7c da a0 28 d7 86 f8 40 fe ed 90 41 b7 33 96 3e 78 61 6e 42 4e 82 06 ec c8 c6 ef 44 28 7b 6f 83 a8 d1 61 48 b7 38 8b eb 
+interpretResponse(N7spdmcpp29PacketMeasurementsResponseVarE):
+        Min:
+                Header:
+                        MessageVersion: MessageVersionEnum::SPDM_1_1
+                        requestResponseCode:    RequestResponseEnum::RESPONSE_MEASUREMENTS
+                        Param1: 0
+                        Param2: 0
+                NumberOfBlocks: 7
+                MeasurementRecordLength:        c9 01 00 
+        Nonce:  0a 63 69 0a 04 e3 7f d3 ab 1b a6 d7 93 6a 30 ad 35 ee 4c 79 16 0f e8 7f f9 75 f3 99 c9 07 10 8f 
+        MeasurementBlockVector.size():  7
+        MeasurementBlockVector[0]:
+                Min:
+                        Index:  1
+                        MeasurementSpecification:       1
+                        MeasurementSize:        67
+                MeasurementVector:      00 40 00 8d 53 1d 77 d8 21 e1 67 11 4d 1e b0 7e 0a e1 9c fb 56 51 52 40 88 43 c7 68 f1 13 5b 54 8f df a1 3a 20 3e 5c 7f 12 9c ea cc 01 7d f2 6c 99 9f 62 da 26 db f2 e1 12 83 45 ec 0f 65 d3 7f 87 ca 41 
+        MeasurementBlockVector[1]:
+                Min:
+                        Index:  2
+                        MeasurementSpecification:       1
+                        MeasurementSize:        67
+                MeasurementVector:      01 40 00 9e ff d8 a6 68 f7 6d 3f ce 35 45 1a 13 6f 8e f6 71 02 60 e9 ca 28 be ef 89 7f 55 9f cd ba 48 a4 c0 66 56 0f b4 90 01 95 ca e4 d4 fa b1 f7 d1 12 43 42 10 08 af 86 14 d9 2a 3f ca bb bf 75 24 8f 
+        MeasurementBlockVector[2]:
+                Min:
+                        Index:  3
+                        MeasurementSpecification:       1
+                        MeasurementSize:        67
+                MeasurementVector:      02 40 00 ff de 42 48 3a 68 7d d4 7d 05 f9 56 a2 d6 20 07 b7 1a 29 88 08 4d a1 09 5e c2 e4 3b ca 15 66 80 ca e0 7d 0b 84 cb c7 fc 9b 1d 4e 80 cd 86 69 aa 95 6a ed 8b b1 7b 0a 20 a5 03 1c 28 8d fa 8b 9f 
+        MeasurementBlockVector[3]:
+                Min:
+                        Index:  4
+                        MeasurementSpecification:       1
+                        MeasurementSize:        67
+                MeasurementVector:      03 40 00 3a 0b d5 b0 84 36 b1 d3 86 12 20 90 cf a0 44 6c f2 57 1b 74 f2 a1 5f 44 df 73 56 95 da b8 4b bb 1b eb b3 ae f3 9a f6 a0 f9 72 79 b5 fb 04 d5 13 a5 2d d1 65 47 fe 88 d0 45 58 15 52 0c 86 1e d4 
+        MeasurementBlockVector[4]:
+                Min:
+                        Index:  16
+                        MeasurementSpecification:       1
+                        MeasurementSize:        11
+                MeasurementVector:      87 08 00 07 00 00 00 00 00 00 00 
+        MeasurementBlockVector[5]:
+                Min:
+                        Index:  253
+                        MeasurementSpecification:       1
+                        MeasurementSize:        131
+                MeasurementVector:      84 80 00 fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd 
+        MeasurementBlockVector[6]:
+                Min:
+                        Index:  254
+                        MeasurementSpecification:       1
+                        MeasurementSize:        19
+                MeasurementVector:      85 10 00 3f 00 00 00 04 00 00 00 1f 00 00 00 11 00 00 00 
+        OpaqueDataVector:
+        SignatureVector:        7a b0 c5 7c ec 8a b9 48 4b 8b 7d 31 7f 0c 66 c5 92 2c 49 79 12 7f fc 5f 70 f0 5d 76 cf 1d a5 6c 41 a4 45 23 da 0a d9 78 7d f5 1c fb 53 bf 4c 31 38 54 1a 4e 44 bf 3d 20 7c da a0 28 d7 86 f8 40 fe ed 90 41 b7 33 96 3e 78 61 6e 42 4e 82 06 ec c8 c6 ef 44 28 7b 6f 83 a8 d1 61 48 b7 38 8b eb 
+computed l2 hash = ff 3a 1e ce 1b 81 d7 88 27 20 fa bd 08 98 3a d4 61 06 ed 9b 19 81 94 41 3c fc df 5d a9 c0 7c 49 3f b5 20 48 09 f8 39 b7 ae 23 34 23 f6 1a 75 4f 
+measurements SIGNATURE verify PASSED!

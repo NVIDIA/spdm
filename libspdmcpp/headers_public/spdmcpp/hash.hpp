@@ -196,11 +196,15 @@ class HashClass
     void update(const std::vector<uint8_t>& buf, size_t off = 0,
                 size_t len = std::numeric_limits<size_t>::max())
     {
-        SPDMCPP_ASSERT(off < buf.size());
+        if (off > buf.size())
+            std::cerr << "Wrong offset in the buffer: off = " << off <<", buf.size() = " << buf.size() << std::endl;
+
+        SPDMCPP_ASSERT(off <= buf.size());
         len = std::min(len, buf.size() - off);
-        SPDMCPP_ASSERT(off + len <= buf.size());
-        // TODO failure possible?
-        mbedtls_md_update(&Ctx, &buf[off], len);
+        if (len > 0)
+        {
+            mbedtls_md_update(&Ctx, &buf[off], len);
+        }
     }
 
     /** @brief function used to finish computing the hash and writing it out

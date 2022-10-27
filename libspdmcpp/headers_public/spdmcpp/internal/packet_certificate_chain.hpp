@@ -1,5 +1,8 @@
+#include <vector>
+#include <cstdint>
 
 #include "../packet.hpp"
+#include "../enum_defs.hpp"
 
 #pragma once
 

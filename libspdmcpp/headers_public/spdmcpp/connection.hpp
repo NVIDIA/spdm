@@ -271,10 +271,16 @@ class ConnectionClass : public NonCopyable
         return WaitingForResponse != RequestResponseEnum::INVALID;
     }
 
-    /* @brief Get wait for state*/
+    /* @brief Get wait for state */
     auto getDbgLastWaitState() const noexcept
     {
         return DbgLastWaitingForResponse;
+    }
+
+    /* @brief Get wait for response state */
+    RequestResponseEnum getWaitingForResponse() const
+    {
+        return WaitingForResponse;
     }
 
     /** @brief The hash algorithm used for generating signatures

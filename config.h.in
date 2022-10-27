@@ -5,6 +5,9 @@
 #define SPDMD_VERSION @SPDMD_VERSION@
 
 //NOLINTNEXTLINE cppcoreguidelines-macro-usage
+#define SPDM_WRAPPER_VERSION @SPDMD_VERSION@
+
+//NOLINTNEXTLINE cppcoreguidelines-macro-usage
 #mesondefine FETCH_SERIALNUMBER_FROM_RESPONDER
 
 //NOLINTNEXTLINE cppcoreguidelines-macro-usage
@@ -18,3 +21,6 @@
 
 //NOLINTNEXTLINE cppcoreguidelines-macro-usage
 #mesondefine USE_I2C
+
+//NOLINTNEXTLINE cppcoreguidelines-macro-usage
+#mesondefine USE_FUZZ

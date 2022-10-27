@@ -1,0 +1,186 @@
+Jan 01 00:10:12 hgx spdmd[288]: mbedtls_x509_crt_parse_der() = -8576 = 'X509 - The CRT/CRL/CSR format is invalid, e.g. different type expected'
+Jan 01 00:16:11 hgx spdmd[288]: sendRequest(N7spdmcpp23PacketGetVersionRequestE):
+Jan 01 00:16:11 hgx spdmd[288]:         Header:
+Jan 01 00:16:11 hgx spdmd[288]:                 MessageVersion:        MessageVersionEnum::SPDM_1_0
+Jan 01 00:16:11 hgx spdmd[288]:                 requestResponseCode:        RequestResponseEnum::REQUEST_GET_VERSION
+Jan 01 00:16:11 hgx spdmd[288]:                 Param1:        0
+Jan 01 00:16:11 hgx spdmd[288]:                 Param2:        0
+Jan 01 00:16:11 hgx spdmd[288]: Context->IO->write() buf.size() = 6
+Jan 01 00:16:11 hgx spdmd[288]: buf = 0d 05 10 84 00 00
+Jan 01 00:16:11 hgx spdmd[288]: asyncResponse(N7spdmcpp24PacketVersionResponseVarE):
+Jan 01 00:16:11 hgx spdmd[288]: ResponseBuffer.size() = 10
+Jan 01 00:16:11 hgx spdmd[288]: ResponseBuffer = 0d 05 10 04 00 00 00 01 00 11
+Jan 01 00:16:11 hgx spdmd[288]: interpretResponse(N7spdmcpp24PacketVersionResponseVarE):
+Jan 01 00:16:11 hgx spdmd[288]:         Min:
+Jan 01 00:16:11 hgx spdmd[288]:                 Header:
+Jan 01 00:16:11 hgx spdmd[288]:                         MessageVersion:        MessageVersionEnum::SPDM_1_0
+Jan 01 00:16:11 hgx spdmd[288]:                         requestResponseCode:        RequestResponseEnum::RESPONSE_VERSION
+Jan 01 00:16:11 hgx spdmd[288]:                         Param1:        0
+Jan 01 00:16:11 hgx spdmd[288]:                         Param2:        0
+Jan 01 00:16:11 hgx spdmd[288]:                 Reserved:        0
+Jan 01 00:16:11 hgx spdmd[288]:         VersionNumberEntries[0]: <getMajor(): 1   getMinor(): 1   getUpdateVersionNumber(): 0   getAlpha(): 0>
+Jan 01 00:16:11 hgx spdmd[288]: chosen MessageVersion: MessageVersionEnum::SPDM_1_1
+Jan 01 00:16:11 hgx spdmd[288]: sendRequest(N7spdmcpp28PacketGetCapabilitiesRequestE):
+Jan 01 00:16:11 hgx spdmd[288]:         Header:
+Jan 01 00:16:11 hgx spdmd[288]:                 MessageVersion:        MessageVersionEnum::SPDM_1_1
+Jan 01 00:16:11 hgx spdmd[288]:                 requestResponseCode:        RequestResponseEnum::REQUEST_GET_CAPABILITIES
+Jan 01 00:16:11 hgx spdmd[288]:                 Param1:        0
+Jan 01 00:16:11 hgx spdmd[288]:                 Param2:        0
+Jan 01 00:16:11 hgx spdmd[288]:         Reserved0:        0
+Jan 01 00:16:11 hgx spdmd[288]:         CTExponent:        0
+Jan 01 00:16:11 hgx spdmd[288]:         Reserved1:        0
+Jan 01 00:16:11 hgx spdmd[288]:         Flags:        (0x00000004 RequesterCapabilitiesFlags::CHAL_CAP)
+Jan 01 00:16:11 hgx spdmd[288]: Context->IO->write() buf.size() = 14
+Jan 01 00:16:11 hgx spdmd[288]: buf = 0d 05 11 e1 00 00 00 00 00 00 04 00 00 00
+Jan 01 00:16:11 hgx spdmd[288]: asyncResponse(N7spdmcpp26PacketCapabilitiesResponseE):
+Jan 01 00:16:11 hgx spdmd[288]: ResponseBuffer.size() = 14
+Jan 01 00:16:11 hgx spdmd[288]: ResponseBuffer = 0d 05 11 61 00 00 00 1a 00 00 32 00 00 00
+Jan 01 00:16:11 hgx spdmd[288]: interpretResponse(N7spdmcpp26PacketCapabilitiesResponseE):
+Jan 01 00:16:11 hgx spdmd[288]:         Header:
+Jan 01 00:16:11 hgx spdmd[288]:                 MessageVersion:        MessageVersionEnum::SPDM_1_1
+Jan 01 00:16:11 hgx spdmd[288]:                 requestResponseCode:        RequestResponseEnum::RESPONSE_CAPABILITIES
+Jan 01 00:16:11 hgx spdmd[288]:                 Param1:        0
+Jan 01 00:16:11 hgx spdmd[288]:                 Param2:        0
+Jan 01 00:16:11 hgx spdmd[288]:         Reserved0:        0
+Jan 01 00:16:11 hgx spdmd[288]:         CTExponent:        26
+Jan 01 00:16:11 hgx spdmd[288]:         Reserved1:        0
+Jan 01 00:16:11 hgx spdmd[288]:         Flags:        (0x00000032 ResponderCapabilitiesFlags::CERT_CAP | ResponderCapabilitiesFlags::MEAS_CAP_10 | ResponderCapabilitiesFlags::MEAS_FRESH_CAP)
+Jan 01 00:16:11 hgx spdmd[288]: sendRequest(N7spdmcpp35PacketNegotiateAlgorithmsRequestVarE):
+Jan 01 00:16:11 hgx spdmd[288]:         Min:
+Jan 01 00:16:11 hgx spdmd[288]:                 Header:
+Jan 01 00:16:11 hgx spdmd[288]:                         MessageVersion:        MessageVersionEnum::SPDM_1_1
+Jan 01 00:16:11 hgx spdmd[288]:                         requestResponseCode:        RequestResponseEnum::REQUEST_NEGOTIATE_ALGORITHMS
+Jan 01 00:16:11 hgx spdmd[288]:                         Param1:        0
+Jan 01 00:16:11 hgx spdmd[288]:                         Param2:        0
+Jan 01 00:16:11 hgx spdmd[288]:                 Length:        32
+Jan 01 00:16:11 hgx spdmd[288]:                 MeasurementSpecification:        1
+Jan 01 00:16:11 hgx spdmd[288]:                 Reserved0:        0
+Jan 01 00:16:11 hgx spdmd[288]:                 BaseAsymAlgo:        (0x00000190 BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P256 | BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P384 | BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P521)
+Jan 01 00:16:11 hgx spdmd[288]:                 BaseHashAlgo:        (0x00000007 BaseHashAlgoFlags::TPM_ALG_SHA_256 | BaseHashAlgoFlags::TPM_ALG_SHA_384 | BaseHashAlgoFlags::TPM_ALG_SHA_512)
+Jan 01 00:16:11 hgx spdmd[288]:                 Reserved1:        0
+Jan 01 00:16:11 hgx spdmd[288]:                 Reserved2:        0
+Jan 01 00:16:11 hgx spdmd[288]:                 Reserved3:        0
+Jan 01 00:16:11 hgx spdmd[288]:                 ExtAsymCount:        0
+Jan 01 00:16:11 hgx spdmd[288]:                 ExtHashCount:        0
+Jan 01 00:16:11 hgx spdmd[288]:                 Reserved4:        0
+Jan 01 00:16:11 hgx spdmd[288]:         PacketReqAlgVector.size():        0
+Jan 01 00:16:11 hgx spdmd[288]: Context->IO->write() buf.size() = 34
+Jan 01 00:16:11 hgx spdmd[288]: buf = 0d 05 11 e3 00 00 20 00 01 00 90 01 00 00 07 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+Jan 01 00:16:11 hgx spdmd[288]: asyncResponse(N7spdmcpp27PacketAlgorithmsResponseVarE):
+Jan 01 00:16:11 hgx spdmd[288]: ResponseBuffer.size() = 38
+Jan 01 00:16:11 hgx spdmd[288]: ResponseBuffer = 0d 05 11 63 00 00 24 00 01 00 04 00 00 00 80 00 00 00 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+Jan 01 00:16:11 hgx spdmd[288]: interpretResponse(N7spdmcpp27PacketAlgorithmsResponseVarE):
+Jan 01 00:16:11 hgx spdmd[288]:         Min:
+Jan 01 00:16:11 hgx spdmd[288]:                 Header:
+Jan 01 00:16:11 hgx spdmd[288]:                         MessageVersion:        MessageVersionEnum::SPDM_1_1
+Jan 01 00:16:11 hgx spdmd[288]:                         requestResponseCode:        RequestResponseEnum::RESPONSE_ALGORITHMS
+Jan 01 00:16:11 hgx spdmd[288]:                         Param1:        0
+Jan 01 00:16:11 hgx spdmd[288]:                         Param2:        0
+Jan 01 00:16:11 hgx spdmd[288]:                 Length:        36
+Jan 01 00:16:11 hgx spdmd[288]:                 MeasurementSpecification:        1
+Jan 01 00:16:11 hgx spdmd[288]:                 Reserved0:        0
+Jan 01 00:16:11 hgx spdmd[288]:                 MeasurementHashAlgo:        (0x00000004 MeasurementHashAlgoFlags::TPM_ALG_SHA_384)
+Jan 01 00:16:11 hgx spdmd[288]:                 BaseAsymAlgo:        (0x00000080 BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P384)
+Jan 01 00:16:11 hgx spdmd[288]:                 BaseHashAlgo:        (0x00000002 BaseHashAlgoFlags::TPM_ALG_SHA_384)
+Jan 01 00:16:11 hgx spdmd[288]:                 Reserved1:        0
+Jan 01 00:16:11 hgx spdmd[288]:                 Reserved2:        0
+Jan 01 00:16:11 hgx spdmd[288]:                 Reserved3:        0
+Jan 01 00:16:11 hgx spdmd[288]:                 ExtAsymCount:        0
+Jan 01 00:16:11 hgx spdmd[288]:                 ExtHashCount:        0
+Jan 01 00:16:11 hgx spdmd[288]:                 Reserved4:        0
+Jan 01 00:16:11 hgx spdmd[288]:         PacketReqAlgVector.size():        0
+Jan 01 00:16:11 hgx spdmd[288]: sendRequest(N7spdmcpp23PacketGetDigestsRequestE):
+Jan 01 00:16:11 hgx spdmd[288]:         Header:
+Jan 01 00:16:11 hgx spdmd[288]:                 MessageVersion:        MessageVersionEnum::SPDM_1_1
+Jan 01 00:16:11 hgx spdmd[288]:                 requestResponseCode:        RequestResponseEnum::REQUEST_GET_DIGESTS
+Jan 01 00:16:11 hgx spdmd[288]:                 Param1:        0
+Jan 01 00:16:11 hgx spdmd[288]:                 Param2:        0
+Jan 01 00:16:11 hgx spdmd[288]: Context->IO->write() buf.size() = 6
+Jan 01 00:16:11 hgx spdmd[288]: buf = 0d 05 11 81 00 00
+Jan 01 00:16:11 hgx spdmd[288]: asyncResponse(N7spdmcpp24PacketDigestsResponseVarE):
+Jan 01 00:16:11 hgx spdmd[288]: ResponseBuffer.size() = 102
+Jan 01 00:16:11 hgx spdmd[288]: ResponseBuffer = 0d 05 11 01 00 03 5f 2c 6a df d7 13 c7 16 ac 8e fc ab 5c 14 72 ed c7 59 68 65 46 6e 85 9a 81 3e 5c 5e a2 2c a2 42 14 cc 94 db 12 26 e2 44 51 ee e0 b8 ed 69 f3 39 79 7c 6f 33 99 1f 48 cc 70 02 d7 8c 64 60 b8 cd 6c 72 f6 21 20 a6 fa 8b ed 80 22 b4 12 67 ec bd a6 22 38 f0 56 92 9f d0 c8 06 c1 19 7b e7 97 d3
+Jan 01 00:16:11 hgx spdmd[288]: interpretResponse(N7spdmcpp24PacketDigestsResponseVarE):
+Jan 01 00:16:11 hgx spdmd[288]:         Min:
+Jan 01 00:16:11 hgx spdmd[288]:                 Header:
+Jan 01 00:16:11 hgx spdmd[288]:                         MessageVersion:        MessageVersionEnum::SPDM_1_1
+Jan 01 00:16:11 hgx spdmd[288]:                         requestResponseCode:        RequestResponseEnum::RESPONSE_DIGESTS
+Jan 01 00:16:11 hgx spdmd[288]:                         Param1:        0
+Jan 01 00:16:11 hgx spdmd[288]:                         Param2:        3
+Jan 01 00:16:11 hgx spdmd[288]:         Digests[0]: 5f 2c 6a df d7 13 c7 16 ac 8e fc ab 5c 14 72 ed c7 59 68 65 46 6e 85 9a 81 3e 5c 5e a2 2c a2 42 14 cc 94 db 12 26 e2 44 51 ee e0 b8 ed 69 f3 39
+Jan 01 00:16:11 hgx spdmd[288]:         Digests[1]: 79 7c 6f 33 99 1f 48 cc 70 02 d7 8c 64 60 b8 cd 6c 72 f6 21 20 a6 fa 8b ed 80 22 b4 12 67 ec bd a6 22 38 f0 56 92 9f d0 c8 06 c1 19 7b e7 97 d3
+Jan 01 00:16:11 hgx spdmd[288]:         Digests[2]:
+Jan 01 00:16:11 hgx spdmd[288]:         Digests[3]:
+Jan 01 00:16:11 hgx spdmd[288]:         Digests[4]:
+Jan 01 00:16:11 hgx spdmd[288]:         Digests[5]:
+Jan 01 00:16:11 hgx spdmd[288]:         Digests[6]:
+Jan 01 00:16:11 hgx spdmd[288]:         Digests[7]:
+Jan 01 00:16:11 hgx spdmd[288]: sendRequest(N7spdmcpp31PacketGetMeasurementsRequestVarE):
+Jan 01 00:16:11 hgx spdmd[288]:         Min:
+Jan 01 00:16:11 hgx spdmd[288]:                 Header:
+Jan 01 00:16:11 hgx spdmd[288]:                         MessageVersion:        MessageVersionEnum::SPDM_1_1
+Jan 01 00:16:11 hgx spdmd[288]:                         requestResponseCode:        RequestResponseEnum::REQUEST_GET_MEASUREMENTS
+Jan 01 00:16:11 hgx spdmd[288]:                         Param1:        0
+Jan 01 00:16:11 hgx spdmd[288]:                         Param2:        1
+Jan 01 00:16:11 hgx spdmd[288]:         Nonce:        00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+Jan 01 00:16:11 hgx spdmd[288]:         SlotIDParam:        0
+Jan 01 00:16:11 hgx spdmd[288]: Context->IO->write() buf.size() = 6
+Jan 01 00:16:11 hgx spdmd[288]: buf = 0d 05 11 e0 00 01
+Jan 01 00:16:11 hgx spdmd[288]: asyncResponse(N7spdmcpp29PacketMeasurementsResponseVarE):
+Jan 01 00:16:11 hgx spdmd[288]: ResponseBuffer.size() = 55
+Jan 01 00:16:11 hgx spdmd[288]: ResponseBuffer = 0d 05 11 60 00 00 01 0b 00 00 01 01 07 00 83 04 00 02 00 00 01 d8 a1 cf 86 d2 62 22 e8 cc 0e 10 f1 4a cb 6c 5d ae dd 17 ce 08 3d dc 1d 9c 02 fb fd 0e 00 ba cd 00 00
+Jan 01 00:16:11 hgx spdmd[288]: interpretResponse(N7spdmcpp29PacketMeasurementsResponseVarE):
+Jan 01 00:16:11 hgx spdmd[288]:         Min:
+Jan 01 00:16:11 hgx spdmd[288]:                 Header:
+Jan 01 00:16:11 hgx spdmd[288]:                         MessageVersion:        MessageVersionEnum::SPDM_1_1
+Jan 01 00:16:11 hgx spdmd[288]:                         requestResponseCode:        RequestResponseEnum::RESPONSE_MEASUREMENTS
+Jan 01 00:16:11 hgx spdmd[288]:                         Param1:        0
+Jan 01 00:16:11 hgx spdmd[288]:                         Param2:        0
+Jan 01 00:16:11 hgx spdmd[288]:                 NumberOfBlocks:        1
+Jan 01 00:16:11 hgx spdmd[288]:                 MeasurementRecordLength:        0b 00 00
+Jan 01 00:16:11 hgx spdmd[288]:         Nonce:        d8 a1 cf 86 d2 62 22 e8 cc 0e 10 f1 4a cb 6c 5d ae dd 17 ce 08 3d dc 1d 9c 02 fb fd 0e 00 ba cd
+Jan 01 00:16:11 hgx spdmd[288]:         MeasurementBlockVector.size():        1
+Jan 01 00:16:11 hgx spdmd[288]:         MeasurementBlockVector[0]:
+Jan 01 00:16:11 hgx spdmd[288]:                 Min:
+Jan 01 00:16:11 hgx spdmd[288]:                         Index:        1
+Jan 01 00:16:11 hgx spdmd[288]:                            MeasurementSpecification:        1
+Jan 01 00:16:11 hgx spdmd[288]:                            MeasurementSize:        7
+Jan 01 00:16:11 hgx spdmd[288]:                    MeasurementVector:        83 04 00 02 00 00 01
+Jan 01 00:16:11 hgx spdmd[288]:         OpaqueDataVector:
+Jan 01 00:16:11 hgx spdmd[288]:         SignatureVector:
+Jan 01 00:16:11 hgx spdmd[288]: sendRequest(N7spdmcpp31PacketGetMeasurementsRequestVarE):
+Jan 01 00:16:11 hgx spdmd[288]:         Min:
+Jan 01 00:16:11 hgx spdmd[288]:                 Header:
+Jan 01 00:16:11 hgx spdmd[288]:                         MessageVersion:        MessageVersionEnum::SPDM_1_1
+Jan 01 00:16:11 hgx spdmd[288]:                         requestResponseCode:        RequestResponseEnum::REQUEST_GET_MEASUREMENTS
+Jan 01 00:16:11 hgx spdmd[288]:                         Param1:        1
+Jan 01 00:16:11 hgx spdmd[288]:                         Param2:        254
+Jan 01 00:16:11 hgx spdmd[288]:         Nonce:        bf 20 f7 10 41 23 b0 73 23 ca f9 ce 35 a4 a7 5e 47 c1 4e 55 3e c5 cf 9e 4b f7 9e 6f 1f a9 8e bc
+Jan 01 00:16:11 hgx spdmd[288]:         SlotIDParam:        0
+Jan 01 00:16:11 hgx spdmd[288]: Context->IO->write() buf.size() = 39
+Jan 01 00:16:11 hgx spdmd[288]: buf = 0d 05 11 e0 01 fe bf 20 f7 10 41 23 b0 73 23 ca f9 ce 35 a4 a7 5e 47 c1 4e 55 3e c5 cf 9e 4b f7 9e 6f 1f a9 8e bc 00
+Jan 01 00:16:11 hgx spdmd[288]: asyncResponse(N7spdmcpp29PacketMeasurementsResponseVarE):
+Jan 01 00:16:11 hgx spdmd[288]: ResponseBuffer.size() = 147
+Jan 01 00:16:11 hgx spdmd[288]: ResponseBuffer = 0d 05 11 60 00 00 01 07 00 00 fe 01 03 00 80 00 00 b5 cd 90 8d 7a f9 b7 af b2 13 5f 05 2f 1a d0 72 22 da a7 cd a0 35 41 80 65 fe a1 6b b9 98 b5 71 00 00 1c 25 83 16 ef b7 26 c6 84 bb de 3a 56 4f 23 aa 49 a2 d4 50 56 ce 91 6c bc 9f 92 52 db 18 9e 08 93 3a a3 c5 ac 12 30 8d 68 57 ec 82 25 76 7b e6 d6 5c 28 ed e0 40 d0 46 15 b1 10 7a 99 f7 b6 b3 2b 70 0e 82 6b 36 6b d7 a6 38 3a 33 03 0a a3 9b 0c ed ce af f0 19 6d f8 31 0e fe 06 8e 6b 7b be
+Jan 01 00:16:11 hgx spdmd[288]: interpretResponse(N7spdmcpp29PacketMeasurementsResponseVarE):
+Jan 01 00:16:11 hgx spdmd[288]:         Min:
+Jan 01 00:16:11 hgx spdmd[288]:                 Header:
+Jan 01 00:16:11 hgx spdmd[288]:                         MessageVersion:        MessageVersionEnum::SPDM_1_1
+Jan 01 00:16:11 hgx spdmd[288]:                         requestResponseCode:        RequestResponseEnum::RESPONSE_MEASUREMENTS
+Jan 01 00:16:11 hgx spdmd[288]:                         Param1:        0
+Jan 01 00:16:11 hgx spdmd[288]:                         Param2:        0
+Jan 01 00:16:11 hgx spdmd[288]:                 NumberOfBlocks:        1
+Jan 01 00:16:11 hgx spdmd[288]:                 MeasurementRecordLength:        07 00 00
+Jan 01 00:16:11 hgx spdmd[288]:         Nonce:        b5 cd 90 8d 7a f9 b7 af b2 13 5f 05 2f 1a d0 72 22 da a7 cd a0 35 41 80 65 fe a1 6b b9 98 b5 71
+Jan 01 00:16:11 hgx spdmd[288]:         MeasurementBlockVector.size():        1
+Jan 01 00:16:11 hgx spdmd[288]:         MeasurementBlockVector[0]:
+Jan 01 00:16:11 hgx spdmd[288]:                 Min:
+Jan 01 00:16:11 hgx spdmd[288]:                         Index:        254
+Jan 01 00:16:11 hgx spdmd[288]:                            MeasurementSpecification:        1
+Jan 01 00:16:11 hgx spdmd[288]:                            MeasurementSize:        3
+Jan 01 00:16:11 hgx spdmd[288]:                    MeasurementVector:        80 00 00
+Jan 01 00:16:11 hgx spdmd[288]:         OpaqueDataVector:
+Jan 01 00:16:11 hgx spdmd[288]:         SignatureVector:        1c 25 83 16 ef b7 26 c6 84 bb de 3a 56 4f 23 aa 49 a2 d4 50 56 ce 91 6c bc 9f 92 52 db 18 9e 08 93 3a a3 c5 ac 12 30 8d 68 57 ec 82 25 76 7b e6 d6 5c 28 ed e0 40 d0 46 15 b1 10 7a 99 f7 b6 b3 2b 70 0e 82 6b 36 6b d7 a6 38 3a 33 03 0a a3 9b 0c ed ce af f0 19 6d f8 31 0e fe 06 8e 6b 7b be
+Jan 01 00:16:11 hgx spdmd[288]: computed l2 hash = e6 dc 29 be 00 53 cd b5 ad ed cb 5d 5e 25 80 7c fe bc 78 92 b2 59 19 df 00 0f 7a 48 04 a2 ad b4 d8 53 e2 22 05 05 67 4c a4 5a 83 af 93 ee 6e aa
+Jan 01 00:16:11 hgx spdmd[288]: measurements SIGNATURE verify PASSED!
+
