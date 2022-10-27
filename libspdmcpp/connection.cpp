@@ -62,13 +62,9 @@ RetStat ConnectionClass::refreshMeasurements(
 }
 RetStat ConnectionClass::refreshMeasurementsInternal()
 {
-    if (MeasurementIndices[255])
+    if (MeasurementIndices[0] || MeasurementIndices[255])
     {
         SPDMCPP_ASSERT(MeasurementIndices.count() == 1);
-    }
-    else
-    {
-        SPDMCPP_ASSERT(!MeasurementIndices[0]);
     }
     auto rs = tryGetVersion();
     SPDMCPP_LOG_TRACE_RS(Log, rs);

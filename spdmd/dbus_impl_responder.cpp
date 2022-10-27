@@ -289,7 +289,7 @@ void Responder::refresh(uint8_t slotIndex, std::vector<uint8_t> nonc,
     {
         for (auto ind : measurementIndices)
         {
-            if (ind >= 1 && ind < 255)
+            if (ind < 255)
             {
                 if (meas[ind])
                 {
