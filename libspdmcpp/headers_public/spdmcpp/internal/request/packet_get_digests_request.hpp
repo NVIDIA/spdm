@@ -15,8 +15,10 @@ struct PacketGetDigestsRequest
 
     void printMl(LogClass& log) const
     {
-        SPDMCPP_LOG_INDENT(log);
-        SPDMCPP_LOG_printMl(log, Header);
+        if (log.logLevel >= LogClass::Level::Informational) {
+            SPDMCPP_LOG_INDENT(log);
+            SPDMCPP_LOG_printMl(log, Header);
+        }
     }
 };
 

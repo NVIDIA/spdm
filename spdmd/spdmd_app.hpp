@@ -74,14 +74,7 @@ class SpdmdApp : public SpdmdAppContext
     {
         return SpdmdAppContext::bus;
     }
-
-    /** @brief Get reference to logger object
-     *
-     */
-    spdmcpp::LogClass& getLog()
-    {
-        return SpdmdAppContext::log;
-    }
+  
 
   private:
     /** @brief verbose - debug level for SPDM daemon */

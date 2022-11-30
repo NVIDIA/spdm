@@ -16,9 +16,11 @@ struct PacketChallengeRequest
 
     void printMl(LogClass& log) const
     {
-        SPDMCPP_LOG_INDENT(log);
-        SPDMCPP_LOG_printMl(log, Header);
-        SPDMCPP_LOG_iexprln(log, Nonce);
+        if (log.logLevel >= LogClass::Level::Informational) {
+            SPDMCPP_LOG_INDENT(log);
+            SPDMCPP_LOG_printMl(log, Header);
+            SPDMCPP_LOG_iexprln(log, Nonce);
+        }
     }
 };
 

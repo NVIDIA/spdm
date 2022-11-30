@@ -26,12 +26,14 @@ struct PacketCapabilitiesResponse
 
     void printMl(LogClass& log) const
     {
-        SPDMCPP_LOG_INDENT(log);
-        SPDMCPP_LOG_printMl(log, Header);
-        SPDMCPP_LOG_iexprln(log, Reserved0);
-        SPDMCPP_LOG_iexprln(log, CTExponent);
-        SPDMCPP_LOG_iexprln(log, Reserved1);
-        SPDMCPP_LOG_iflagsln(log, Flags);
+        if (log.logLevel >= LogClass::Level::Informational) {
+            SPDMCPP_LOG_INDENT(log);
+            SPDMCPP_LOG_printMl(log, Header);
+            SPDMCPP_LOG_iexprln(log, Reserved0);
+            SPDMCPP_LOG_iexprln(log, CTExponent);
+            SPDMCPP_LOG_iexprln(log, Reserved1);
+            SPDMCPP_LOG_iflagsln(log, Flags);
+        }
     }
 };
 

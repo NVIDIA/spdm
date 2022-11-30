@@ -61,15 +61,17 @@ struct PacketVersionNumber
 
     void print(LogClass& log) const
     {
-        log.print("<");
-        SPDMCPP_LOG_expr(log, getMajor());
-        log.print("   ");
-        SPDMCPP_LOG_expr(log, getMinor());
-        log.print("   ");
-        SPDMCPP_LOG_expr(log, getUpdateVersionNumber());
-        log.print("   ");
-        SPDMCPP_LOG_expr(log, getAlpha());
-        log.print(">");
+        if (log.logLevel >= LogClass::Level::Informational) {
+            log.print("<");
+            SPDMCPP_LOG_expr(log, getMajor());
+            log.print("   ");
+            SPDMCPP_LOG_expr(log, getMinor());
+            log.print("   ");
+            SPDMCPP_LOG_expr(log, getUpdateVersionNumber());
+            log.print("   ");
+            SPDMCPP_LOG_expr(log, getAlpha());
+            log.print(">");
+        }
     }
 
     bool operator==(const PacketVersionNumber& other) const

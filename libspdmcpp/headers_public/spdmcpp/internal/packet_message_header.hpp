@@ -24,23 +24,27 @@ struct PacketMessageHeader
 
     void print(LogClass& log) const
     {
-        log.print('<');
-        SPDMCPP_LOG_expr(log, MessageVersion);
-        log.print("   ");
-        SPDMCPP_LOG_expr(log, requestResponseCode);
-        log.print("   ");
-        SPDMCPP_LOG_expr(log, Param1);
-        log.print("   ");
-        SPDMCPP_LOG_expr(log, Param2);
-        log.print(">");
+        if (log.logLevel >= LogClass::Level::Informational) {
+            log.print('<');
+            SPDMCPP_LOG_expr(log, MessageVersion);
+            log.print("   ");
+            SPDMCPP_LOG_expr(log, requestResponseCode);
+            log.print("   ");
+            SPDMCPP_LOG_expr(log, Param1);
+            log.print("   ");
+            SPDMCPP_LOG_expr(log, Param2);
+            log.print(">");
+        }
     }
     void printMl(LogClass& log) const
     {
-        SPDMCPP_LOG_INDENT(log);
-        SPDMCPP_LOG_iexprln(log, MessageVersion);
-        SPDMCPP_LOG_iexprln(log, requestResponseCode);
-        SPDMCPP_LOG_iexprln(log, Param1);
-        SPDMCPP_LOG_iexprln(log, Param2);
+        if (log.logLevel >= LogClass::Level::Informational) {
+            SPDMCPP_LOG_INDENT(log);
+            SPDMCPP_LOG_iexprln(log, MessageVersion);
+            SPDMCPP_LOG_iexprln(log, requestResponseCode);
+            SPDMCPP_LOG_iexprln(log, Param1);
+            SPDMCPP_LOG_iexprln(log, Param2);
+        }
     }
 };
 

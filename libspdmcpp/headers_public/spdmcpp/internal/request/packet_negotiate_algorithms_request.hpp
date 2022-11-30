@@ -80,24 +80,26 @@ struct PacketReqAlgStruct
 
     void print(LogClass& log) const
     {
-        log.print("<");
-        SPDMCPP_LOG_expr(log, AlgType);
-        log.print("   FixedAlgCount: ");
-        log.print(getFixedAlgCount());
-        log.print("   ExtAlgCount: ");
-        log.print(getExtAlgCount());
+        if (log.logLevel >= LogClass::Level::Informational) {
+            log.print("<");
+            SPDMCPP_LOG_expr(log, AlgType);
+            log.print("   FixedAlgCount: ");
+            log.print(getFixedAlgCount());
+            log.print("   ExtAlgCount: ");
+            log.print(getExtAlgCount());
 
-        switch (AlgType)
-        {
-            case AlgTypeEnum::ReqBaseAsymAlg:
-                log.print("   ReqBaseAsymAlg: ");
-                log.print(get_debug_string(getReqBaseAsymAlg()));
-                break;
-            default:
-                log.print("   UNIMPLEMENTED");
-                break;
+            switch (AlgType)
+            {
+                case AlgTypeEnum::ReqBaseAsymAlg:
+                    log.print("   ReqBaseAsymAlg: ");
+                    log.print(get_debug_string(getReqBaseAsymAlg()));
+                    break;
+                default:
+                    log.print("   UNIMPLEMENTED");
+                    break;
+            }
+            log.print(">");
         }
-        log.print(">");
     }
 
     bool operator==(const PacketReqAlgStruct& other) const
@@ -190,19 +192,21 @@ struct PacketNegotiateAlgorithmsRequestMin
 
     void printMl(LogClass& log) const
     {
-        SPDMCPP_LOG_INDENT(log);
-        SPDMCPP_LOG_printMl(log, Header);
-        SPDMCPP_LOG_iexprln(log, Length);
-        SPDMCPP_LOG_iexprln(log, MeasurementSpecification);
-        SPDMCPP_LOG_iexprln(log, Reserved0);
-        SPDMCPP_LOG_iflagsln(log, BaseAsymAlgo);
-        SPDMCPP_LOG_iflagsln(log, BaseHashAlgo);
-        SPDMCPP_LOG_iexprln(log, Reserved1);
-        SPDMCPP_LOG_iexprln(log, Reserved2);
-        SPDMCPP_LOG_iexprln(log, Reserved3);
-        SPDMCPP_LOG_iexprln(log, ExtAsymCount);
-        SPDMCPP_LOG_iexprln(log, ExtHashCount);
-        SPDMCPP_LOG_iexprln(log, Reserved4);
+        if (log.logLevel >= LogClass::Level::Informational) {
+            SPDMCPP_LOG_INDENT(log);
+            SPDMCPP_LOG_printMl(log, Header);
+            SPDMCPP_LOG_iexprln(log, Length);
+            SPDMCPP_LOG_iexprln(log, MeasurementSpecification);
+            SPDMCPP_LOG_iexprln(log, Reserved0);
+            SPDMCPP_LOG_iflagsln(log, BaseAsymAlgo);
+            SPDMCPP_LOG_iflagsln(log, BaseHashAlgo);
+            SPDMCPP_LOG_iexprln(log, Reserved1);
+            SPDMCPP_LOG_iexprln(log, Reserved2);
+            SPDMCPP_LOG_iexprln(log, Reserved3);
+            SPDMCPP_LOG_iexprln(log, ExtAsymCount);
+            SPDMCPP_LOG_iexprln(log, ExtHashCount);
+            SPDMCPP_LOG_iexprln(log, Reserved4);
+        }
     }
 
     bool operator==(const PacketNegotiateAlgorithmsRequestMin& other) const
@@ -275,17 +279,19 @@ struct PacketNegotiateAlgorithmsRequestVar
 
     void printMl(LogClass& log) const
     {
-        SPDMCPP_LOG_INDENT(log);
-        SPDMCPP_LOG_printMl(log, Min);
+        if (log.logLevel >= LogClass::Level::Informational) {
+            SPDMCPP_LOG_INDENT(log);
+            SPDMCPP_LOG_printMl(log, Min);
 
-        SPDMCPP_LOG_iexprln(
-            log, PacketReqAlgVector.size()); // TODO template for vector?!
-        for (size_t i = 0; i < PacketReqAlgVector.size(); ++i)
-        {
-            log.iprint("PacketReqAlgVector[" + std::to_string(i) +
-                       "]: "); // TODO something more optimal
-            PacketReqAlgVector[i].print(log);
-            log.endl();
+            SPDMCPP_LOG_iexprln(
+                log, PacketReqAlgVector.size()); // TODO template for vector?!
+            for (size_t i = 0; i < PacketReqAlgVector.size(); ++i)
+            {
+                log.iprint("PacketReqAlgVector[" + std::to_string(i) +
+                           "]: "); // TODO something more optimal
+                PacketReqAlgVector[i].print(log);
+                log.endl();
+            }
         }
     }
 };

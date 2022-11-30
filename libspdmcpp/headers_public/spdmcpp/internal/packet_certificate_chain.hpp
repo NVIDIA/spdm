@@ -14,12 +14,14 @@ struct PacketCertificateChain
 
     void print(LogClass& log) const
     {
-        log.print("<");
-        SPDMCPP_LOG_expr(log, Length);
-        log.print("   ");
-        SPDMCPP_LOG_expr(log, Reserved);
-        log.print("   ");
-        log.print(">");
+        if (log.logLevel >= LogClass::Level::Informational) {
+            log.print("<");
+            SPDMCPP_LOG_expr(log, Length);
+            log.print("   ");
+            SPDMCPP_LOG_expr(log, Reserved);
+            log.print("   ");
+            log.print(">");
+        }
     }
 };
 

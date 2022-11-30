@@ -15,8 +15,10 @@ struct PacketDigestsResponseMin
 
     void printMl(LogClass& log) const
     {
-        SPDMCPP_LOG_INDENT(log);
-        SPDMCPP_LOG_printMl(log, Header);
+        if (log.logLevel >= LogClass::Level::Informational) {
+            SPDMCPP_LOG_INDENT(log);
+            SPDMCPP_LOG_printMl(log, Header);
+        }
     }
 
     bool operator==(const PacketDigestsResponseMin& other) const
@@ -73,14 +75,16 @@ struct PacketDigestsResponseVar
 
     void printMl(LogClass& log) const
     {
-        SPDMCPP_LOG_INDENT(log);
-        SPDMCPP_LOG_printMl(log, Min);
-        for (uint8_t i = 0; i < digestsNum; ++i)
-        {
-            log.iprint("Digests[" + std::to_string(i) +
-                       "]: "); // TODO something more optimal
-            log.print(Digests[i]);
-            log.endl();
+        if (log.logLevel >= LogClass::Level::Informational) {
+            SPDMCPP_LOG_INDENT(log);
+            SPDMCPP_LOG_printMl(log, Min);
+            for (uint8_t i = 0; i < digestsNum; ++i)
+            {
+                log.iprint("Digests[" + std::to_string(i) +
+                           "]: "); // TODO something more optimal
+                log.print(Digests[i]);
+                log.endl();
+            }
         }
     }
 };

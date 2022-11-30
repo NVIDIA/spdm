@@ -69,11 +69,15 @@ void SpdmdApp::setupCli(int argc, char** argv)
 
     if (verbose > spdmcpp::LogClass::Level::Emergency)
     {
-        log.setLogLevel(verbose);
-        log.print("Verbose log level set to " +
+        getLog().setLogLevel(verbose);
+        getLog().print("Verbose log level set to " +
                   Logging::server::convertForMessage(
                       (Logging::server::Entry::Level)verbose) +
                   "\n");
+    }
+    else
+    {
+        getLog().setLogLevel(spdmcpp::LogClass::Level::Error);
     }
 
     if (!cache.empty())
@@ -105,13 +109,13 @@ void SpdmdApp::setupCli(int argc, char** argv)
 
 void SpdmdApp::connectDBus()
 {
-    SPDMCPP_LOG_TRACE_FUNC(log);
+    SPDMCPP_LOG_TRACE_FUNC(getLog());
     bus.attach_event(event.get(), SD_EVENT_PRIORITY_NORMAL);
 }
 
 void SpdmdApp::connectMCTP()
 {
-    SPDMCPP_LOG_TRACE_FUNC(log);
+    SPDMCPP_LOG_TRACE_FUNC(getLog());
     if (mctpIo.isSocketOpen())
     {
         // return if socket is already created because we call this function
@@ -126,7 +130,7 @@ void SpdmdApp::connectMCTP()
 
     auto callback = [this](sdeventplus::source::IO& /*io*/, int /*fd*/,
                            uint32_t revents) {
-        SPDMCPP_LOG_TRACE_FUNC(log);
+        SPDMCPP_LOG_TRACE_FUNC(getLog());
 
         if (!(revents & EPOLLIN))
         {
@@ -136,7 +140,7 @@ void SpdmdApp::connectMCTP()
         {
             auto rs = mctpIo.read(packetBuffer);
             if (rs != spdmcpp::RetStat::OK) {
-                log.println("SpdmdApp::IO read failed likely due to broken socket connection, quitting!");
+                getLog().println("SpdmdApp::IO read failed likely due to broken socket connection, quitting!");
                 event.exit(1);
                 return;
             }
@@ -148,24 +152,24 @@ void SpdmdApp::connectMCTP()
             auto rs =
                 spdmcpp::MctpTransportClass::peekEid(packetBuffer, lay, eid);
 
-            SPDMCPP_LOG_TRACE_RS(log, rs);
+            SPDMCPP_LOG_TRACE_RS(getLog(), rs);
             switch (rs) {
             case spdmcpp::RetStat::OK:
                 break;
             case spdmcpp::RetStat::ERROR_BUFFER_TOO_SMALL:
-                log.print("SpdmdApp::IO: packet size = ");
-                log.print(packetBuffer.size());
-                log.println(" is too small to be a valid SPDM packet");
+                getLog().print("SpdmdApp::IO: packet size = ");
+                getLog().print(packetBuffer.size());
+                getLog().println(" is too small to be a valid SPDM packet");
                 return;
             default:
-                log.print("SpdmdApp::IO peekEid returned unexpected error: ");
-                log.println(rs);
+                getLog().print("SpdmdApp::IO peekEid returned unexpected error: ");
+                getLog().println(rs);
                 return;
             }
         }
         if (eid >= responders.size())
         {
-            log.println("SpdmdApp::IO received message from EID=" +
+            getLog().println("SpdmdApp::IO received message from EID=" +
                         std::to_string(eid) +
                         " outside of responder array size=" +
                         std::to_string(responders.size()));
@@ -174,7 +178,7 @@ void SpdmdApp::connectMCTP()
         auto resp = responders[eid];
         if (!resp)
         {
-            log.println("SpdmdApp::IO received message from EID=" +
+            getLog().println("SpdmdApp::IO received message from EID=" +
                         std::to_string(eid) +
                         " while responder class is not created");
         }
@@ -193,7 +197,7 @@ void SpdmdApp::createResponder(
     uint8_t eid, const sdbusplus::message::object_path& mctpPath,
     const sdbusplus::message::object_path& inventoryPath)
 {
-    SPDMCPP_LOG_TRACE_FUNC(log);
+    SPDMCPP_LOG_TRACE_FUNC(getLog());
     if (eid >= responders.size())
     {
         responders.resize(eid + 1);

@@ -15,13 +15,15 @@ struct PacketMeasurementBlockMin
 
     void printMl(LogClass& log) const
     {
-        SPDMCPP_LOG_INDENT(log);
-        SPDMCPP_LOG_iexprln(log, Index);
-        log.print("   ");
-        SPDMCPP_LOG_iexprln(log, MeasurementSpecification);
-        log.print("   ");
-        SPDMCPP_LOG_iexprln(log, MeasurementSize);
-        log.print("   ");
+        if (log.logLevel >= LogClass::Level::Informational) {
+            SPDMCPP_LOG_INDENT(log);
+            SPDMCPP_LOG_iexprln(log, Index);
+            log.print("   ");
+            SPDMCPP_LOG_iexprln(log, MeasurementSpecification);
+            log.print("   ");
+            SPDMCPP_LOG_iexprln(log, MeasurementSize);
+            log.print("   ");
+        }
     }
 
     bool operator==(const PacketMeasurementBlockMin& other) const
@@ -81,9 +83,11 @@ struct PacketMeasurementBlockVar
 
     void printMl(LogClass& log) const
     {
-        SPDMCPP_LOG_INDENT(log);
-        SPDMCPP_LOG_printMl(log, Min);
-        SPDMCPP_LOG_iexprln(log, MeasurementVector);
+        if (log.logLevel >= LogClass::Level::Informational) {
+            SPDMCPP_LOG_INDENT(log);
+            SPDMCPP_LOG_printMl(log, Min);
+            SPDMCPP_LOG_iexprln(log, MeasurementVector);
+        }
     }
 };
 

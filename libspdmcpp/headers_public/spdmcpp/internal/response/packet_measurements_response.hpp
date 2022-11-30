@@ -34,10 +34,12 @@ struct PacketMeasurementsResponseMin
 
     void printMl(LogClass& log) const
     {
-        SPDMCPP_LOG_INDENT(log);
-        SPDMCPP_LOG_printMl(log, Header);
-        SPDMCPP_LOG_iexprln(log, NumberOfBlocks);
-        SPDMCPP_LOG_iexprln(log, MeasurementRecordLength);
+        if (log.logLevel >= LogClass::Level::Informational) {
+            SPDMCPP_LOG_INDENT(log);
+            SPDMCPP_LOG_printMl(log, Header);
+            SPDMCPP_LOG_iexprln(log, NumberOfBlocks);
+            SPDMCPP_LOG_iexprln(log, MeasurementRecordLength);
+        }
     }
 
     bool operator==(const PacketMeasurementsResponseMin& other) const
@@ -115,20 +117,22 @@ struct PacketMeasurementsResponseVar // TODO all variable packets don't need
 
     void printMl(LogClass& log) const
     {
-        SPDMCPP_LOG_INDENT(log);
-        SPDMCPP_LOG_printMl(log, Min);
-        SPDMCPP_LOG_iexprln(log, Nonce);
+        if (log.logLevel >= LogClass::Level::Informational) {
+            SPDMCPP_LOG_INDENT(log);
+            SPDMCPP_LOG_printMl(log, Min);
+            SPDMCPP_LOG_iexprln(log, Nonce);
 
-        SPDMCPP_LOG_iexprln(log, MeasurementBlockVector.size());
-        for (size_t i = 0; i < MeasurementBlockVector.size(); ++i)
-        {
-            log.iprintln("MeasurementBlockVector[" + std::to_string(i) +
-                         "]:"); // TODO something more optimal
-            MeasurementBlockVector[i].printMl(log);
+            SPDMCPP_LOG_iexprln(log, MeasurementBlockVector.size());
+            for (size_t i = 0; i < MeasurementBlockVector.size(); ++i)
+            {
+                log.iprintln("MeasurementBlockVector[" + std::to_string(i) +
+                             "]:"); // TODO something more optimal
+                MeasurementBlockVector[i].printMl(log);
+            }
+
+            SPDMCPP_LOG_iexprln(log, OpaqueDataVector);
+            SPDMCPP_LOG_iexprln(log, SignatureVector);
         }
-
-        SPDMCPP_LOG_iexprln(log, OpaqueDataVector);
-        SPDMCPP_LOG_iexprln(log, SignatureVector);
     }
 };
 

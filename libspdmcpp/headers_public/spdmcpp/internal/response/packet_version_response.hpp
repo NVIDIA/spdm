@@ -18,10 +18,12 @@ struct PacketVersionResponseMin
 
     void printMl(LogClass& log) const
     {
-        SPDMCPP_LOG_INDENT(log);
-        SPDMCPP_LOG_printMl(log, Header);
-        SPDMCPP_LOG_iexprln(log, Reserved);
-        // SPDMCPP_LOG_iexprln(log, VersionNumberEntryCount);
+        if (log.logLevel >= LogClass::Level::Informational) {
+            SPDMCPP_LOG_INDENT(log);
+            SPDMCPP_LOG_printMl(log, Header);
+            SPDMCPP_LOG_iexprln(log, Reserved);
+            // SPDMCPP_LOG_iexprln(log, VersionNumberEntryCount);
+        }
     }
 
     bool operator==(const PacketVersionResponseMin& other) const
@@ -52,15 +54,17 @@ struct PacketVersionResponseVar
 
     void printMl(LogClass& log) const
     {
-        SPDMCPP_LOG_INDENT(log);
-        SPDMCPP_LOG_printMl(log, Min);
+        if (log.logLevel >= LogClass::Level::Informational) {
+            SPDMCPP_LOG_INDENT(log);
+            SPDMCPP_LOG_printMl(log, Min);
 
-        for (size_t i = 0; i < VersionNumberEntries.size(); ++i)
-        {
-            log.iprint("VersionNumberEntries[" + std::to_string(i) +
-                       "]: "); // TODO something more optimal
-            VersionNumberEntries[i].print(log);
-            log.endl();
+            for (size_t i = 0; i < VersionNumberEntries.size(); ++i)
+            {
+                log.iprint("VersionNumberEntries[" + std::to_string(i) +
+                           "]: "); // TODO something more optimal
+                VersionNumberEntries[i].print(log);
+                log.endl();
+            }
         }
     }
 

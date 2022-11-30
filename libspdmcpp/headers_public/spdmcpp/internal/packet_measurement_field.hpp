@@ -14,9 +14,11 @@ struct PacketMeasurementFieldMin
 
     void printMl(LogClass& log) const
     {
-        SPDMCPP_LOG_INDENT(log);
-        SPDMCPP_LOG_iexprln(log, Type);
-        log.print("   ");
+        if (log.logLevel >= LogClass::Level::Informational) {
+            SPDMCPP_LOG_INDENT(log);
+            SPDMCPP_LOG_iexprln(log, Type);
+            log.print("   ");
+        }
     }
 
     bool operator==(const PacketMeasurementFieldMin& other) const
@@ -64,9 +66,11 @@ struct PacketMeasurementFieldVar
 
     void printMl(LogClass& log) const
     {
-        SPDMCPP_LOG_INDENT(log);
-        SPDMCPP_LOG_printMl(log, Min);
-        SPDMCPP_LOG_iexprln(log, ValueVector);
+        if (log.logLevel >= LogClass::Level::Informational) {
+            SPDMCPP_LOG_INDENT(log);
+            SPDMCPP_LOG_printMl(log, Min);
+            SPDMCPP_LOG_iexprln(log, ValueVector);
+        }
     }
 };
 

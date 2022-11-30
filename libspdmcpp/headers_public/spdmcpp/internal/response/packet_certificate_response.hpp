@@ -17,10 +17,12 @@ struct PacketCertificateResponseMin
 
     void printMl(LogClass& log) const
     {
-        SPDMCPP_LOG_INDENT(log);
-        SPDMCPP_LOG_printMl(log, Header);
-        SPDMCPP_LOG_iexprln(log, PortionLength);
-        SPDMCPP_LOG_iexprln(log, RemainderLength);
+        if (log.logLevel >= LogClass::Level::Informational) {
+            SPDMCPP_LOG_INDENT(log);
+            SPDMCPP_LOG_printMl(log, Header);
+            SPDMCPP_LOG_iexprln(log, PortionLength);
+            SPDMCPP_LOG_iexprln(log, RemainderLength);
+        }
     }
 
     bool operator==(const PacketCertificateResponseMin& other) const
@@ -67,13 +69,15 @@ struct PacketCertificateResponseVar
 
     void printMl(LogClass& log) const
     {
-        SPDMCPP_LOG_INDENT(log);
-        SPDMCPP_LOG_printMl(log, Min);
-        SPDMCPP_LOG_iexprln(log, CertificateVector.size());
-        if (!CertificateVector.empty())
-        {
+        if (log.logLevel >= LogClass::Level::Informational) {
+            SPDMCPP_LOG_INDENT(log);
+            SPDMCPP_LOG_printMl(log, Min);
+            SPDMCPP_LOG_iexprln(log, CertificateVector.size());
+            if (!CertificateVector.empty())
             {
-                SPDMCPP_LOG_iexprln(log, CertificateVector);
+                {
+                    SPDMCPP_LOG_iexprln(log, CertificateVector);
+                }
             }
         }
     }

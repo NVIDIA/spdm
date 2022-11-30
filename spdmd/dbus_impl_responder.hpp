@@ -113,7 +113,7 @@ class Responder : public ResponderIntf
 
     SpdmdAppContext& appContext;
 
-    spdmcpp::LogClass log;
+    spdmcpp::LogClass &log;
     spdmcpp::ConnectionClass connection;
     MctpTransportClass transport;
     sdbusplus::message::object_path inventoryPath;

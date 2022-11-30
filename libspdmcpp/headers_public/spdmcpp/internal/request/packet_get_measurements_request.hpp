@@ -24,8 +24,10 @@ struct PacketGetMeasurementsRequestMin
 
     void printMl(LogClass& log) const
     {
-        SPDMCPP_LOG_INDENT(log);
-        SPDMCPP_LOG_printMl(log, Header);
+        if (log.logLevel >= LogClass::Level::Informational) {
+            SPDMCPP_LOG_INDENT(log);
+            SPDMCPP_LOG_printMl(log, Header);
+        }
     }
 
     bool operator==(const PacketGetMeasurementsRequestMin& other) const
@@ -94,10 +96,12 @@ struct PacketGetMeasurementsRequestVar
 
     void printMl(LogClass& log) const
     {
-        SPDMCPP_LOG_INDENT(log);
-        SPDMCPP_LOG_printMl(log, Min);
-        SPDMCPP_LOG_iexprln(log, Nonce);
-        SPDMCPP_LOG_iexprln(log, SlotIDParam);
+        if (log.logLevel >= LogClass::Level::Informational) {
+            SPDMCPP_LOG_INDENT(log);
+            SPDMCPP_LOG_printMl(log, Min);
+            SPDMCPP_LOG_iexprln(log, Nonce);
+            SPDMCPP_LOG_iexprln(log, SlotIDParam);
+        }
     }
 };
 

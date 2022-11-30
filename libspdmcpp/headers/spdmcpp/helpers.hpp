@@ -8,6 +8,7 @@
 #include <random>
 #include <span>
 #include <vector>
+#include <algorithm>
 
 namespace spdmcpp
 {

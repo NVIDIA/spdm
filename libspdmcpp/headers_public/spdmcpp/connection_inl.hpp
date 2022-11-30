@@ -8,9 +8,11 @@ namespace spdmcpp
 template <typename T>
 RetStat ConnectionClass::sendRequest(const T& packet, BufEnum bufidx)
 {
-    Log.iprint("sendRequest(");
-    Log.print(typeid(packet).name());
-    Log.println("):");
+    if (Log.logLevel >= spdmcpp::LogClass::Level::Informational) {
+        Log.iprint("sendRequest(");
+        Log.print(typeid(packet).name());
+        Log.println("):");
+    }
     packet.printMl(Log);
 
     std::vector<uint8_t>& buf = SendBuffer;
@@ -45,11 +47,12 @@ RetStat ConnectionClass::sendRequest(const T& packet, BufEnum bufidx)
     {
         transport->encodePost(buf, lay);
     }
-
-    Log.iprint("Context->IO->write() buf.size() = ");
-    Log.println(buf.size());
-    Log.iprint("buf = ");
-    Log.println(buf);
+    if (Log.logLevel >= spdmcpp::LogClass::Level::Informational) {
+        Log.iprint("Context->IO->write() buf.size() = ");
+        Log.println(buf.size());
+        Log.iprint("buf = ");
+        Log.println(buf);
+    }
 
     rs = context.getIO().write(buf);
     return rs;
@@ -69,15 +72,19 @@ RetStat ConnectionClass::interpretResponse(T& packet, Targs... fargs)
     {
         if (rs == RetStat::ERROR_WRONG_REQUEST_RESPONSE_CODE)
         {
-            Log.iprint("wrong code is: ");
-            Log.println(packetMessageHeaderGetRequestresponsecode(
-                ResponseBuffer, lay.getEndOffset()));
+            if (Log.logLevel >= spdmcpp::LogClass::Level::Error) {
+                Log.iprint("wrong code is: ");
+                Log.println(packetMessageHeaderGetRequestresponsecode(
+                    ResponseBuffer, lay.getEndOffset()));
+            }
         }
         return rs;
     }
-    Log.iprint("interpretResponse(");
-    Log.print(typeid(packet).name());
-    Log.println("):");
+    if (Log.logLevel >= spdmcpp::LogClass::Level::Informational) {
+        Log.iprint("interpretResponse(");
+        Log.print(typeid(packet).name());
+        Log.println("):");
+    }
     packet.printMl(Log);
     return rs;
 }
@@ -85,9 +92,11 @@ RetStat ConnectionClass::interpretResponse(T& packet, Targs... fargs)
 template <typename T>
 RetStat ConnectionClass::setupResponseWait(timeout_ms_t timeout, uint16_t retry)
 {
-    Log.iprint("asyncResponse(");
-    Log.print(typeid(T).name());
-    Log.println("):");
+    if (Log.logLevel >= spdmcpp::LogClass::Level::Informational) {
+        Log.iprint("asyncResponse(");
+        Log.print(typeid(T).name());
+        Log.println("):");
+    }
     SPDMCPP_ASSERT(WaitingForResponse == RequestResponseEnum::INVALID);
     SPDMCPP_STATIC_ASSERT(isResponse(T::requestResponseCode));
     WaitingForResponse = T::requestResponseCode;

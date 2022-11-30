@@ -24,7 +24,7 @@ Responder::Responder(SpdmdAppContext& appCtx, const std::string& path,
                      const sdbusplus::message::object_path& mctpPath,
                      const sdbusplus::message::object_path& invPath) :
     ResponderIntf(appCtx.bus, path.c_str(), action::defer_emit),
-    appContext(appCtx), log(std::cerr), connection(appCtx.context, log),
+    appContext(appCtx), log(appCtx.getLog()), connection(appCtx.context, log),
     transport(eid, *this), inventoryPath(invPath)
 {
     {

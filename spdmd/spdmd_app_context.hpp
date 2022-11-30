@@ -48,14 +48,17 @@ class SpdmdAppContext
     /** @brief SPDM requester used dbus */
     sdbusplus::bus::bus bus;
 
-    /** @brief Log object used to log debug messages */
-    spdmcpp::LogClass log;
-
-    SpdmdAppContext(sdeventplus::Event&& e, sdbusplus::bus::bus&& b,
-                    std::ostream& logOutStream) :
+     SpdmdAppContext(sdeventplus::Event&& e, sdbusplus::bus::bus&& b,
+                     std::ostream& logOutStream) :
         event(std::move(e)),
         bus(std::move(b)), log(logOutStream)
     {}
+
+    SpdmdAppContext(const SpdmdAppContext&) = delete;
+    SpdmdAppContext& operator=(const SpdmdAppContext&) = delete;
+    SpdmdAppContext(SpdmdAppContext&&) = delete;
+    SpdmdAppContext& operator=(SpdmdAppContext&&) = delete;
+    ~SpdmdAppContext() = default;
 
     /** @brief Report an error severity message to phosphor logging object */
     bool reportError(const string& message)
@@ -67,6 +70,14 @@ class SpdmdAppContext
     bool reportNotice(const string& message)
     {
         return reportLog(Logging::server::Entry::Level::Notice, message);
+    }
+
+    /** @brief Get reference to logger object
+     *
+     */
+    spdmcpp::LogClass& getLog()
+    {
+        return std::ref(log);
     }
 
   protected:
@@ -163,6 +174,9 @@ class SpdmdAppContext
 
         return true;
     }
+   /** @brief Log object used to log debug messages */
+    spdmcpp::LogClass log;
+
 };
 
 } // namespace spdmd

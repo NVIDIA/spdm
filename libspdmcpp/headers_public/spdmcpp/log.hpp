@@ -51,6 +51,12 @@ class LogClass
         logLevel(reportLevel), Stream(&ostream)
     {}
 
+    LogClass(const LogClass&) = delete;
+    LogClass& operator=(const LogClass&) = delete;
+    LogClass(LogClass&&) = delete;
+    LogClass& operator=(LogClass&&) = delete;
+    ~LogClass() = default;
+
     void setLogLevel(Level reportLevel)
     {
         logLevel = reportLevel;

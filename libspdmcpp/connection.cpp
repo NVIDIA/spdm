@@ -152,9 +152,11 @@ bool ConnectionClass::getCertificatesPEM(std::string& str,
             reinterpret_cast<unsigned char*>(span.data()), span.size(), &size);
         if (ret)
         {
-            Log.iprint(
-                "ConnectionClass::getCertificatesPEM() mbedtls_pem_write_buffer failed with: ");
-            Log.println(ret);
+            if (Log.logLevel >= spdmcpp::LogClass::Level::Error) {
+                Log.iprint(
+                    "ConnectionClass::getCertificatesPEM() mbedtls_pem_write_buffer failed with: ");
+                Log.println(ret);
+            }
             return false;
         }
         // -1 because mbedtls_pem_write_buffer counts the null byte
@@ -179,8 +181,10 @@ RetStat ConnectionClass::parseCertChain(SlotClass& slot,
         rootCertHash.resize(getHashSize(Algorithms.Min.BaseHashAlgo));
         rs = packetDecodeBasic(rootCertHash, cert, off);
         SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
-        Log.iprint("provided root certificate hash = ");
-        Log.println(rootCertHash);
+        if (Log.logLevel >= spdmcpp::LogClass::Level::Informational) {
+            Log.iprint("provided root certificate hash = ");
+            Log.println(rootCertHash);
+        }
     }
 
     slot.CertificateOffset = off;
@@ -214,8 +218,10 @@ RetStat ConnectionClass::verifyCertificateChain(const SlotClass& slot)
         int ret = mbedtls_x509_crt_verify(*slot.MCertificates[i - 1],
                                           *slot.MCertificates[i], nullptr,
                                           nullptr, &rflags, nullptr, nullptr);
-        Log.iprint("mbedtls_x509_crt_verify ret = ");
-        Log.println(ret);
+        if (Log.logLevel >= spdmcpp::LogClass::Level::Informational) {
+            Log.iprint("mbedtls_x509_crt_verify ret = ");
+            Log.println(ret);
+        }
         if (ret)
         {
             std::string info;
@@ -224,7 +230,9 @@ RetStat ConnectionClass::verifyCertificateChain(const SlotClass& slot)
                                                rflags);
             SPDMCPP_ASSERT(ret >= 0);
             info.resize(ret);
-            Log.print(info);
+            if (Log.logLevel >= spdmcpp::LogClass::Level::Error) {
+                Log.print(info);
+            }
             return RetStat::ERROR_CERTIFICATE_CHAIN_VERIFIY_FAILED;
         }
     }
@@ -269,8 +277,10 @@ RetStat ConnectionClass::handleRecv<PacketVersionResponseVar>()
     rs = chooseVersion();
     SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
 
-    Log.iprint("chosen MessageVersion: ");
-    Log.println(MessageVersion);
+    if (Log.logLevel >= spdmcpp::LogClass::Level::Informational) {
+        Log.iprint("chosen MessageVersion: ");
+        Log.println(MessageVersion);
+    }
 
     rs = tryGetCapabilities();
     SPDMCPP_LOG_TRACE_RS(Log, rs);
@@ -648,15 +658,16 @@ RetStat ConnectionClass::handleRecv<PacketChallengeAuthResponseVar>()
 
         Log.iprint("resp.SignatureVector = ");
         Log.println(resp.SignatureVector);
-
         {
             int ret = verifySignature(Slots[CertificateSlotIdx].getLeafCert(),
                                       resp.SignatureVector, hash);
             SPDMCPP_LOG_TRACE_RS(Log, ret);
             if (!ret)
             {
-                Log.iprintln(
-                    "challenge_auth_response SIGNATURE verify PASSED!");
+                if (Log.logLevel >= spdmcpp::LogClass::Level::Informational) {
+                    Log.iprintln(
+                        "challenge_auth_response SIGNATURE verify PASSED!");
+                }
             }
             else
             {
@@ -688,7 +699,9 @@ RetStat ConnectionClass::tryGetMeasurements()
         MeasurementIndices.reset(idx);
         return tryGetMeasurements(idx);
     }
-    Log.iprintln("Warning: no measurements were requested?!");
+    if (Log.logLevel >= spdmcpp::LogClass::Level::Warning) {
+        Log.iprintln("Warning: no measurements were requested?!");
+    }
     return RetStat::OK;
 }
 
@@ -741,8 +754,10 @@ RetStat ConnectionClass::handleRecv<PacketMeasurementsResponseVar>()
         {
             if (DMTFMeasurements.find(block.Min.Index) !=
                 DMTFMeasurements.end())
-            {
-                Log.iprintln("DUPLICATE MeasurementBlock Index!");
+            {   
+                if (Log.logLevel >= spdmcpp::LogClass::Level::Error) {
+                    Log.iprintln("DUPLICATE MeasurementBlock Index!");
+                }
             }
             else
             {
@@ -752,7 +767,9 @@ RetStat ConnectionClass::handleRecv<PacketMeasurementsResponseVar>()
                 SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
                 if (off != block.MeasurementVector.size())
                 {
-                    Log.iprintln("MeasurementBlock not fully parsed!");
+                    if (Log.logLevel >= spdmcpp::LogClass::Level::Error) {
+                        Log.iprintln("MeasurementBlock not fully parsed!");
+                    }
                 }
             }
         }
@@ -781,15 +798,19 @@ RetStat ConnectionClass::handleRecv<PacketMeasurementsResponseVar>()
 #else
         hashBuf(hash, getSignatureHashEnum(), BufEnum::L);
 #endif
-        Log.iprint("computed l2 hash = ");
-        Log.println(hash);
+        if (Log.logLevel >= spdmcpp::LogClass::Level::Informational) {
+            Log.iprint("computed l2 hash = ");
+            Log.println(hash);
+        }
 
         int ret = verifySignature(Slots[CertificateSlotIdx].getLeafCert(),
                                   resp.SignatureVector, hash);
         SPDMCPP_LOG_TRACE_RS(Log, ret);
         if (!ret)
         {
-            Log.iprintln("measurements SIGNATURE verify PASSED!");
+            if (Log.logLevel >= spdmcpp::LogClass::Level::Informational) {
+                Log.iprintln("measurements SIGNATURE verify PASSED!");
+            }
             markInfo(ConnectionInfoEnum::MEASUREMENTS);
         }
         else
@@ -821,11 +842,12 @@ RetStat ConnectionClass::handleRecv(EventReceiveClass& event)
     // TODO however it's error prone, so we should pass the event to each
     // function that needs it instead (via const references)
     std::swap(event.buffer, ResponseBuffer);
-
-    Log.iprint("ResponseBuffer.size() = ");
-    Log.println(ResponseBuffer.size());
-    Log.iprint("ResponseBuffer = ");
-    Log.println(ResponseBuffer);
+    if (Log.logLevel >= spdmcpp::LogClass::Level::Informational) {
+        Log.iprint("ResponseBuffer.size() = ");
+        Log.println(ResponseBuffer.size());
+        Log.iprint("ResponseBuffer = ");
+        Log.println(ResponseBuffer);
+    }
 
     // NOLINTNEXTLINE cppcoreguidelines-init-variables
     MessageVersionEnum version;
@@ -856,8 +878,10 @@ RetStat ConnectionClass::handleRecv(EventReceiveClass& event)
     // "custom" response handling for ERRORS
     if (code == RequestResponseEnum::RESPONSE_ERROR)
     {
-        Log.iprint("RESPONSE_ERROR while waiting for response: ");
-        Log.println(WaitingForResponse);
+        if (Log.logLevel >= spdmcpp::LogClass::Level::Error) {
+            Log.iprint("RESPONSE_ERROR while waiting for response: ");
+            Log.println(WaitingForResponse);
+        }
         WaitingForResponse = RequestResponseEnum::INVALID;
 
         PacketErrorResponseVar err;
@@ -869,10 +893,12 @@ RetStat ConnectionClass::handleRecv(EventReceiveClass& event)
     // if we're not expecting this response return an error
     if (code != WaitingForResponse)
     {
-        Log.iprint("ERROR_WRONG_REQUEST_RESPONSE_CODE: ");
-        Log.println(code);
-        Log.iprint(" while waiting for response: ");
-        Log.println(WaitingForResponse);
+        if (Log.logLevel >= spdmcpp::LogClass::Level::Error) {
+            Log.iprint("ERROR_WRONG_REQUEST_RESPONSE_CODE: ");
+            Log.println(code);
+            Log.iprint(" while waiting for response: ");
+            Log.println(WaitingForResponse);
+        }
         WaitingForResponse = RequestResponseEnum::INVALID;
         return RetStat::ERROR_WRONG_REQUEST_RESPONSE_CODE;
     }
@@ -906,8 +932,10 @@ RetStat ConnectionClass::handleRecv(EventReceiveClass& event)
             DTYPE(PacketChallengeAuthResponseVar)
             DTYPE(PacketMeasurementsResponseVar)
             default:
-                Log.iprint("!!! Unknown code: ");
-                Log.println(code);
+                if (Log.logLevel >= spdmcpp::LogClass::Level::Error) {
+                    Log.iprint("!!! Unknown code: ");
+                    Log.println(code);
+                }
                 return RetStat::ERROR_UNKNOWN_REQUEST_RESPONSE_CODE;
         #undef DTYPE
         } // clang-format on

@@ -17,10 +17,12 @@ struct PacketGetCertificateRequest
 
     void printMl(LogClass& log) const
     {
-        SPDMCPP_LOG_INDENT(log);
-        SPDMCPP_LOG_printMl(log, Header);
-        SPDMCPP_LOG_iexprln(log, Offset);
-        SPDMCPP_LOG_iexprln(log, Length);
+        if (log.logLevel >= LogClass::Level::Informational) {
+            SPDMCPP_LOG_INDENT(log);
+            SPDMCPP_LOG_printMl(log, Header);
+            SPDMCPP_LOG_iexprln(log, Offset);
+            SPDMCPP_LOG_iexprln(log, Length);
+        }
     }
 };
 
