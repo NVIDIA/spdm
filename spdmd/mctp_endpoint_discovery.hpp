@@ -76,6 +76,9 @@ class MctpDiscovery
     /** @brief MCTP d-bus interface, property name EID  */
     static constexpr auto mctpEndpointIntfPropertyEid = "EID";
 
+    /** @brief MCTP get medium type*/
+    static constexpr auto mctpEndpointIntfPropertyMediumType = "MediumType";
+
     /** @brief MCTP d-bus interface, property name EID  */
     static constexpr auto mctpEndpointIntfPropertySupportedMessageTypes =
         "SupportedMessageTypes";
@@ -98,6 +101,22 @@ class MctpDiscovery
      *  @returns EID or invalidEid (256) in case of error
      */
     size_t getEid(const std::map<std::string, dbus::Value>& properties);
+
+    /**
+     * @brief Extracts transport medium value from the object's interfaces
+     *
+     * @param interfaces collection map with interfaces and its properties
+     * @return std::optional<spdmcpp::TransportMedium> with transport medium or false if failed
+     */
+    std::optional<spdmcpp::TransportMedium> getMediumType(const dbus::InterfaceMap& interfaces);
+
+    /**
+     * @brief Extracts transport medium value from the object's interfaces
+     *
+     * @param properties collection of properties that comes from proper interface
+     * @return std::optional<spdmcpp::TransportMedium>
+     */
+    std::optional<spdmcpp::TransportMedium> getMediumType(const std::map<std::string, dbus::Value>& properties);
 
     /** @brief Extract UUID value from the object's interfaces */
     std::string getUUID(const dbus::InterfaceMap& interfaces);

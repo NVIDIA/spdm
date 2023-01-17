@@ -11,6 +11,7 @@
 #include <sdeventplus/source/io.hpp>
 
 #include <memory>
+#include <map>
 
 using namespace std;
 using namespace spdmd;
@@ -50,12 +51,6 @@ class SpdmdApp : public SpdmdAppContext
      */
     void connectMCTP();
 
-    /** @brief Create new Responder object
-     *
-     */
-    void createResponder(uint8_t eid,
-                         const sdbusplus::message::object_path& mctpPath,
-                         const sdbusplus::message::object_path& inventoryPath);
 
     /** @brief Sets up the automatic measurement delay according to commandline
      * parameters
@@ -74,9 +69,26 @@ class SpdmdApp : public SpdmdAppContext
     {
         return SpdmdAppContext::bus;
     }
-  
+
+    /** @brief Check the UUIDs in the existing disovery table responder
+     * and create responder when UUID is not exist, or re-create responder
+     * if the higher priority reponder is detected
+     * @param respArgs Discovered response arguments
+     *
+    */
+    void discoveryUpdateResponder(const dbus_api::ResponderArgs& respArg);
 
   private:
+    /** @brief Create new Responder object
+     *
+     */
+    void createResponder(const dbus_api::ResponderArgs& args);
+
+    /** @brief When responder should be recreated
+     *
+    */
+    static bool needRecreateResponder( spdmcpp::TransportMedium currMedium, spdmcpp::TransportMedium newMedium);
+
     /** @brief verbose - debug level for SPDM daemon */
     spdmcpp::LogClass::Level verbose = spdmcpp::LogClass::Level::Emergency;
 
@@ -86,10 +98,12 @@ class SpdmdApp : public SpdmdAppContext
 
     /** @brief Event handlar for MCTP events - used for transmission purposes
      * over MCTP */
-    sdeventplus::source::IO* mctpEvent = nullptr;
+    std::unique_ptr<sdeventplus::source::IO> mctpEvent;
 
     /** @brief Array of all responder objects, managed by SPDM daemon */
-    std::vector<dbus_api::Responder*> responders;
+    std::vector<std::unique_ptr<dbus_api::Responder>> responders;
+    /** @brief Discovery responders by UUID map*/
+    std::map<std::string, dbus_api::ResponderArgs> resp_discovery;
 
     /** @brief Buffer for packets received from responders over MCTP */
     std::vector<uint8_t> packetBuffer;

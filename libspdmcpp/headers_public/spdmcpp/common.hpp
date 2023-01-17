@@ -26,6 +26,16 @@ constexpr timeout_ms_t timeoutMsInfinite =
     std::numeric_limits<timeout_ms_t>::max();
 constexpr timeout_ms_t timeoutMsMaximum = timeoutMsInfinite - 1;
 
+/**
+ * @enum transportMedium
+ * @brief Specify transport medium under MCTP protocol
+*/
+enum class TransportMedium : char {
+    PCIe,
+    SPI,
+    I2C
+};
+
 /** @struct NonCopyable
  *  @brief Helper class for deleting copy ops
  *  @details We often don't needed/want these and clang-tidy complains about

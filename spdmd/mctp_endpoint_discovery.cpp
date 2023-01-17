@@ -110,7 +110,10 @@ void MctpDiscovery::mctpNewObjectSignal(
     }
 #endif
 
-    spdmApp.createResponder((mctp_eid_t)eid, objPath, invPath);
+    auto mediumType = getMediumType(interfaces);
+    dbus_api::ResponderArgs args { mctp_eid_t(eid), uuid, mediumType, objPath, invPath };
+    spdmApp.discoveryUpdateResponder(args);
+
 }
 
 #ifndef DISCOVERY_ONLY_FROM_MCTP_CONTROL
@@ -139,8 +142,9 @@ void MctpDiscovery::inventoryNewObjectSignal(
         spdmApp.getLog().iprintln("SPDM inventoryNewObjectSignal couldn't get EID for UUID '"s + uuid + '\'');
         return;
     }
-    
-    spdmApp.createResponder((mctp_eid_t)eid, mctp.path, objPath);
+    auto mediumType = getMediumType(interfaces);
+    dbus_api::ResponderArgs args { mctp_eid_t(eid), uuid, mediumType, mctp.path, objPath };
+    spdmApp.discoveryUpdateResponder(args);
 }
 #endif
 
@@ -288,5 +292,53 @@ sdbusplus::message::object_path
     }
     return {};
 }
+
+std::optional<spdmcpp::TransportMedium> MctpDiscovery::getMediumType(const dbus::InterfaceMap& interfaces)
+{
+    auto intf = interfaces.find(mctpEndpointIntfName);
+    if (intf != interfaces.end())
+    {
+        return getMediumType(intf->second);
+    }
+    return std::nullopt;
+}
+
+std::optional<spdmcpp::TransportMedium> MctpDiscovery::getMediumType(const std::map<std::string, dbus::Value>& properties)
+{
+    if (!properties.contains(mctpEndpointIntfPropertyMediumType))
+    {
+        return spdmcpp::TransportMedium::PCIe;
+    }
+    std::string mediumTypeStr;
+
+    try
+    {
+        mediumTypeStr = std::get<std::string>(properties.at(mctpEndpointIntfPropertyMediumType));
+        mediumTypeStr = mediumTypeStr.substr(mediumTypeStr.find_last_of('.')+1);
+    }
+    catch (const std::bad_variant_access& e)
+    {
+        return std::nullopt;
+    }
+    catch (const std::exception& e)
+    {
+        return std::nullopt;
+    }
+    if (mediumTypeStr == "PCIe")
+    {
+        return spdmcpp::TransportMedium::PCIe;
+    }
+    if (mediumTypeStr == "SPI")
+    {
+        return spdmcpp::TransportMedium::SPI;
+    }
+    if (mediumTypeStr == "SMBus")
+    {
+        return spdmcpp::TransportMedium::I2C;
+    }
+    return std::nullopt;
+}
+
+
 
 } // namespace spdmd

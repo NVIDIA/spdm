@@ -24,6 +24,17 @@ namespace dbus_api
 
 class Responder;
 
+/**
+ * @struct Responder creation parameters
+*/
+struct ResponderArgs {
+    uint8_t eid;
+    std::string uuid;
+    std::optional<spdmcpp::TransportMedium> medium;
+    sdbusplus::message::object_path mctpPath;
+    sdbusplus::message::object_path inventoryPath;
+};
+
 /** @class MctpTransportClass
  *  @brief Support class for transport through the mctp-demux-daemon with
  * timeouts handled by sdeventplus

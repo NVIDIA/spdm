@@ -19,8 +19,7 @@ constexpr auto spdmDefaultService = "xyz.openbmc_project.SPDM";
 namespace spdmd
 {
 
-dbus::ServiceHelper inventoryService("/",
-                                     "org.freedesktop.DBus.ObjectManager",
+dbus::ServiceHelper inventoryService("/", "org.freedesktop.DBus.ObjectManager",
                                      "xyz.openbmc_project.PLDM");
 
 SpdmdApp::SpdmdApp() :
@@ -34,8 +33,6 @@ SpdmdApp::SpdmdApp() :
 SpdmdApp::~SpdmdApp()
 {
     context.unregisterIo(mctpIo);
-
-    delete mctpEvent;
 }
 
 void SpdmdApp::setupCli(int argc, char** argv)
@@ -71,9 +68,9 @@ void SpdmdApp::setupCli(int argc, char** argv)
     {
         getLog().setLogLevel(verbose);
         getLog().print("Verbose log level set to " +
-                  Logging::server::convertForMessage(
-                      (Logging::server::Entry::Level)verbose) +
-                  "\n");
+                       Logging::server::convertForMessage(
+                           (Logging::server::Entry::Level)verbose) +
+                       "\n");
     }
     else
     {
@@ -139,8 +136,10 @@ void SpdmdApp::connectMCTP()
 
         {
             auto rs = mctpIo.read(packetBuffer);
-            if (rs != spdmcpp::RetStat::OK) {
-                getLog().println("SpdmdApp::IO read failed likely due to broken socket connection, quitting!");
+            if (rs != spdmcpp::RetStat::OK)
+            {
+                getLog().println(
+                    "SpdmdApp::IO read failed likely due to broken socket connection, quitting!");
                 event.exit(1);
                 return;
             }
@@ -153,90 +152,136 @@ void SpdmdApp::connectMCTP()
                 spdmcpp::MctpTransportClass::peekEid(packetBuffer, lay, eid);
 
             SPDMCPP_LOG_TRACE_RS(getLog(), rs);
-            switch (rs) {
-            case spdmcpp::RetStat::OK:
-                break;
-            case spdmcpp::RetStat::ERROR_BUFFER_TOO_SMALL:
-                getLog().print("SpdmdApp::IO: packet size = ");
-                getLog().print(packetBuffer.size());
-                getLog().println(" is too small to be a valid SPDM packet");
-                return;
-            default:
-                getLog().print("SpdmdApp::IO peekEid returned unexpected error: ");
-                getLog().println(rs);
-                return;
+            switch (rs)
+            {
+                case spdmcpp::RetStat::OK:
+                    break;
+                case spdmcpp::RetStat::ERROR_BUFFER_TOO_SMALL:
+                    getLog().print("SpdmdApp::IO: packet size = ");
+                    getLog().print(packetBuffer.size());
+                    getLog().println(" is too small to be a valid SPDM packet");
+                    return;
+                default:
+                    getLog().print(
+                        "SpdmdApp::IO peekEid returned unexpected error: ");
+                    getLog().println(rs);
+                    return;
             }
         }
         if (eid >= responders.size())
         {
             getLog().println("SpdmdApp::IO received message from EID=" +
-                        std::to_string(eid) +
-                        " outside of responder array size=" +
-                        std::to_string(responders.size()));
+                             std::to_string(eid) +
+                             " outside of responder array size=" +
+                             std::to_string(responders.size()));
             return;
         }
-        auto resp = responders[eid];
-        if (!resp)
+        if (!responders[eid])
         {
             getLog().println("SpdmdApp::IO received message from EID=" +
-                        std::to_string(eid) +
-                        " while responder class is not created");
+                             std::to_string(eid) +
+                             " while responder class is not created");
         }
         else
         {
+            auto& resp = responders[eid];
             spdmcpp::EventReceiveClass ev(packetBuffer);
             resp->handleEvent(ev);
         }
     };
 
-    mctpEvent = new sdeventplus::source::IO(event, mctpIo.getSocket(), EPOLLIN,
-                                            std::move(callback));
+    mctpEvent = std::make_unique<sdeventplus::source::IO>(
+        event, mctpIo.getSocket(), EPOLLIN, std::move(callback));
 }
 
-void SpdmdApp::createResponder(
-    uint8_t eid, const sdbusplus::message::object_path& mctpPath,
-    const sdbusplus::message::object_path& inventoryPath)
+bool SpdmdApp::needRecreateResponder(spdmcpp::TransportMedium currMedium,
+                                     spdmcpp::TransportMedium newMedium)
+{
+    using tran = spdmcpp::TransportMedium;
+    switch (currMedium)
+    {
+        case tran::PCIe:
+            return false;
+        case tran::SPI:
+            return newMedium == tran::PCIe;
+        case tran::I2C:
+            return newMedium != tran::I2C;
+    }
+    return false;
+}
+
+void SpdmdApp::discoveryUpdateResponder(const dbus_api::ResponderArgs& respArg)
+{
+
+    const auto it = resp_discovery.find(respArg.uuid);
+    if (it == std::end(resp_discovery))
+    {
+        // Discovery object by UUID not found select first
+        resp_discovery.emplace(std::make_pair(respArg.uuid, respArg));
+        createResponder(respArg);
+        reportNotice("Create first responder UUID: " + respArg.uuid +
+                     " EID: " + std::to_string(respArg.eid));
+    }
+    else
+    {
+        // Discovery found recreate if needed
+        if (respArg.medium.has_value() && it->second.medium.has_value())
+        {
+            if (needRecreateResponder(it->second.medium.value(),
+                                      respArg.medium.value()))
+            {
+                reportNotice("Recreate responder UUID: " + respArg.uuid +
+                             " EID: " + std::to_string(respArg.eid));
+                responders[it->second.eid].reset();
+                resp_discovery.emplace(std::make_pair(respArg.uuid, respArg));
+                createResponder(respArg);
+            }
+            else
+            {
+                reportNotice("Lower priority responder not need create: " +
+                             it->first);
+            }
+        }
+        else
+        {
+            reportNotice("Unknown transport medium when recreate: " +
+                         it->first);
+        }
+    }
+}
+
+void SpdmdApp::createResponder(const dbus_api::ResponderArgs& args)
 {
     SPDMCPP_LOG_TRACE_FUNC(getLog());
-    if (eid >= responders.size())
+    if (args.eid >= responders.size())
     {
-        responders.resize(eid + 1);
+        responders.resize(args.eid + 1);
     }
 
-    if (responders[eid])
-    {
-        // The device is already created.
-        // It's been decided this is not an error and should be silently
-        // ignored. In part because it happens when pldmd is restarted.
-        // In general device removal and hot-plug is not supported by pldm or
-        // spdm.
-        return;
-    }
-
-    string msg =
-        "Creating SPDM object for a responder with EID = " + to_string(eid);
+    string msg = "Creating SPDM object for a responder with EID = " +
+                 to_string(args.eid);
     reportNotice(msg);
 
     std::string path(spdmRootObjectPath);
     { // construct responder path
         path += '/';
-        auto sub = inventoryPath.filename();
+        auto sub = args.inventoryPath.filename();
         if (!sub.empty())
         {
             path += sub;
         }
         else
         { // fallback to eid for local-testing
-            path += std::to_string(eid);
+            path += std::to_string(args.eid);
         }
     }
-    responders[eid] =
-        new dbus_api::Responder(*this, path, eid, mctpPath, inventoryPath);
+    responders[args.eid] = std::make_unique<dbus_api::Responder>(
+        *this, path, args.eid, args.mctpPath, args.inventoryPath);
 
 #if FETCH_SERIALNUMBER_FROM_RESPONDER != 0
-    responders[eid]->refreshSerialNumber();
+    responders[args.eid]->refreshSerialNumber();
 #endif
-    autoMeasure(eid);
+    autoMeasure(args.eid);
 }
 
 void SpdmdApp::setupMeasurementDelay()
