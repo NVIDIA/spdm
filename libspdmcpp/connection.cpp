@@ -12,9 +12,10 @@
 #define SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs)                                 \
     do                                                                         \
     {                                                                          \
-        SPDMCPP_LOG_TRACE_RS(Log, (rs));                                       \
-        if (isError(rs))                                                       \
+        if (isError(rs)) {                                                     \
+            SPDMCPP_LOG_TRACE(Log, (rs));                                      \
             return rs;                                                         \
+        }                                                                      \
     } while (false)
 
 namespace spdmcpp

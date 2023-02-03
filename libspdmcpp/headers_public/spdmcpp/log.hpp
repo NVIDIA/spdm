@@ -345,6 +345,19 @@ class TraceHelper
         (log).println(__LINE__);                                                 \
     }
 
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+#define SPDMCPP_LOG_TRACE(log, rs)                                               \
+    {                                                                            \
+        (log).iprint(#rs " = ");                                                 \
+        (log).print((rs));                                                       \
+        (log).print("; in: ");                                                   \
+        (log).print((__func__)); /*NOLINT cppcoreguidelines-pro-bounds-array-to-pointer-decay*/ \
+        (log).print("() @ ");                                                    \
+        (log).print(__FILE__);                                                   \
+        (log).print(" : ");                                                      \
+        (log).println(__LINE__);                                                 \
+    }
+
 // clang-format on
 
 } // namespace spdmcpp
