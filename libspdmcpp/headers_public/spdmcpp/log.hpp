@@ -347,6 +347,7 @@ class TraceHelper
 
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define SPDMCPP_LOG_TRACE(log, rs)                                               \
+    if ((log).logLevel >= spdmcpp::LogClass::Level::Error)                       \
     {                                                                            \
         (log).iprint(#rs " = ");                                                 \
         (log).print((rs));                                                       \

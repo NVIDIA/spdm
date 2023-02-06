@@ -106,16 +106,14 @@ struct PacketDigestsResponseVar
 }
 
 [[nodiscard]] inline RetStat
-    packetDecodeInternal(PacketDigestsResponseVar& p,
+    packetDecodeInternal(spdmcpp::LogClass& logg,PacketDigestsResponseVar& p,
                          const std::vector<uint8_t>& buf, size_t& off,
                          const PacketDecodeInfo& info)
 {
-    auto rs = packetDecodeInternal(p.Min, buf, off);
+    auto rs = packetDecodeInternal(logg, p.Min, buf, off);
     if (isError(rs))
     {
-        {
             return rs;
-        }
     }
 
     //     p.Digests.resize(countBits(
@@ -125,7 +123,7 @@ struct PacketDigestsResponseVar
         if ((1 << i) & p.Min.Header.Param2)
         {
             p.Digests[i].resize(info.BaseHashSize);
-            rs = packetDecodeBasic(p.Digests[i], buf, off);
+            rs = packetDecodeBasic(logg, p.Digests[i], buf, off);
             if (isError(rs))
             {
                 return rs;

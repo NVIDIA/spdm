@@ -126,11 +126,11 @@ struct PacketChallengeAuthResponseVar
 }
 
 [[nodiscard]] inline RetStat
-    packetDecodeInternal(PacketChallengeAuthResponseVar& p,
+    packetDecodeInternal(spdmcpp::LogClass& logg,PacketChallengeAuthResponseVar& p,
                          const std::vector<uint8_t>& buf, size_t& off,
                          const PacketDecodeInfo& info)
 {
-    auto rs = packetDecodeInternal(p.Min, buf, off);
+    auto rs = packetDecodeInternal(logg, p.Min, buf, off);
     if (isError(rs))
     {
         {
@@ -139,7 +139,7 @@ struct PacketChallengeAuthResponseVar
     }
 
     p.CertChainHashVector.resize(info.BaseHashSize);
-    rs = packetDecodeBasic(p.CertChainHashVector, buf, off);
+    rs = packetDecodeBasic(logg, p.CertChainHashVector, buf, off);
     if (isError(rs))
     {
         {
@@ -147,7 +147,7 @@ struct PacketChallengeAuthResponseVar
         }
     }
 
-    rs = packetDecodeBasic(p.Nonce, buf, off);
+    rs = packetDecodeBasic(logg, p.Nonce, buf, off);
     if (isError(rs))
     {
         {
@@ -158,7 +158,7 @@ struct PacketChallengeAuthResponseVar
     if (info.ChallengeParam2)
     {
         p.MeasurementSummaryHashVector.resize(info.BaseHashSize);
-        rs = packetDecodeBasic(p.MeasurementSummaryHashVector, buf, off);
+        rs = packetDecodeBasic(logg, p.MeasurementSummaryHashVector, buf, off);
         if (isError(rs))
         {
             {
@@ -168,7 +168,7 @@ struct PacketChallengeAuthResponseVar
     }
     {
         uint16_t length = 0;
-        rs = packetDecodeBasic(length, buf,
+        rs = packetDecodeBasic(logg, length, buf,
                                off); // TODO verify no greater than 1024
         if (isError(rs))
         {
@@ -177,7 +177,7 @@ struct PacketChallengeAuthResponseVar
             }
         }
         p.OpaqueDataVector.resize(length);
-        rs = packetDecodeBasic(p.OpaqueDataVector, buf, off);
+        rs = packetDecodeBasic(logg, p.OpaqueDataVector, buf, off);
         if (isError(rs))
         {
             {
@@ -186,7 +186,7 @@ struct PacketChallengeAuthResponseVar
         }
     }
     p.SignatureVector.resize(info.SignatureSize);
-    rs = packetDecodeBasic(p.SignatureVector, buf, off);
+    rs = packetDecodeBasic(logg, p.SignatureVector, buf, off);
     return rs;
 }
 

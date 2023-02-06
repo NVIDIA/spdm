@@ -153,10 +153,10 @@ struct PacketAlgorithmsResponseVar
 }
 
 [[nodiscard]] inline RetStat
-    packetDecodeInternal(PacketAlgorithmsResponseVar& p,
+    packetDecodeInternal(spdmcpp::LogClass& logg,PacketAlgorithmsResponseVar& p,
                          const std::vector<uint8_t>& buf, size_t& off)
 {
-    auto rs = packetDecodeInternal(p.Min, buf, off);
+    auto rs = packetDecodeInternal(logg, p.Min, buf, off);
     if (isError(rs))
     {
         {
@@ -167,7 +167,7 @@ struct PacketAlgorithmsResponseVar
     p.PacketReqAlgVector.resize(p.Min.Header.Param1);
     for (auto& iter : p.PacketReqAlgVector)
     {
-        rs = packetDecodeInternal(iter, buf, off);
+        rs = packetDecodeInternal(logg,iter, buf, off);
         if (isError(rs))
         {
             return rs;

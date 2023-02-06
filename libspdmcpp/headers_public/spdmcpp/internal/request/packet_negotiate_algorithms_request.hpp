@@ -130,17 +130,17 @@ struct PacketReqAlgStruct
     return RetStat::OK;
 }
 [[nodiscard]] inline RetStat
-    packetDecodeInternal(PacketReqAlgStruct& p, const std::vector<uint8_t>& buf,
+    packetDecodeInternal(spdmcpp::LogClass& logg,PacketReqAlgStruct& p, const std::vector<uint8_t>& buf,
                          size_t& off)
 {
-    auto rs = packetDecodeBasic(p.AlgType, buf, off);
+    auto rs = packetDecodeBasic(logg, p.AlgType, buf, off);
     if (isError(rs))
     {
         {
             return rs;
         }
     }
-    rs = packetDecodeBasic(p.AlgCount, buf, off);
+    rs = packetDecodeBasic(logg, p.AlgCount, buf, off);
     if (isError(rs))
     {
         {
@@ -150,7 +150,7 @@ struct PacketReqAlgStruct
     // TODO validate p.AlgType & Count?
     for (uint8_t i = 0; i < p.getFixedAlgCount(); ++i)
     {
-        rs = packetDecodeBasic(p.AlgSupported[i], buf, off);
+        rs = packetDecodeBasic(logg, p.AlgSupported[i], buf, off);
         if (isError(rs))
         {
             {
@@ -160,7 +160,7 @@ struct PacketReqAlgStruct
     }
     for (uint8_t i = 0; i < p.getExtAlgCount(); ++i)
     {
-        rs = packetDecodeBasic(p.AlgExternal[i], buf, off);
+        rs = packetDecodeBasic(logg, p.AlgExternal[i], buf, off);
         if (isError(rs))
         {
             {
@@ -319,17 +319,17 @@ struct PacketNegotiateAlgorithmsRequestVar
 }
 
 [[nodiscard]] inline RetStat
-    packetDecodeInternal(PacketNegotiateAlgorithmsRequestVar& p,
+    packetDecodeInternal(spdmcpp::LogClass& logg,PacketNegotiateAlgorithmsRequestVar& p,
                          const std::vector<uint8_t>& buf, size_t& off)
 {
-    auto rs = packetDecodeInternal(p.Min, buf, off);
+    auto rs = packetDecodeInternal(logg,p.Min, buf, off);
 
     // TODO HANDLE ExtAsymCount and ExtHashCount!!!
 
     p.PacketReqAlgVector.resize(p.Min.Header.Param1);
     for (auto& iter : p.PacketReqAlgVector)
     {
-        rs = packetDecodeInternal(iter, buf, off);
+        rs = packetDecodeInternal(logg, iter, buf, off);
         if (isError(rs))
         {
             return rs;

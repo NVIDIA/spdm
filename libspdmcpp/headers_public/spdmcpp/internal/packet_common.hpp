@@ -7,7 +7,7 @@
 
 // helper for basic types
 template <typename T>
-[[nodiscard]] RetStat packetDecodeBasic(T& p, const std::vector<uint8_t>& buf,
+[[nodiscard]] RetStat packetDecodeBasic(spdmcpp::LogClass& logg, T& p, const std::vector<uint8_t>& buf,
                                         size_t& start)
 {
     SPDMCPP_ASSERT(
@@ -15,6 +15,9 @@ template <typename T>
         buf.size()); // TODO need macros for various categories of asserts!!!
     if (start + sizeof(p) > buf.size())
     {
+        SPDMCPP_LOG_TRACE(logg, start);
+        SPDMCPP_LOG_TRACE(logg, sizeof(p));
+        SPDMCPP_LOG_TRACE(logg, buf.size());
         return RetStat::ERROR_BUFFER_TOO_SMALL;
     }
     // NOLINTNEXTLINE cppcoreguidelines-pro-type-reinterpret-cast
@@ -26,7 +29,7 @@ template <typename T>
 // helper for statically sized structures
 template <typename T>
 [[nodiscard]] RetStat
-    packetDecodeInternal(T& p, const std::vector<uint8_t>& buf, size_t& start)
+    packetDecodeInternal(spdmcpp::LogClass& logg ,T& p, const std::vector<uint8_t>& buf, size_t& start)
 {
     SPDMCPP_STATIC_ASSERT(T::sizeIsConstant);
     SPDMCPP_ASSERT(
@@ -34,6 +37,9 @@ template <typename T>
         buf.size()); // TODO need macros for various categories of asserts!!!
     if (start + sizeof(p) > buf.size())
     {
+        SPDMCPP_LOG_TRACE(logg, start);
+        SPDMCPP_LOG_TRACE(logg, sizeof(p));
+        SPDMCPP_LOG_TRACE(logg, buf.size());
         return RetStat::ERROR_BUFFER_TOO_SMALL;
     }
     // NOLINTNEXTLINE cppcoreguidelines-pro-type-reinterpret-cast
@@ -52,21 +58,30 @@ template <typename T>
  * end it marks the offset right after the decoded packet
  */
 template <typename T, typename... Targs>
-[[nodiscard]] RetStat packetDecode(T& p, const std::vector<uint8_t>& buf,
+[[nodiscard]] RetStat packetDecode(spdmcpp::LogClass& logg,T& p, const std::vector<uint8_t>& buf,
                                    size_t& off, Targs... fargs)
 {
     if (off + sizeof(PacketMessageHeader) > buf.size())
     {
+        SPDMCPP_LOG_TRACE(logg, off);
+        SPDMCPP_LOG_TRACE(logg,  sizeof(PacketMessageHeader));
+        SPDMCPP_LOG_TRACE(logg, buf.size());
         return RetStat::ERROR_BUFFER_TOO_SMALL;
     }
     if (packetMessageHeaderGetRequestresponsecode(buf, off) !=
         T::requestResponseCode)
     {
+        SPDMCPP_LOG_TRACE(logg, off);
+        SPDMCPP_LOG_TRACE(logg,  sizeof(PacketMessageHeader));
+        SPDMCPP_LOG_TRACE(logg, buf.size());
         return RetStat::ERROR_WRONG_REQUEST_RESPONSE_CODE;
     }
-    auto rs = packetDecodeInternal(p, buf, off, fargs...);
+    auto rs = packetDecodeInternal(logg, p, buf, off, fargs...);
     if (isError(rs))
     {
+        SPDMCPP_LOG_TRACE(logg, off);
+        SPDMCPP_LOG_TRACE(logg,  sizeof(PacketMessageHeader));
+        SPDMCPP_LOG_TRACE(logg, buf.size());
         return rs;
     }
     if (off < buf.size())
@@ -156,23 +171,26 @@ inline void packetEncodeBasic(const std::array<uint8_t, N>& src,
     packetEncodeBasic(src.data(), src.size(), buf, start);
 }
 
-[[nodiscard]] inline RetStat packetDecodeBasic(uint8_t* dst, size_t size,
+[[nodiscard]] inline RetStat packetDecodeBasic(spdmcpp::LogClass& logg,uint8_t* dst, size_t size,
                                                const std::vector<uint8_t>& buf,
                                                size_t& start)
 {
     if (start + size > buf.size())
     {
+        SPDMCPP_LOG_TRACE(logg,start);
+        SPDMCPP_LOG_TRACE(logg,size);
+        SPDMCPP_LOG_TRACE(logg,buf.size());
         return RetStat::ERROR_BUFFER_TOO_SMALL;
     }
     memcpy(dst, &buf[start], size);
     start += size;
     return RetStat::OK;
 }
-[[nodiscard]] inline RetStat packetDecodeBasic(std::vector<uint8_t>& dst,
+[[nodiscard]] inline RetStat packetDecodeBasic(spdmcpp::LogClass& logg,std::vector<uint8_t>& dst,
                                                const std::vector<uint8_t>& buf,
                                                size_t& start)
 {
-    return packetDecodeBasic(dst.data(), dst.size(), buf, start);
+    return packetDecodeBasic(logg, dst.data(), dst.size(), buf, start);
 }
 
 #endif

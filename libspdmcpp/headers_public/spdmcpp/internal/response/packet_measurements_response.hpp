@@ -169,11 +169,11 @@ struct PacketMeasurementsResponseVar // TODO all variable packets don't need
 }
 
 [[nodiscard]] inline RetStat
-    packetDecodeInternal(PacketMeasurementsResponseVar& p,
+    packetDecodeInternal(spdmcpp::LogClass& logg, PacketMeasurementsResponseVar& p,
                          const std::vector<uint8_t>& buf, size_t& off,
                          const PacketDecodeInfo& info)
 {
-    auto rs = packetDecodeInternal(p.Min, buf, off);
+    auto rs = packetDecodeInternal(logg, p.Min, buf, off);
     if (isError(rs))
     {
         {
@@ -188,51 +188,52 @@ struct PacketMeasurementsResponseVar // TODO all variable packets don't need
             p.MeasurementBlockVector.resize(p.MeasurementBlockVector.size() +
                                             1);
             rs =
-                packetDecodeInternal(p.MeasurementBlockVector.back(), buf, off);
+                packetDecodeInternal(logg,p.MeasurementBlockVector.back(), buf, off);
+            
+            SPDMCPP_LOG_TRACE(logg, p.Min.getMeasurementRecordLength());
             if (isError(rs))
             {
-                {
-                    return rs;
-                }
+                return rs;
             }
-        }
+    }
         if (off != end)
         {
             return RetStat::ERROR_UNKNOWN;
         }
     }
-    rs = packetDecodeBasic(p.Nonce, buf, off);
+    rs = packetDecodeBasic(logg, p.Nonce, buf, off);
+
+    SPDMCPP_LOG_TRACE(logg, p.Min.getMeasurementRecordLength());
     if (isError(rs))
     {
-        {
-            return rs;
-        }
+        return rs;
     }
 
     {
         uint16_t length = 0;
-        rs = packetDecodeBasic(length, buf,
+        rs = packetDecodeBasic(logg, length, buf,
                                off); // TODO verify no greater than 1024
         if (isError(rs))
         {
-            {
-                return rs;
-            }
+            SPDMCPP_LOG_TRACE(logg, p.Min.getMeasurementRecordLength());
+            return rs;
         }
 
         p.OpaqueDataVector.resize(length);
-        rs = packetDecodeBasic(p.OpaqueDataVector, buf, off);
+        rs = packetDecodeBasic(logg, p.OpaqueDataVector, buf, off);
         if (isError(rs))
         {
-            {
-                return rs;
-            }
+            SPDMCPP_LOG_TRACE(logg, p.Min.getMeasurementRecordLength());
+            return rs;
         }
     }
     if (info.GetMeasurementsParam1 & 0x01)
     {
         p.SignatureVector.resize(info.SignatureSize);
-        rs = packetDecodeBasic(p.SignatureVector, buf, off);
+        rs = packetDecodeBasic(logg, p.SignatureVector, buf, off);
+        if(isError(rs)) {
+            SPDMCPP_LOG_TRACE(logg, p.Min.getMeasurementRecordLength());
+        }
     }
 
     return rs;

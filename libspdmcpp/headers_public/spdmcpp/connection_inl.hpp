@@ -67,7 +67,7 @@ RetStat ConnectionClass::interpretResponse(T& packet, Targs... fargs)
         transport->decode(ResponseBuffer, lay);
     }
     size_t off = lay.getEndOffset();
-    auto rs = packetDecode(packet, ResponseBuffer, off, fargs...);
+    auto rs = packetDecode(Log, packet, ResponseBuffer, off, fargs...);
     if (isError(rs))
     {
         if (rs == RetStat::ERROR_WRONG_REQUEST_RESPONSE_CODE)
@@ -100,6 +100,7 @@ RetStat ConnectionClass::setupResponseWait(timeout_ms_t timeout, uint16_t retry)
     SPDMCPP_ASSERT(WaitingForResponse == RequestResponseEnum::INVALID);
     SPDMCPP_STATIC_ASSERT(isResponse(T::requestResponseCode));
     WaitingForResponse = T::requestResponseCode;
+    DbgLastWaitingForResponse = WaitingForResponse;
 
     if (timeout != timeoutMsInfinite)
     {

@@ -94,10 +94,10 @@ struct PacketCertificateResponseVar
 }
 
 [[nodiscard]] inline RetStat
-    packetDecodeInternal(PacketCertificateResponseVar& p,
+    packetDecodeInternal(spdmcpp::LogClass& logg,PacketCertificateResponseVar& p,
                          const std::vector<uint8_t>& buf, size_t& off)
 {
-    auto rs = packetDecodeInternal(p.Min, buf, off);
+    auto rs = packetDecodeInternal(logg, p.Min, buf, off);
     if (isError(rs))
     {
         {

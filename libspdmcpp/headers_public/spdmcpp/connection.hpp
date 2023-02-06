@@ -138,8 +138,23 @@ class ConnectionClass : public NonCopyable
      * information
      *  @param[in] log - the LogClass to use for logging
      */
-    explicit ConnectionClass(const ContextClass& context, LogClass& log);
+    explicit ConnectionClass(const ContextClass& context, LogClass& log, uint8_t eid);
     ~ConnectionClass() = default;
+
+
+    /** @brief get send timeout during the connection
+     * 
+    */
+    auto getSendTimeoutValue() const noexcept {
+        return SendTimeout;
+    }
+
+    /** @brief Get send buffer value
+     * 
+    */
+    const auto& getSendBufferRef() const noexcept {
+        return SendBuffer;
+    }
 
     /** @brief Registers a TransportClass for handling the connection (e.g. with
      * standard mtcp-demux-daemon the instance handles encapsulating with the
@@ -252,6 +267,12 @@ class ConnectionClass : public NonCopyable
     bool isWaitingForResponse() const
     {
         return WaitingForResponse != RequestResponseEnum::INVALID;
+    }
+
+    /* @brief Get wait for state*/
+    auto getDbgLastWaitState() const noexcept 
+    {
+        return DbgLastWaitingForResponse;
     }
 
     /** @brief The hash algorithm used for generating signatures
@@ -670,6 +691,11 @@ class ConnectionClass : public NonCopyable
      */
     RequestResponseEnum WaitingForResponse = RequestResponseEnum::INVALID;
 
+    /** @brief The last response we are wating for debug purpose only
+     * 
+    */
+    RequestResponseEnum DbgLastWaitingForResponse = RequestResponseEnum::INVALID;
+
     /** @brief Bitmask for which ConnectionInfoEnum we're holding used by
      * markInfo and hasInfo
      */
@@ -709,6 +735,9 @@ class ConnectionClass : public NonCopyable
      * for communication
      */
     RetStat chooseVersion();
+
+public:
+    const uint8_t m_eid;
 };
 
 } // namespace spdmcpp

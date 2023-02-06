@@ -88,10 +88,10 @@ struct PacketMeasurementFieldVar
 }
 
 [[nodiscard]] inline RetStat
-    packetDecodeInternal(PacketMeasurementFieldVar& p,
+    packetDecodeInternal(spdmcpp::LogClass& logg,PacketMeasurementFieldVar& p,
                          const std::vector<uint8_t>& buf, size_t& off)
 {
-    auto rs = packetDecodeBasic(p.Min, buf, off);
+    auto rs = packetDecodeBasic(logg, p.Min, buf, off);
     if (isError(rs))
     {
         {
@@ -100,7 +100,7 @@ struct PacketMeasurementFieldVar
     }
 
     p.ValueVector.resize(p.Min.Size);
-    rs = packetDecodeBasic(p.ValueVector, buf, off);
+    rs = packetDecodeBasic(logg, p.ValueVector, buf, off);
     return rs;
 }
 

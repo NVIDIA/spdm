@@ -120,12 +120,12 @@ class SpdmdAppContext
         if ((severity == Logging::server::Entry::Level::Error) &&
             (log.logLevel >= spdmcpp::LogClass::Level::Error))
         {
-            std::cerr << message;
+            std::cerr << message << std::endl;
         }
         else if ((severity == Logging::server::Entry::Level::Notice) &&
                  (log.logLevel >= spdmcpp::LogClass::Level::Notice))
         {
-            log.getOstream() << message;
+            log.getOstream() << message << std::endl;
         }
 
 #ifdef USE_PHOSPHOR_LOGGING

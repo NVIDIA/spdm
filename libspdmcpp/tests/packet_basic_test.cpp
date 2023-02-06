@@ -76,6 +76,7 @@ template <class T>
 bool packetPseudorandomDecodeEncodeBasic()
 {
     SPDMCPP_STATIC_ASSERT(T::sizeIsConstant);
+    LogClass log(std::cerr);
     std::vector<uint8_t> src, dst;
     src.resize(sizeof(T));
     fillPseudoRandom(src);
@@ -86,7 +87,7 @@ bool packetPseudorandomDecodeEncodeBasic()
     T packet;
     {
         size_t off = 0;
-        auto rs = packetDecodeBasic(packet, src, off);
+        auto rs = packetDecodeBasic(log, packet, src, off);
         SPDMCPP_TEST_ASSERT_RS(rs, RetStat::OK);
         if (off != src.size())
         {
@@ -128,7 +129,7 @@ bool packetPseudorandomDecodeEncode()
     T packet;
     {
         size_t off = 0;
-        auto rs = packetDecode(packet, src, off);
+        auto rs = packetDecode(log, packet, src, off);
         SPDMCPP_TEST_ASSERT_RS(rs, RetStat::OK);
         SPDMCPP_ASSERT(off == src.size());
     }
@@ -149,14 +150,14 @@ bool packetPseudorandomDecodeEncode()
     src.push_back(0xBA);
     {
         size_t off = 0;
-        auto rs = packetDecode(packet, src, off);
+        auto rs = packetDecode(log, packet, src, off);
         SPDMCPP_TEST_ASSERT_RS(rs, RetStat::WARNING_BUFFER_TOO_BIG);
     }
     src.pop_back();
     src.pop_back();
     {
         size_t off = 0;
-        auto rs = packetDecode(packet, src, off);
+        auto rs = packetDecode(log, packet, src, off);
         SPDMCPP_TEST_ASSERT_RS(rs, RetStat::ERROR_BUFFER_TOO_SMALL);
     }
     return true;
@@ -183,7 +184,7 @@ bool packetEncodeDecode(const T& src, Targs... fargs)
     T dst;
     {
         size_t off = 0;
-        auto rs = packetDecode(dst, buf, off, fargs...);
+        auto rs = packetDecode(log, dst, buf, off, fargs...);
         if (rs != RetStat::OK)
         {
             std::cerr << "RetStat: " << get_cstr(rs) << std::endl;
@@ -224,7 +225,7 @@ bool packetEncodeDecodeInternal(const T& src, Targs... fargs)
     T dst;
     {
         size_t off = 0;
-        auto rs = packetDecodeInternal(dst, buf, off, fargs...);
+        auto rs = packetDecodeInternal(log,dst, buf, off, fargs...);
         if (rs != RetStat::OK)
         {
             std::cerr << "RetStat: " << get_cstr(rs) << std::endl;

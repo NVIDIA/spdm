@@ -8,21 +8,35 @@
 #include <algorithm>
 #include <fstream>
 
+
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs)                                 \
     do                                                                         \
     {                                                                          \
         if (isError(rs)) {                                                     \
             SPDMCPP_LOG_TRACE(Log, (rs));                                      \
+            SPDMCPP_LOG_TRACE(Log, m_eid);                                     \
+            SPDMCPP_LOG_TRACE(Log, SendBuffer);                                \
+            SPDMCPP_LOG_TRACE(Log, ResponseBuffer);                            \
             return rs;                                                         \
         }                                                                      \
+    } while (false)
+
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+#define SPDMCPP_CONNECTION_RS_ERROR_LOG(print_send_buf)                        \
+    do                                                                         \
+    {                                                                          \
+            SPDMCPP_LOG_TRACE(Log, m_eid);                                     \
+            if((print_send_buf))                                               \
+                SPDMCPP_LOG_TRACE(Log, SendBuffer);                            \
+            SPDMCPP_LOG_TRACE(Log, ResponseBuffer);                            \
     } while (false)
 
 namespace spdmcpp
 {
 
-ConnectionClass::ConnectionClass(const ContextClass& cont, LogClass& log) :
-    context(cont), Log(log)
+ConnectionClass::ConnectionClass(const ContextClass& cont, LogClass& log, uint8_t eid) :
+    context(cont), Log(log), m_eid(eid)
 {
     resetConnection();
 }
@@ -172,7 +186,7 @@ RetStat ConnectionClass::parseCertChain(SlotClass& slot,
     SPDMCPP_LOG_TRACE_FUNC(Log);
     PacketCertificateChain certChain;
     size_t off = 0;
-    auto rs = packetDecodeInternal(certChain, cert, off);
+    auto rs = packetDecodeInternal(Log,certChain, cert, off);
     SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
 
     SPDMCPP_ASSERT(certChain.Length == cert.size());
@@ -180,7 +194,7 @@ RetStat ConnectionClass::parseCertChain(SlotClass& slot,
 
     {
         rootCertHash.resize(getHashSize(Algorithms.Min.BaseHashAlgo));
-        rs = packetDecodeBasic(rootCertHash, cert, off);
+        rs = packetDecodeBasic(Log,rootCertHash, cert, off);
         SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
         if (Log.logLevel >= spdmcpp::LogClass::Level::Informational) {
             Log.iprint("provided root certificate hash = ");
@@ -763,7 +777,7 @@ RetStat ConnectionClass::handleRecv<PacketMeasurementsResponseVar>()
             else
             {
                 size_t off = 0;
-                rs = packetDecodeInternal(DMTFMeasurements[block.Min.Index],
+                rs = packetDecodeInternal(Log, DMTFMeasurements[block.Min.Index],
                                           block.MeasurementVector, off);
                 SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
                 if (off != block.MeasurementVector.size())
@@ -895,10 +909,19 @@ RetStat ConnectionClass::handleRecv(EventReceiveClass& event)
     if (code != WaitingForResponse)
     {
         if (Log.logLevel >= spdmcpp::LogClass::Level::Error) {
-            Log.iprint("ERROR_WRONG_REQUEST_RESPONSE_CODE: ");
-            Log.println(code);
-            Log.iprint(" while waiting for response: ");
-            Log.println(WaitingForResponse);
+            if(isWaitingForResponse()) {
+                Log.iprint("ERROR_WRONG_REQUEST_RESPONSE_CODE: ");
+                Log.println(code);
+                Log.iprint(" while waiting for response: ");
+                Log.println(WaitingForResponse);
+            } else {
+                Log.iprint("Received unexpected response CODE: ");
+                Log.print(code);
+                Log.print(" From EID: ");
+                Log.print(m_eid);
+                Log.println(" while not waiting for any response, discarding this message");
+            }
+            SPDMCPP_CONNECTION_RS_ERROR_LOG(isWaitingForResponse());
         }
         WaitingForResponse = RequestResponseEnum::INVALID;
         return RetStat::ERROR_WRONG_REQUEST_RESPONSE_CODE;

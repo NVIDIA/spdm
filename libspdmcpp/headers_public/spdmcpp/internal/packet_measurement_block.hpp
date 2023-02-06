@@ -105,19 +105,18 @@ struct PacketMeasurementBlockVar
 }
 
 [[nodiscard]] inline RetStat
-    packetDecodeInternal(PacketMeasurementBlockVar& p,
+    packetDecodeInternal(spdmcpp::LogClass& logg,PacketMeasurementBlockVar& p,
                          const std::vector<uint8_t>& buf, size_t& off)
 {
-    auto rs = packetDecodeBasic(p.Min, buf, off);
+    auto rs = packetDecodeBasic(logg, p.Min, buf, off);
     if (isError(rs))
     {
         {
             return rs;
         }
     }
-
     p.MeasurementVector.resize(p.Min.MeasurementSize);
-    rs = packetDecodeBasic(p.MeasurementVector, buf, off);
+    rs = packetDecodeBasic(logg, p.MeasurementVector, buf, off);
     return rs;
 }
 

@@ -83,17 +83,17 @@ struct PacketVersionResponseVar
 };
 
 [[nodiscard]] inline RetStat
-    packetDecodeInternal(PacketVersionResponseVar& p,
+    packetDecodeInternal(spdmcpp::LogClass& logg,PacketVersionResponseVar& p,
                          const std::vector<uint8_t>& buf, size_t& off)
 {
-    auto rs = packetDecodeInternal(p.Min, buf, off);
+    auto rs = packetDecodeInternal(logg,p.Min, buf, off);
     if (rs != RetStat::OK)
     {
         return rs;
     }
     {
         uint8_t size = 0;
-        rs = packetDecodeBasic(size, buf, off);
+        rs = packetDecodeBasic(logg,size, buf, off);
         if (rs != RetStat::OK)
         {
             return rs;
@@ -102,7 +102,7 @@ struct PacketVersionResponseVar
     }
     for (auto& iter : p.VersionNumberEntries)
     {
-        rs = packetDecodeInternal(iter, buf, off);
+        rs = packetDecodeInternal(logg, iter, buf, off);
         if (rs != RetStat::OK)
         {
             return rs;

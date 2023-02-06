@@ -24,7 +24,7 @@ Responder::Responder(SpdmdAppContext& appCtx, const std::string& path,
                      const sdbusplus::message::object_path& mctpPath,
                      const sdbusplus::message::object_path& invPath) :
     ResponderIntf(appCtx.bus, path.c_str(), action::defer_emit),
-    appContext(appCtx), log(appCtx.getLog()), connection(appCtx.context, log),
+    appContext(appCtx), log(appCtx.getLog()), connection(appCtx.context, log, eid),
     transport(eid, *this), inventoryPath(invPath)
 {
     {
@@ -163,42 +163,48 @@ void Responder::syncSlotsInfo()
 void Responder::handleError(spdmcpp::RetStat rs)
 {
     updateLastUpdateTime();
+    const std::string dbgIdName = "eid: " + std::to_string(connection.m_eid) + " name: " + inventoryPath.filename();
     switch (rs)
     {
         case RetStat::ERROR_BUFFER_TOO_SMALL:
         case RetStat::ERROR_WRONG_REQUEST_RESPONSE_CODE:
         case RetStat::ERROR_UNKNOWN_REQUEST_RESPONSE_CODE:
             status(SPDMStatus::Error_RequesterCommunication);
-            appContext.reportError("SPDM requester communication fail");
+            appContext.reportError("SPDM requester communication fail on " + dbgIdName);
             break;
         case RetStat::ERROR_RESPONSE:
             status(SPDMStatus::Error_Responder);
-            appContext.reportError("SPDM responder response fail");
+            appContext.reportError("SPDM responder response fail on " + dbgIdName);
             break;
         case RetStat::ERROR_CERTIFICATE_CHAIN_DIGEST_INVALID:
         case RetStat::ERROR_ROOT_CERTIFICATE_HASH_INVALID:
         case RetStat::ERROR_CERTIFICATE_CHAIN_VERIFIY_FAILED:
         case RetStat::ERROR_CERTIFICATE_PARSING_ERROR:
             status(SPDMStatus::Error_CertificateValidation);
-            appContext.reportError("SPDM certificate validation fail");
+            appContext.reportError("SPDM certificate validation fail on " + dbgIdName);
             break;
         case RetStat::ERROR_AUTHENTICATION_FAILED:
             status(SPDMStatus::Error_AuthenticationFailed);
-            appContext.reportError("SPDM authentication fail");
+            appContext.reportError("SPDM authentication fail on " + dbgIdName);
             break;
         case RetStat::ERROR_MEASUREMENT_SIGNATURE_VERIFIY_FAILED:
             status(SPDMStatus::Error_MeasurementsSignatureVerificationFailed);
             appContext.reportError(
-                "SPDM measurements signature verification fail");
+                "SPDM measurements signature verification fail on " + dbgIdName);
             break;
         case RetStat::ERROR_TIMEOUT:
             status(Responder::SPDMStatus::Error_ConnectionTimeout);
-            appContext.reportError("SPDM timeout");
+            appContext.reportError("SPDM timeout on " + dbgIdName
+                + ", while waiting on: " + get_cstr(connection.getDbgLastWaitState()) 
+                + ", timeout value: " + std::to_string(connection.getSendTimeoutValue()) + "ms"
+            );
+            getLog().print("sendBuffer=");
+            getLog().println(connection.getSendBufferRef());
             break;
         default:
             status(SPDMStatus::Error_Other);
             appContext.reportError(std::string("SPDM other error: ") +
-                                   get_cstr(rs));
+                                   get_cstr(rs) + " on " + dbgIdName);
     }
     SPDMCPP_ASSERT(!connection.isWaitingForResponse());
 }

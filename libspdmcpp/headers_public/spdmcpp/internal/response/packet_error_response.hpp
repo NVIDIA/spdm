@@ -67,10 +67,10 @@ struct PacketErrorResponseVar
 };
 
 [[nodiscard]] inline RetStat
-    packetDecodeInternal(PacketErrorResponseVar& p,
+    packetDecodeInternal(spdmcpp::LogClass& logg,PacketErrorResponseVar& p,
                          const std::vector<uint8_t>& buf, size_t& off)
 {
-    auto rs = packetDecodeInternal(p.Min, buf, off);
+    auto rs = packetDecodeInternal(logg,p.Min, buf, off);
     // TODO handle custom data
     return rs;
 }

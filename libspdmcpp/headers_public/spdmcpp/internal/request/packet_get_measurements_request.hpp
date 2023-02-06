@@ -132,10 +132,10 @@ struct PacketGetMeasurementsRequestVar
 }
 
 [[nodiscard]] inline RetStat
-    packetDecodeInternal(PacketGetMeasurementsRequestVar& p,
+    packetDecodeInternal(spdmcpp::LogClass& logg,PacketGetMeasurementsRequestVar& p,
                          const std::vector<uint8_t>& buf, size_t& off)
 {
-    auto rs = packetDecodeInternal(p.Min, buf, off);
+    auto rs = packetDecodeInternal(logg, p.Min, buf, off);
     if (isError(rs))
     {
         {
@@ -145,7 +145,7 @@ struct PacketGetMeasurementsRequestVar
 
     if (p.hasNonce())
     {
-        rs = packetDecodeBasic(p.Nonce, buf, off);
+        rs = packetDecodeBasic(logg, p.Nonce, buf, off);
         if (isError(rs))
         {
             {
@@ -155,7 +155,7 @@ struct PacketGetMeasurementsRequestVar
 
         if (p.Min.Header.MessageVersion != MessageVersionEnum::SPDM_1_0)
         {
-            rs = packetDecodeBasic(p.SlotIDParam, buf, off);
+            rs = packetDecodeBasic(logg, p.SlotIDParam, buf, off);
             if (isError(rs))
             {
                 {

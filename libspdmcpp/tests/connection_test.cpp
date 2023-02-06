@@ -84,7 +84,7 @@ class ConnectionFixture
     ContextClass Context;
     ConnectionClass Connection;
 
-    ConnectionFixture() : log(std::cout), Connection(Context, log)
+    ConnectionFixture() : log(std::cout), Connection(Context, log, 0)
     {
         Context.registerIo(IO);
         Connection.registerTransport(Trans);
@@ -105,6 +105,7 @@ class ConnectionFixture
     RetStat interpret(T& packet, Targs... fargs,
                       MessageHashEnum hashidx = MessageHashEnum::NUM)
     {
+        LogClass log(std::cerr);
         SPDMCPP_ASSERT(IO.WriteQueue.size() == 1);
         auto& buf = IO.WriteQueue.front();
 
@@ -121,7 +122,7 @@ class ConnectionFixture
         {
             getHash(hashidx).update(buf, off);
         }
-        rs = packetDecode(packet, buf, off, fargs...);
+        rs = packetDecode(log, packet, buf, off, fargs...);
         SPDMCPP_LOG_TRACE_RS(Connection.getLog(), rs);
         if (rs == RetStat::OK)
         {
