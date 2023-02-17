@@ -189,7 +189,12 @@ RetStat ConnectionClass::parseCertChain(SlotClass& slot,
     auto rs = packetDecodeInternal(Log,certChain, cert, off);
     SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
 
-    SPDMCPP_ASSERT(certChain.Length == cert.size());
+    if(certChain.Length != cert.size())
+    {
+        SPDMCPP_LOG_TRACE(Log, certChain.Length);
+        SPDMCPP_LOG_TRACE(Log, cert.size());
+        return RetStat::ERROR_CERTIFICATE_CHAIN_SIZE_INVALID;
+    }
     std::vector<uint8_t> rootCertHash;
 
     {

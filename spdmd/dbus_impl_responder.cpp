@@ -180,6 +180,7 @@ void Responder::handleError(spdmcpp::RetStat rs)
         case RetStat::ERROR_ROOT_CERTIFICATE_HASH_INVALID:
         case RetStat::ERROR_CERTIFICATE_CHAIN_VERIFIY_FAILED:
         case RetStat::ERROR_CERTIFICATE_PARSING_ERROR:
+        case RetStat::ERROR_CERTIFICATE_CHAIN_SIZE_INVALID:
             status(SPDMStatus::Error_CertificateValidation);
             appContext.reportError("SPDM certificate validation fail on " + dbgIdName);
             break;
