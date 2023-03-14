@@ -189,10 +189,10 @@ struct PacketMeasurementsResponseVar // TODO all variable packets don't need
                                             1);
             rs =
                 packetDecodeInternal(logg,p.MeasurementBlockVector.back(), buf, off);
-            
-            SPDMCPP_LOG_TRACE(logg, p.Min.getMeasurementRecordLength());
+
             if (isError(rs))
             {
+                SPDMCPP_LOG_TRACE(logg, p.Min.getMeasurementRecordLength());
                 return rs;
             }
     }
@@ -203,9 +203,9 @@ struct PacketMeasurementsResponseVar // TODO all variable packets don't need
     }
     rs = packetDecodeBasic(logg, p.Nonce, buf, off);
 
-    SPDMCPP_LOG_TRACE(logg, p.Min.getMeasurementRecordLength());
     if (isError(rs))
     {
+        SPDMCPP_LOG_TRACE(logg, p.Min.getMeasurementRecordLength());
         return rs;
     }
 
