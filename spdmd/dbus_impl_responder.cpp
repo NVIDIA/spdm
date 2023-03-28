@@ -210,6 +210,9 @@ void Responder::handleError(spdmcpp::RetStat rs)
             getLog().print("sendBuffer=");
             getLog().println(connection.getSendBufferRef());
             break;
+        case RetStat::ERROR_INVALID_FLAG_SIZE:
+            appContext.reportError("Invalid flag size");
+            break;
         default:
             status(SPDMStatus::Error_Other);
             appContext.reportError(std::string("SPDM other error: ") +

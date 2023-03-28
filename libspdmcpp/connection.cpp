@@ -199,7 +199,14 @@ RetStat ConnectionClass::parseCertChain(SlotClass& slot,
     std::vector<uint8_t> rootCertHash;
 
     {
-        rootCertHash.resize(getHashSize(Algorithms.Min.BaseHashAlgo));
+        if (auto hsize = getHashSize(Algorithms.Min.BaseHashAlgo); hsize != invalidFlagSize)
+        {
+            rootCertHash.resize(hsize);
+        }
+        else
+        {
+            return RetStat::ERROR_INVALID_FLAG_SIZE;
+        }
         rs = packetDecodeBasic(Log, rootCertHash, cert, off);
         SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
         if (Log.logLevel >= spdmcpp::LogClass::Level::Informational)
@@ -466,8 +473,22 @@ RetStat ConnectionClass::handleRecv<PacketAlgorithmsResponseVar>()
 
     appendRecvToBuf(BufEnum::A);
 
-    packetDecodeInfo.BaseHashSize = getHashSize(resp.Min.BaseHashAlgo);
-    packetDecodeInfo.SignatureSize = getSignatureSize(resp.Min.BaseAsymAlgo);
+    if (auto hsize = getHashSize(resp.Min.BaseHashAlgo); hsize != invalidFlagSize)
+    {
+        packetDecodeInfo.BaseHashSize = hsize;
+    }
+    else
+    {
+        SPDMCPP_CONNECTION_RS_ERROR_RETURN(RetStat::ERROR_INVALID_FLAG_SIZE);
+    }
+    if (auto ssize=getSignatureSize(resp.Min.BaseAsymAlgo); ssize!=invalidFlagSize)
+    {
+        packetDecodeInfo.SignatureSize = ssize;
+    }
+    else
+    {
+        SPDMCPP_CONNECTION_RS_ERROR_RETURN(RetStat::ERROR_INVALID_FLAG_SIZE);
+    }
 
     if (skipCertificate)
     {

@@ -245,8 +245,12 @@ void testConnectionFlow(BaseAsymAlgoFlags asymAlgo, BaseHashAlgoFlags hashAlgo)
     }
 
     PacketDecodeInfo info;
-    info.BaseHashSize = getHashSize(algoResp.Min.BaseHashAlgo);
-    info.SignatureSize = getSignatureSize(algoResp.Min.BaseAsymAlgo);
+    int fsize = getHashSize(algoResp.Min.BaseHashAlgo);
+    ASSERT_NE(fsize, invalidFlagSize);
+    info.BaseHashSize = fsize;
+    fsize = getSignatureSize(algoResp.Min.BaseAsymAlgo);
+    ASSERT_NE(fsize, invalidFlagSize);
+    info.SignatureSize = fsize;
 
     mbedtls_pk_context pkctx;
     mbedtls_pk_init(&pkctx);

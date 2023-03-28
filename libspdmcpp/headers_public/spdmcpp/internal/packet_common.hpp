@@ -10,9 +10,12 @@ template <typename T>
 [[nodiscard]] RetStat packetDecodeBasic(spdmcpp::LogClass& logg, T& p, const std::vector<uint8_t>& buf,
                                         size_t& start)
 {
-    SPDMCPP_ASSERT(
-        start <
-        buf.size()); // TODO need macros for various categories of asserts!!!
+    if (start >= buf.size())
+    {
+        SPDMCPP_LOG_TRACE(logg, start);
+        SPDMCPP_LOG_TRACE(logg, buf.size());
+        return RetStat::ERROR_BUFFER_TOO_SMALL;
+    }
     if (start + sizeof(p) > buf.size())
     {
         SPDMCPP_LOG_TRACE(logg, start);
@@ -32,9 +35,13 @@ template <typename T>
     packetDecodeInternal(spdmcpp::LogClass& logg ,T& p, const std::vector<uint8_t>& buf, size_t& start)
 {
     SPDMCPP_STATIC_ASSERT(T::sizeIsConstant);
-    SPDMCPP_ASSERT(
-        start <
-        buf.size()); // TODO need macros for various categories of asserts!!!
+
+    if (start >= buf.size())
+    {
+        SPDMCPP_LOG_TRACE(logg, start);
+        SPDMCPP_LOG_TRACE(logg, buf.size());
+        return RetStat::ERROR_BUFFER_TOO_SMALL;
+    }
     if (start + sizeof(p) > buf.size())
     {
         SPDMCPP_LOG_TRACE(logg, start);

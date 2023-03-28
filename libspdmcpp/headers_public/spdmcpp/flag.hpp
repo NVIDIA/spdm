@@ -3,6 +3,7 @@
 
 #include "assert.hpp"
 
+#include <bit>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -19,18 +20,7 @@ namespace spdmcpp
 template <typename T>
 size_t countBits(T value)
 {
-    auto bits = static_cast<std::underlying_type_t<T>>(value);
-    size_t ret = 0;
-    for (size_t i = 0; i < sizeof(T) * 8; ++i)
-    {
-        ret += bits & 1;
-        bits >>= 1;
-        if (!bits)
-        {
-            break;
-        }
-    }
-    return ret;
+    return std::popcount(static_cast<std::underlying_type_t<T>>(value));
 }
 
 template <typename T>
@@ -153,10 +143,14 @@ std::string to_string_hex(T v)
 #undef FLAG_END
 
 // clang-format on
+static constexpr auto invalidFlagSize = -1;
 
-inline uint16_t getHashSize(BaseHashAlgoFlags flags)
+inline int16_t getHashSize(BaseHashAlgoFlags flags)
 {
-    SPDMCPP_ASSERT(countBits(flags) <= 1);
+    if (countBits(flags) > 1)
+    {
+        return invalidFlagSize;
+    }
     switch (flags)
     {
         case BaseHashAlgoFlags::TPM_ALG_SHA_256:
@@ -176,9 +170,12 @@ inline uint16_t getHashSize(BaseHashAlgoFlags flags)
     }
 }
 
-inline uint16_t getHashSize(MeasurementHashAlgoFlags flags)
+inline int16_t getHashSize(MeasurementHashAlgoFlags flags)
 {
-    SPDMCPP_ASSERT(countBits(flags) <= 1);
+    if (countBits(flags) > 1)
+    {
+        return invalidFlagSize;
+    }
     switch (flags)
     {
         case MeasurementHashAlgoFlags::RAW_BIT_STREAM_ONLY:
@@ -200,9 +197,12 @@ inline uint16_t getHashSize(MeasurementHashAlgoFlags flags)
     }
 }
 
-inline uint16_t getSignatureSize(BaseAsymAlgoFlags flags)
+inline int16_t getSignatureSize(BaseAsymAlgoFlags flags)
 {
-    SPDMCPP_ASSERT(countBits(flags) <= 1);
+    if (countBits(flags) > 1)
+    {
+        return invalidFlagSize;
+    }
     switch (flags)
     {
         case BaseAsymAlgoFlags::TPM_ALG_RSASSA_2048:
