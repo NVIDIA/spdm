@@ -364,7 +364,7 @@ RetStat ConnectionClass::tryGetCapabilities()
         PacketGetCapabilitiesRequest request;
         request.Header.MessageVersion = MessageVersion;
 
-        request.Flags = RequesterCapabilitiesFlags::CHAL_CAP;
+        request.Flags = RequesterCapabilitiesFlags::NIL;
 
         rs = sendRequestSetupResponse<PacketCapabilitiesResponse>(
             request, BufEnum::A, Timings.getT1());
@@ -383,13 +383,19 @@ RetStat ConnectionClass::handleRecv<PacketCapabilitiesResponse>()
     appendRecvToBuf(BufEnum::A);
 
     responderCapabilitiesFlags = resp.Flags;
-    if (!(resp.Flags & ResponderCapabilitiesFlags::CERT_CAP))
-    {
-        return RetStat::ERROR_MISSING_CAPABILITY_CERT;
-    }
-    if (!(resp.Flags & ResponderCapabilitiesFlags::MEAS_CAP_10))
+    if (!(resp.Flags & (ResponderCapabilitiesFlags::MEAS_CAP_10 |
+                        ResponderCapabilitiesFlags::MEAS_CAP_01)))
     {
         return RetStat::ERROR_MISSING_CAPABILITY_MEAS;
+    }
+    skipVerifySignature =
+        ((resp.Flags & ResponderCapabilitiesFlags::MEAS_CAP_01) ==
+         ResponderCapabilitiesFlags::MEAS_CAP_01);
+    skipCertificate = !(resp.Flags & ResponderCapabilitiesFlags::CERT_CAP);
+
+    if (skipCertificate && !skipVerifySignature)
+    {
+        return RetStat::ERROR_MISSING_CAPABILITY_CERT;
     }
 
     Timings.setCTExponent(resp.CTExponent);
@@ -457,7 +463,14 @@ RetStat ConnectionClass::handleRecv<PacketAlgorithmsResponseVar>()
     packetDecodeInfo.BaseHashSize = getHashSize(resp.Min.BaseHashAlgo);
     packetDecodeInfo.SignatureSize = getSignatureSize(resp.Min.BaseAsymAlgo);
 
-    rs = tryGetDigest();
+    if (skipCertificate)
+    {
+        rs = tryChallengeIfSupported();
+    }
+    else
+    {
+        rs = tryGetDigest();
+    }
     SPDMCPP_LOG_TRACE_RS(Log, rs);
     return rs;
 }
@@ -732,13 +745,13 @@ RetStat ConnectionClass::tryGetMeasurements(uint8_t idx)
 
     PacketGetMeasurementsRequestVar request;
     request.Min.Header.MessageVersion = MessageVersion;
-
-    if (MeasurementIndices.none())
+    request.Min.Header.Param1 = packetDecodeInfo.GetMeasurementsParam1 = 0x00;
+    if (MeasurementIndices.none() && !skipVerifySignature)
     {
         // means this is the last getMeasurements, so we set the nonce and
-        // request a signature
+        // request a signature and if skip is not set
         request.Min.Header.Param1 = packetDecodeInfo.GetMeasurementsParam1 =
-            0x1;
+            0x01;
         request.setNonce();
         request.Nonce = MeasurementNonce;
         request.SlotIDParam = CertificateSlotIdx;
@@ -774,7 +787,7 @@ RetStat ConnectionClass::handleRecv<PacketMeasurementsResponseVar>()
         {
             if (DMTFMeasurements.find(block.Min.Index) !=
                 DMTFMeasurements.end())
-            {   
+            {
                 if (Log.logLevel >= spdmcpp::LogClass::Level::Error) {
                     Log.iprintln("DUPLICATE MeasurementBlock Index!");
                 }
@@ -794,8 +807,8 @@ RetStat ConnectionClass::handleRecv<PacketMeasurementsResponseVar>()
             }
         }
     }
-
-    if (packetDecodeInfo.GetMeasurementsParam1 & 1)
+    // No more signatures verify or not
+    if (MeasurementIndices.none())
     {
         /*HashL1L2.update(&ResponseBuffer[ResponseBufferSPDMOffset],
                         ResponseBuffer.size() - ResponseBufferSPDMOffset -
@@ -803,7 +816,18 @@ RetStat ConnectionClass::handleRecv<PacketMeasurementsResponseVar>()
 
         appendToBuf(BufEnum::L, &ResponseBuffer[ResponseBufferSPDMOffset],
                     ResponseBuffer.size() - ResponseBufferSPDMOffset -
+
                         packetDecodeInfo.SignatureSize);
+
+        if(skipVerifySignature)
+        {
+            if (Log.logLevel >= spdmcpp::LogClass::Level::Informational)
+            {
+                Log.iprintln("measurements SIGNATURE verify SKIPPED!");
+            }
+            markInfo(ConnectionInfoEnum::MEASUREMENTS);
+            return RetStat::OK;
+        }
 
         { // store measurement signature
             MeasurementsSignature.resize(packetDecodeInfo.SignatureSize);
@@ -822,8 +846,7 @@ RetStat ConnectionClass::handleRecv<PacketMeasurementsResponseVar>()
             Log.iprint("computed l2 hash = ");
             Log.println(hash);
         }
-
-        int ret = verifySignature(Slots[CertificateSlotIdx].getLeafCert(),
+        auto ret = verifySignature(Slots[CertificateSlotIdx].getLeafCert(),
                                   resp.SignatureVector, hash);
         SPDMCPP_LOG_TRACE_RS(Log, ret);
         if (!ret)

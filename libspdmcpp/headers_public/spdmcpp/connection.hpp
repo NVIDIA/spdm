@@ -736,6 +736,11 @@ class ConnectionClass : public NonCopyable
      */
     RetStat chooseVersion();
 
+    /// If signature should be skipped
+    bool skipVerifySignature{};
+    /// If not cert capab getDiggest/getCert
+    bool skipCertificate{};
+
 public:
     const uint8_t m_eid;
 };
