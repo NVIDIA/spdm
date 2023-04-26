@@ -54,7 +54,7 @@ RetStat ConnectionClass::sendRequest(const T& packet, BufEnum bufidx)
         Log.println(buf);
     }
 
-    rs = context.getIO().write(buf);
+    rs = context.getIO(currentMedium).write(buf);
     return rs;
 }
 

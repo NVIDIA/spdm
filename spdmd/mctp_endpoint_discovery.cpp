@@ -12,26 +12,65 @@ namespace spdmd
 
 constexpr size_t invalidEid = 256;
 
-dbus::ServiceHelper mctpControlService("/xyz/openbmc_project/mctp",
+dbus::ServiceHelper mctpControlServicePCIe("/xyz/openbmc_project/mctp",
                                        "org.freedesktop.DBus.ObjectManager",
                                        "xyz.openbmc_project.MCTP.Control.PCIe");
+
+dbus::ServiceHelper mctpControlServiceSPI("/xyz/openbmc_project/mctp",
+                                       "org.freedesktop.DBus.ObjectManager",
+                                       "xyz.openbmc_project.MCTP.Control.SPI");
+
+dbus::ServiceHelper mctpControlServiceI2C("/xyz/openbmc_project/mctp",
+                                       "org.freedesktop.DBus.ObjectManager",
+                                       "xyz.openbmc_project.MCTP.Control.I2C");
+
+std::vector<dbus::ServiceHelper> mctpControlServices{
+    mctpControlServicePCIe
+  , mctpControlServiceSPI
+#ifdef USE_I2C
+  , mctpControlServiceI2C
+#endif
+};
+
+
 
 MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
     bus(spdmApp.getBus()), spdmApp(spdmApp),
 #ifndef DISCOVERY_ONLY_FROM_MCTP_CONTROL
     inventoryMatch(spdmApp.getBus(),
         sdbusplus::bus::match::rules::interfacesAdded(
-            inventoryService.getPath()),
-            [this](sdbusplus::message::message& msg) {
-                sdbusplus::message::object_path objPath;
-                dbus::InterfaceMap interfaces;
-                msg.read(objPath, interfaces);
-                inventoryNewObjectSignal(objPath, interfaces);
-            }),
+            inventoryService.getPath()
+        ),
+        [this](sdbusplus::message::message& msg) {
+            sdbusplus::message::object_path objPath;
+            dbus::InterfaceMap interfaces;
+            msg.read(objPath, interfaces);
+            inventoryNewObjectSignal(objPath, interfaces);
+        }),
 #endif
-    mctpMatch(spdmApp.getBus(),
+    mctpMatchPCIe(spdmApp.getBus(),
         sdbusplus::bus::match::rules::interfacesAdded(
-            mctpControlService.getPath()
+            mctpControlServicePCIe.getPath()
+        ),
+        [this](sdbusplus::message::message& msg) {
+            sdbusplus::message::object_path objPath;
+            dbus::InterfaceMap interfaces;
+            msg.read(objPath, interfaces);
+            mctpNewObjectSignal(objPath, interfaces);
+        }),
+    mctpMatchSPI(spdmApp.getBus(),
+        sdbusplus::bus::match::rules::interfacesAdded(
+            mctpControlServiceSPI.getPath()
+        ),
+        [this](sdbusplus::message::message& msg) {
+            sdbusplus::message::object_path objPath;
+            dbus::InterfaceMap interfaces;
+            msg.read(objPath, interfaces);
+            mctpNewObjectSignal(objPath, interfaces);
+        }),
+    mctpMatchI2C(spdmApp.getBus(),
+        sdbusplus::bus::match::rules::interfacesAdded(
+            mctpControlServiceI2C.getPath()
         ),
         [this](sdbusplus::message::message& msg) {
             sdbusplus::message::object_path objPath;
@@ -40,28 +79,29 @@ MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
             mctpNewObjectSignal(objPath, interfaces);
         })
 {
-    dbus::ObjectValueTree objects;
-
     SPDMCPP_LOG_TRACE_FUNC(spdmApp.getLog());
 
-    try
-    {
-        auto& service = mctpControlService;
-        auto method = service.new_method_call(bus, "GetManagedObjects");
-        auto reply = bus.call(method);
-        reply.read(objects);
-    }
-    catch (const std::exception& e)
-    {
-        spdmApp.getLog().iprintln(e.what());
-        return;
-    }
-
-    for (const auto& [objectPath, interfaces] : objects)
-    {
-        mctpNewObjectSignal(objectPath, interfaces);
-    }
+        for (auto& service : mctpControlServices)
+        {
+            dbus::ObjectValueTree objects;
+            try {
+                auto method = service.new_method_call(bus, "GetManagedObjects");
+                auto reply = bus.call(method);
+                reply.read(objects);
+            }
+            catch (const std::exception& e)
+            {
+                using namespace std::string_literals;
+                spdmApp.getLog().iprintln("Warning: Discovery->GetManagedObjects "s + e.what());
+                continue;
+            }
+            for (const auto& [objectPath, interfaces] : objects)
+            {
+                mctpNewObjectSignal(objectPath, interfaces);
+            }
+        }
 }
+
 
 
 void MctpDiscovery::tryConnectMCTP()
@@ -86,6 +126,7 @@ void MctpDiscovery::mctpNewObjectSignal(
     const sdbusplus::message::object_path& objPath,
     const dbus::InterfaceMap& interfaces)
 {
+    spdmApp.getLog().iprintln("mctpNewObjectSignal: " + std::string(objPath));
     tryConnectMCTP();
 
     size_t eid = getEid(interfaces);
@@ -96,7 +137,6 @@ void MctpDiscovery::mctpNewObjectSignal(
     }
 
     auto uuid = getUUID(interfaces);
-
 #ifdef DISCOVERY_ONLY_FROM_MCTP_CONTROL
     std::string invPath;
 #else
@@ -240,22 +280,26 @@ std::string MctpDiscovery::getUUID(const dbus::InterfaceMap& interfaces)
 
 MctpDiscovery::Object MctpDiscovery::getMCTP(const std::string& uuid)
 {
+
     dbus::ObjectValueTree objects;
 
     SPDMCPP_LOG_TRACE_FUNC(spdmApp.getLog());
 
     try
     {
-        auto method =
-            mctpControlService.new_method_call(bus, "GetManagedObjects");
-        auto reply = bus.call(method);
-        reply.read(objects);
-
-        for (const auto& [objectPath, interfaces] : objects)
+        for (auto &service: mctpControlServices)
         {
-            if (uuid == getUUID(interfaces))
+            auto method =
+                service.new_method_call(bus, "GetManagedObjects");
+            auto reply = bus.call(method);
+            reply.read(objects);
+
+            for (const auto& [objectPath, interfaces] : objects)
             {
-                return {objectPath, interfaces};
+                if (uuid == getUUID(interfaces))
+                {
+                    return {objectPath, interfaces};
+                }
             }
         }
     }
@@ -264,7 +308,9 @@ MctpDiscovery::Object MctpDiscovery::getMCTP(const std::string& uuid)
         spdmApp.getLog().print(e.what());
     }
     return {};
+
 }
+
 
 sdbusplus::message::object_path
     MctpDiscovery::getInventoryPath(const std::string& uuid)

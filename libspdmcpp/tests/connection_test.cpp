@@ -84,15 +84,22 @@ class ConnectionFixture
     ContextClass Context;
     ConnectionClass Connection;
 
-    ConnectionFixture() : log(std::cout), Connection(Context, log, 0)
+    ConnectionFixture() : log(std::cout), Connection(Context, log, 0,  spdmcpp::TransportMedium::PCIe)
     {
-        Context.registerIo(IO);
+        Context.registerIo(IO, spdmcpp::TransportMedium::PCIe);
         Connection.registerTransport(Trans);
     }
     ~ConnectionFixture()
     {
-        Connection.unregisterTransport(Trans);
-        Context.unregisterIo(IO);
+        try
+        {
+            Connection.unregisterTransport(Trans);
+            Context.unregisterIo(IO, spdmcpp::TransportMedium::PCIe );
+        }
+        catch(const std::exception& exc)
+        {
+            SPDMCPP_ASSERT(false);
+        }
     }
 
     HashClass& getHash(MessageHashEnum hashidx)

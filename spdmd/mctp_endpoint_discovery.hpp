@@ -53,7 +53,10 @@ class MctpDiscovery
     sdbusplus::bus::match_t inventoryMatch;
 #endif
     /** @brief Used to watch for new MCTP endpoints */
-    sdbusplus::bus::match_t mctpMatch;
+    sdbusplus::bus::match_t mctpMatchPCIe;
+    sdbusplus::bus::match_t mctpMatchSPI;
+    sdbusplus::bus::match_t mctpMatchI2C;
+
 
     /** @brief Called when a new mctp endpoint is discovered */
     void mctpNewObjectSignal(const sdbusplus::message::object_path& objectPath, const dbus::InterfaceMap& interfaces);
@@ -65,6 +68,10 @@ class MctpDiscovery
     
     /** @brief Try calling spdmApp.ConnectMCTP() */
     void tryConnectMCTP();
+
+    /** MCTP handle callback */
+    void mtcpCallback(uint32_t revents, spdmcpp::MctpIoClass &mctpIo);
+
 
     /** @brief SPDM type of an MCTP message */
     static constexpr uint8_t mctpTypeSPDM = 5;

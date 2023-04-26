@@ -62,6 +62,7 @@ class SpdmdApp : public SpdmdAppContext
      */
     int loop();
 
+
     /** @brief Get reference to the used d-bus object
      *
      */
@@ -78,7 +79,13 @@ class SpdmdApp : public SpdmdAppContext
     */
     void discoveryUpdateResponder(const dbus_api::ResponderArgs& respArg);
 
+
   private:
+    /** @brief SPDMD callback signal called
+     *
+     */
+    void mctpCallback(uint32_t revents, spdmcpp::MctpIoClass &mctpIo);
+
     /** @brief Create new Responder object
      *
      */
@@ -94,11 +101,18 @@ class SpdmdApp : public SpdmdAppContext
 
     /** @brief MCTP interface auxiliary object - used for transmission purposes
      * over MCTP */
-    spdmcpp::MctpIoClass mctpIo;
+
+    spdmcpp::MctpIoClass mctpIoPCIe;
+    spdmcpp::MctpIoClass mctpIoSPI;
+    spdmcpp::MctpIoClass mctpIoI2C;
+
 
     /** @brief Event handlar for MCTP events - used for transmission purposes
      * over MCTP */
-    std::unique_ptr<sdeventplus::source::IO> mctpEvent;
+    sdeventplus::source::IO* mctpEventPCIe {};
+    sdeventplus::source::IO* mctpEventSPI  {};
+    sdeventplus::source::IO* mctpEventI2C  {};
+
 
     /** @brief Array of all responder objects, managed by SPDM daemon */
     std::vector<std::unique_ptr<dbus_api::Responder>> responders;

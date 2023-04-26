@@ -9,3 +9,7 @@ option('fetch_serialnumber_from_responder', type: 'integer', min : 0, max : 254,
 option('emu', type: 'feature', description: 'Build spdmcpp_emu for testing', value: 'enabled')	#TODO disable before release
 
 option('conf_file_name', type: 'string', value : '"/etc/spdmd_conf.json"', description: 'Exact path to SPDM json configuration file')
+
+option('use_default_dbus', type: 'feature', description: 'Use default DBus bus for tests on x86.', value: 'disabled')
+
+option('use_i2c', type: 'feature', description: 'Use I2C transport medium.', value: 'disabled')

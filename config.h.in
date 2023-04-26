@@ -12,3 +12,9 @@
 
 //NOLINTNEXTLINE cppcoreguidelines-macro-usage
 #mesondefine SPDM_JSON_CONF_FILE_NAME
+
+//NOLINTNEXTLINE cppcoreguidelines-macro-usage
+#mesondefine USE_DEFAULT_DBUS
+
+//NOLINTNEXTLINE cppcoreguidelines-macro-usage
+#mesondefine USE_I2C

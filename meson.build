@@ -24,6 +24,9 @@ conf_data.set_quoted('SPDMD_VERSION', meson.project_version())
 conf_data.set('FETCH_SERIALNUMBER_FROM_RESPONDER', get_option('fetch_serialnumber_from_responder'))
 conf_data.set('DISCOVERY_ONLY_FROM_MCTP_CONTROL', get_option('discovery_only_from_mctp_control').enabled())
 conf_data.set('SPDM_JSON_CONF_FILE_NAME', get_option('conf_file_name'))
+conf_data.set('USE_DEFAULT_DBUS', get_option('use_default_dbus').enabled())
+conf_data.set('USE_I2C', get_option('use_i2c').enabled())
+
 configure_file(
   input: 'config.h.in',
   output: 'config.h',

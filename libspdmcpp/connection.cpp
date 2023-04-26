@@ -35,9 +35,8 @@ namespace spdmcpp
 {
 
 ConnectionClass::ConnectionClass(const ContextClass& cont, LogClass& log,
-                                 uint8_t eid) :
-    context(cont),
-    Log(log), m_eid(eid)
+                                 uint8_t eid, TransportMedium medium) :
+    context(cont), Log(log), currentMedium(medium), m_eid(eid)
 {
     resetConnection();
 }
@@ -1030,13 +1029,13 @@ RetStat ConnectionClass::handleRecv(EventReceiveClass& event)
     return RetStat::ERROR_UNKNOWN;
 }
 
-RetStat ConnectionClass::handleTimeout(EventTimeoutClass& /*event*/)
+RetStat ConnectionClass::handleTimeout(EventTimeoutClass& event)
 {
     SPDMCPP_LOG_TRACE_FUNC(Log);
     if (SendRetry)
     {
         --SendRetry;
-        auto rs = context.getIO().write(SendBuffer);
+        auto rs = context.getIO(event.transportMedium).write(SendBuffer);
         SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
 
         rs = transport->setupTimeout(SendTimeout);

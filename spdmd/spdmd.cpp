@@ -1,4 +1,5 @@
 #include "mctp_endpoint_discovery.hpp"
+#include "spdmcpp/common.hpp"
 #include "spdmd_app.hpp"
 #include "spdmd_version.hpp"
 
@@ -22,18 +23,43 @@ namespace spdmd
 dbus::ServiceHelper inventoryService("/", "org.freedesktop.DBus.ObjectManager",
                                      "xyz.openbmc_project.PLDM");
 
+
 SpdmdApp::SpdmdApp() :
-    SpdmdAppContext(sdeventplus::Event::get_default(), bus::new_system(),
-                    std::cout),
-    mctpIo(getLog())
+    SpdmdAppContext(sdeventplus::Event::get_default(),
+#ifdef USE_DEFAULT_DBUS
+                    bus::new_default(),
+#else
+                    bus::new_system(),
+#endif
+                    std::cout
+                )
+    , mctpIoPCIe(getLog()), mctpIoSPI(getLog()), mctpIoI2C(getLog())
 {
-    context.registerIo(mctpIo);
+    context.registerIo(mctpIoPCIe, spdmcpp::TransportMedium::PCIe);
+    context.registerIo(mctpIoSPI, spdmcpp::TransportMedium::SPI);
+    context.registerIo(mctpIoI2C, spdmcpp::TransportMedium::I2C);
 }
+
 
 SpdmdApp::~SpdmdApp()
 {
-    context.unregisterIo(mctpIo);
+    try
+    {
+        context.unregisterIo(mctpIoPCIe, spdmcpp::TransportMedium::PCIe);
+        context.unregisterIo(mctpIoSPI, spdmcpp::TransportMedium::SPI);
+        context.unregisterIo(mctpIoI2C, spdmcpp::TransportMedium::I2C);
+        delete mctpEventPCIe;
+        delete mctpEventSPI;
+        delete mctpEventI2C;
+    }
+    catch(const std::exception& exc)
+    {
+        std::cerr << "Unhandled exception when destroying spdmd " <<
+            exc.what() << std::endl;
+    }
 }
+
+
 
 void SpdmdApp::setupCli(int argc, char** argv)
 {
@@ -110,89 +136,73 @@ void SpdmdApp::connectDBus()
     bus.attach_event(event.get(), SD_EVENT_PRIORITY_NORMAL);
 }
 
+
 void SpdmdApp::connectMCTP()
 {
     SPDMCPP_LOG_TRACE_FUNC(getLog());
-    if (mctpIo.isSocketOpen())
+    if (!mctpIoPCIe.isSocketOpen())
     {
-        // return if socket is already created because we call this function
-        // redundantly on discovery due to some startup issues,
-        // see comment in MctpDiscovery::addNewEndpoint()
-        return;
-    }
-    if (!mctpIo.createSocket())
-    {
-        throw std::runtime_error("Couldn't create mctp socket");
-    }
-
-    auto callback = [this](sdeventplus::source::IO& /*io*/, int /*fd*/,
-                           uint32_t revents) {
-        SPDMCPP_LOG_TRACE_FUNC(getLog());
-
-        if (!(revents & EPOLLIN))
+        if (mctpIoPCIe.createSocket("\0mctp-pcie-mux"s))
         {
-            return;
-        }
-
-        {
-            auto rs = mctpIo.read(packetBuffer);
-            if (rs != spdmcpp::RetStat::OK)
-            {
-                getLog().println(
-                    "SpdmdApp::IO read failed likely due to broken socket connection, quitting!");
-                event.exit(1);
-                return;
+            auto callback = [this](sdeventplus::source::IO& /*io*/, int /*fd*/,
+                            uint32_t revents) {
+                mctpCallback(revents, mctpIoPCIe);
+            };
+            mctpEventPCIe = new sdeventplus::source::IO(event, mctpIoPCIe.getSocket(), EPOLLIN,
+                                                    std::move(callback));
+        } else {
+            if (getLog().logLevel >= spdmcpp::LogClass::Level::Warning) {
+                getLog().iprintln("Unable to connect to mctp-pcie-mux socket");
             }
         }
-
-        uint8_t eid = 0;
+    }
+    if (!mctpIoSPI.isSocketOpen())
+    {
+        if (mctpIoSPI.createSocket("\0mctp-spi-mux"s))
         {
-            spdmcpp::TransportClass::LayerState lay; // TODO double decode
-            auto rs =
-                spdmcpp::MctpTransportClass::peekEid(packetBuffer, lay, eid);
-
-            SPDMCPP_LOG_TRACE_RS(getLog(), rs);
-            switch (rs)
-            {
-                case spdmcpp::RetStat::OK:
-                    break;
-                case spdmcpp::RetStat::ERROR_BUFFER_TOO_SMALL:
-                    getLog().print("SpdmdApp::IO: packet size = ");
-                    getLog().print(packetBuffer.size());
-                    getLog().println(" is too small to be a valid SPDM packet");
-                    return;
-                default:
-                    getLog().print(
-                        "SpdmdApp::IO peekEid returned unexpected error: ");
-                    getLog().println(rs);
-                    return;
+            auto callback = [this](sdeventplus::source::IO& /*io*/, int /*fd*/,
+                            uint32_t revents) {
+                mctpCallback(revents, mctpIoSPI);
+            };
+            mctpEventSPI = new sdeventplus::source::IO(event, mctpIoSPI.getSocket(), EPOLLIN,
+                                                    std::move(callback));
+        } else {
+            if (getLog().logLevel >= spdmcpp::LogClass::Level::Warning) {
+                getLog().iprintln("Unable to connect to mctp-spi-mux socket");
             }
         }
-        if (eid >= responders.size())
-        {
-            getLog().println("SpdmdApp::IO received message from EID=" +
-                             std::to_string(eid) +
-                             " outside of responder array size=" +
-                             std::to_string(responders.size()));
-            return;
-        }
-        if (!responders[eid])
-        {
-            getLog().println("SpdmdApp::IO received message from EID=" +
-                             std::to_string(eid) +
-                             " while responder class is not created");
-        }
-        else
-        {
-            auto& resp = responders[eid];
-            spdmcpp::EventReceiveClass ev(packetBuffer);
-            resp->handleEvent(ev);
-        }
-    };
+    }
 
-    mctpEvent = std::make_unique<sdeventplus::source::IO>(
-        event, mctpIo.getSocket(), EPOLLIN, std::move(callback));
+
+#ifdef USE_I2C
+    if (!mctpIoI2C.isSocketOpen())
+    {
+        if mctpIoI2C.createSocket("\0mctp-i2c-mux"s))
+        {
+            auto callback = [this](sdeventplus::source::IO& /*io*/, int /*fd*/,
+                            uint32_t revents) {
+                mctpCallback(revents, mctpIoI2C);
+            };
+            mctpEventI2C = new sdeventplus::source::IO(event, mctpIoI2C.getSocket(), EPOLLIN,
+
+        } else {
+            if (getLog().logLevel >= spdmcpp::LogClass::Level::Warning) {
+                getLog().iprintln("Unable to connect to mctp-i2c-mux socket");
+            }
+        }
+    }
+#endif
+
+#ifdef USE_I2C
+    if(!mctpEventPCIe && !mctpEventSPI && !mctpEventI2C) {
+#else
+    if(!mctpEventPCIe && !mctpEventSPI) {
+#endif
+        throw std::runtime_error("Couldn't connect to any MCTP endpoint");
+    }
 }
+
+
 
 bool SpdmdApp::needRecreateResponder(spdmcpp::TransportMedium currMedium,
                                      spdmcpp::TransportMedium newMedium)
@@ -275,8 +285,12 @@ void SpdmdApp::createResponder(const dbus_api::ResponderArgs& args)
             path += std::to_string(args.eid);
         }
     }
-    responders[args.eid] = std::make_unique<dbus_api::Responder>(
-        *this, path, args.eid, args.mctpPath, args.inventoryPath);
+    if(args.medium.has_value()) {
+        responders[args.eid] = std::make_unique<dbus_api::Responder>(
+            *this, path, args.eid, args.mctpPath, args.inventoryPath, args.medium.value_or(TransportMedium::PCIe));
+    } else {
+        reportError("Unable to determine responder type for EID = " + std::to_string(args.eid) );
+    }
 
 #if FETCH_SERIALNUMBER_FROM_RESPONDER != 0
     responders[args.eid]->refreshSerialNumber();
@@ -304,6 +318,77 @@ void SpdmdApp::setupMeasurementDelay()
         event, SpdmdAppContext::Clock(event).now() + measureOnDiscoveryDelay,
         std::chrono::seconds{1}, std::move(timerCallback));
 }
+
+
+
+void SpdmdApp::mctpCallback(uint32_t revents, spdmcpp::MctpIoClass &mctpIo)
+{
+
+        SPDMCPP_LOG_TRACE_FUNC(getLog());
+
+        if (!(revents & EPOLLIN))
+        {
+            return;
+        }
+
+        {
+            auto rs = mctpIo.read(packetBuffer);
+            if (rs != spdmcpp::RetStat::OK)
+            {
+                getLog().println(
+                    "SpdmdApp::IO read failed likely due to broken socket connection, quitting!");
+                event.exit(1);
+                return;
+            }
+        }
+
+        uint8_t eid = 0;
+        {
+            spdmcpp::TransportClass::LayerState lay; // TODO double decode
+            auto rs =
+                spdmcpp::MctpTransportClass::peekEid(packetBuffer, lay, eid);
+
+            SPDMCPP_LOG_TRACE_RS(getLog(), rs);
+            switch (rs)
+            {
+                case spdmcpp::RetStat::OK:
+                    break;
+                case spdmcpp::RetStat::ERROR_BUFFER_TOO_SMALL:
+                    getLog().print("SpdmdApp::IO: packet size = ");
+                    getLog().print(packetBuffer.size());
+                    getLog().println(" is too small to be a valid SPDM packet");
+                    return;
+                default:
+                    getLog().print(
+                        "SpdmdApp::IO peekEid returned unexpected error: ");
+                    getLog().println(rs);
+                    return;
+            }
+        }
+        if (eid >= responders.size())
+        {
+            getLog().println("SpdmdApp::IO received message from EID=" +
+                             std::to_string(eid) +
+                             " outside of responder array size=" +
+                             std::to_string(responders.size()));
+            return;
+        }
+        if (!responders[eid])
+        {
+            getLog().println("SpdmdApp::IO received message from EID=" +
+                             std::to_string(eid) +
+                             " while responder class is not created");
+        }
+        else
+        {
+            auto& resp = responders[eid];
+            spdmcpp::EventReceiveClass ev(packetBuffer);
+            resp->handleEvent(ev);
+        }
+}
+
+
+
 
 void SpdmdApp::measurementDelayCallback()
 {
@@ -333,7 +418,8 @@ int SpdmdApp::loop()
     return event.loop();
 }
 
-} // namespace spdmd
+
+}
 
 int main(int argc, char** argv)
 {

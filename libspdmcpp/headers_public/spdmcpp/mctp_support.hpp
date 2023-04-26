@@ -144,7 +144,7 @@ class MctpIoClass : public IOClass
         }
     }
 
-    bool createSocket()
+    bool createSocket(const std::string& path)
     {
         SPDMCPP_LOG_TRACE_FUNC(Log);
         Socket = socket(AF_UNIX, SOCK_SEQPACKET, 0);
@@ -154,18 +154,19 @@ class MctpIoClass : public IOClass
         }
 
         // NOLINTNEXTLINE cppcoreguidelines-avoid-c-arrays
-        const char path[] = "\0mctp-pcie-mux";
         struct sockaddr_un addr
         {};
         addr.sun_family = AF_UNIX;
         // NOLINTNEXTLINE cppcoreguidelines-pro-bounds-array-to-pointer-decay
-        memcpy(addr.sun_path, path, sizeof(path) - 1);
+        memcpy(addr.sun_path, path.data(), path.length());
 
         // NOLINTNEXTLINE cppcoreguidelines-pro-type-cstyle-cast
         if (::connect(Socket, (struct sockaddr*)&addr,
-                      sizeof(path) + sizeof(addr.sun_family) - 1) == -1)
+            path.length() + sizeof(addr.sun_family)) == -1)
         {
-            Log.iprint("connect() error to mctp-demux-daemon, errno = ");
+            Log.iprint("connect() error to mctp-demux-daemon, path = \"");
+            Log.print(path);
+            Log.print("\", errno = ");
             Log.print(errno);
             Log.print(" ");
             Log.println(std::strerror(errno));
@@ -185,7 +186,7 @@ class MctpIoClass : public IOClass
                 return false;
             }
         }
-        Log.iprintln("Connection success!\n");
+        Log.iprintln("AF_UNIX \\0" + path.substr(1) + ": Connection success!\n");
         return true;
     }
     void deleteSocket()

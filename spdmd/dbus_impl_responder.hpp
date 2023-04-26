@@ -2,6 +2,7 @@
 
 #include "config.h"
 
+#include "spdmcpp/common.hpp"
 #include "spdmd_app_context.hpp"
 #include "xyz/openbmc_project/Association/Definitions/server.hpp"
 #include "xyz/openbmc_project/SPDM/Responder/server.hpp"
@@ -43,8 +44,8 @@ struct ResponderArgs {
 class MctpTransportClass : public spdmcpp::MctpTransportClass
 {
   public:
-    MctpTransportClass(uint8_t eid, Responder& resp) :
-        spdmcpp::MctpTransportClass(eid), responder(resp)
+    MctpTransportClass(uint8_t eid, Responder& resp, spdmcpp::TransportMedium medium) :
+        spdmcpp::MctpTransportClass(eid), transportMedium(medium) ,responder(resp)
     {}
     ~MctpTransportClass() override = default;
 
@@ -52,7 +53,12 @@ class MctpTransportClass : public spdmcpp::MctpTransportClass
 
     bool clearTimeout() override;
 
+    auto getTransportMedium() {
+        return transportMedium;
+    }
+
   protected:
+    spdmcpp::TransportMedium transportMedium;
     Responder& responder;
     std::unique_ptr<SpdmdAppContext::Timer> time;
 
@@ -82,10 +88,13 @@ class Responder : public ResponderIntf
      *  @param[in] path - Path to attach at.
      *  @param[in] eid - MCTP EndpointID of the responder
      *  @param[in] inventoryPath - Used for the object-manager association
+     *  @param[in] transportMedium - Responder base transport medium
      */
     Responder(SpdmdAppContext& appCtx, const std::string& path, uint8_t eid,
               const sdbusplus::message::object_path& mctpPath,
-              const sdbusplus::message::object_path& inventPath);
+              const sdbusplus::message::object_path& inventPath,
+              spdmcpp::TransportMedium transportMedium
+    );
 
     ~Responder() override;
 
@@ -101,9 +110,20 @@ class Responder : public ResponderIntf
     {
         return log;
     }
+
+    spdmcpp::TransportMedium getTransportMedium() const
+    {
+        return transportMedium;
+    }
+
     sdeventplus::Event& getEvent()
     {
         return appContext.event;
+    }
+
+    uint8_t getEid() const
+    {
+        return eid;
     }
 
     /** @brief Event callback for receiving events
@@ -126,8 +146,11 @@ class Responder : public ResponderIntf
 
     spdmcpp::LogClass &log;
     spdmcpp::ConnectionClass connection;
-    MctpTransportClass transport;
+    MctpTransportClass transport ;
     sdbusplus::message::object_path inventoryPath;
+    spdmcpp::TransportMedium transportMedium;
+    uint8_t eid;
+
 
     spdmcpp::RetStat (Responder::*eventHandler)(spdmcpp::EventClass& event) =
         nullptr;

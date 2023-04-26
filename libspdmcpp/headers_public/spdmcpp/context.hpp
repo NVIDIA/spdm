@@ -37,10 +37,28 @@ class ContextClass
      * ContextClass does not take ownership and will not deallocate the
      * object
      */
-    void registerIo(IOClass& io)
+    void registerIo(IOClass& io, TransportMedium transportMedium)
     {
-        SPDMCPP_ASSERT(!IO);
-        IO = &io;
+        switch (transportMedium)
+        {
+        case TransportMedium::PCIe:
+            SPDMCPP_ASSERT(!IO_PCIe);
+            IO_PCIe = &io;
+            break;
+
+        case TransportMedium::SPI:
+            SPDMCPP_ASSERT(!IO_SPI);
+            IO_SPI = &io;
+            break;
+
+        case TransportMedium::I2C:
+            SPDMCPP_ASSERT(!IO_I2C);
+            IO_I2C = &io;
+            break;
+
+        default:
+            throw std::invalid_argument("registerIoPcie: wrong transport medium param");
+        }
     }
 
     /** @brief Unregisters the IOClass object, should be called before
@@ -49,10 +67,28 @@ class ContextClass
      * correctness (register and unregister calls must match and can't be
      * redundant)
      */
-    void unregisterIo(IOClass& io)
+    void unregisterIo(IOClass& io, TransportMedium transportMedium)
     {
-        SPDMCPP_ASSERT(IO == &io);
-        IO = nullptr;
+        switch (transportMedium)
+        {
+        case TransportMedium::PCIe:
+            SPDMCPP_ASSERT(IO_PCIe == &io);
+            IO_PCIe = nullptr;
+            break;
+
+        case TransportMedium::SPI:
+            SPDMCPP_ASSERT(IO_SPI == &io);
+            IO_SPI = nullptr;
+            break;
+
+        case TransportMedium::I2C:
+            SPDMCPP_ASSERT(IO_I2C == &io);
+            IO_I2C = nullptr;
+            break;
+
+        default:
+            throw std::invalid_argument("unregisterIo: wrong transport medium param");
+        }
     }
 
     /** @brief SPDM versions that we're configured to support
@@ -62,9 +98,20 @@ class ContextClass
         return SupportedVersions;
     }
 
-    IOClass& getIO() const
+    IOClass& getIO(TransportMedium medium) const
     {
-        return *IO;
+        switch (medium)
+        {
+        case TransportMedium::PCIe:
+            return *IO_PCIe;
+
+        case TransportMedium::SPI:
+            return *IO_SPI;
+
+        case TransportMedium::I2C:
+            return *IO_I2C;
+        }
+        throw std::invalid_argument("getIO: not supported TransportMedium value");
     }
 
   protected:
@@ -72,7 +119,9 @@ class ContextClass
      */
     std::vector<MessageVersionEnum> SupportedVersions;
 
-    IOClass* IO = nullptr;
+    IOClass* IO_PCIe {};
+    IOClass* IO_SPI  {};
+    IOClass* IO_I2C  {};
 };
 
 } // namespace spdmcpp

@@ -138,7 +138,8 @@ class ConnectionClass : public NonCopyable
      *  @param[in] log - the LogClass to use for logging
      */
     explicit ConnectionClass(const ContextClass& context, LogClass& log,
-                             uint8_t eid);
+                             uint8_t eid, TransportMedium medium);
+
     ~ConnectionClass() = default;
 
     /** @brief get send timeout during the connection
@@ -387,6 +388,8 @@ class ConnectionClass : public NonCopyable
     /** @brief Callback for handling incomming events
      */
     [[nodiscard]] RetStat handleEvent(EventClass& event);
+
+ 
 
   protected:
     [[nodiscard]] RetStat tryGetVersion();
@@ -743,7 +746,10 @@ class ConnectionClass : public NonCopyable
     /// If not cert capab getDiggest/getCert
     bool skipCertificate{};
 
-  public:
+private:
+    TransportMedium currentMedium;
+
+public:
     const uint8_t m_eid;
 };
 
