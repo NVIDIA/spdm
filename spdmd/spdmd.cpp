@@ -68,8 +68,8 @@ void SpdmdApp::setupCli(int argc, char** argv)
     {
         getLog().setLogLevel(verbose);
         getLog().print("Verbose log level set to " +
-                       Logging::server::convertForMessage(
-                           (Logging::server::Entry::Level)verbose) +
+                       obmcprj::Logging::server::convertForMessage(
+                           (obmcprj::Logging::server::Entry::Level)verbose) +
                        "\n");
     }
     else

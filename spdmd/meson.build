@@ -8,6 +8,7 @@ sources = [
   'spdmd.cpp',
   'dbus_impl_responder.cpp',
   'mctp_endpoint_discovery.cpp',
+  'spdmd_app_context.cpp'
 ]
 
 executable(

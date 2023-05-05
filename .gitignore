@@ -1,3 +1,4 @@
 /subprojects/*/
 /build/*
 /.vscode/*
+.cache
