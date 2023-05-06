@@ -7,3 +7,5 @@ option('discovery_only_from_mctp_control', type: 'feature', description: 'Build 
 option('fetch_serialnumber_from_responder', type: 'integer', min : 0, max : 254, value : 0, description: 'If not 0 will enable custom code to feth the serial number measurement and write it to the pldm inventory')
 
 option('emu', type: 'feature', description: 'Build spdmcpp_emu for testing', value: 'enabled')	#TODO disable before release
+
+option('conf_file_name', type: 'string', value : '"/etc/spdmd_conf.json"', description: 'Exact path to SPDM json configuration file')

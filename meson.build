@@ -23,6 +23,7 @@ conf_data = configuration_data()
 conf_data.set_quoted('SPDMD_VERSION', meson.project_version())
 conf_data.set('FETCH_SERIALNUMBER_FROM_RESPONDER', get_option('fetch_serialnumber_from_responder'))
 conf_data.set('DISCOVERY_ONLY_FROM_MCTP_CONTROL', get_option('discovery_only_from_mctp_control').enabled())
+conf_data.set('SPDM_JSON_CONF_FILE_NAME', get_option('conf_file_name'))
 configure_file(
   input: 'config.h.in',
   output: 'config.h',
@@ -58,6 +59,14 @@ else
     'CLI11',
     fallback: [ 'CLI11', 'CLI11_dep' ],
   )
+endif
+
+if comp.has_header('nlohmann/json.hpp')
+    nlohmann_json = declare_dependency()
+else
+    nlohmann_json_proj = subproject('nlohmann', required: true)
+    nlohmann_json = nlohmann_json_proj.get_variable('nlohmann_json_dep')
+    nlohmann_json = nlohmann_json.as_system('system')
 endif
 
 subdir('libspdmcpp')

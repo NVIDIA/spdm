@@ -1,5 +1,7 @@
 #pragma once
 
+#include "config.h"
+
 #include "spdmcpp/context.hpp"
 #include "spdmcpp/log.hpp"
 #include "utils.hpp"
@@ -11,6 +13,8 @@
 
 #include <chrono>
 #include <sstream>
+#include <optional>
+#include <nlohmann/json.hpp>
 
 /* Define USE_PHOSPHOR_LOGGING to log error messages to phosphor logging module.
  */
@@ -24,6 +28,8 @@ extern dbus::ServiceHelper inventoryService;
 
 class SpdmdAppContext
 {
+    static constexpr auto confFile = SPDM_JSON_CONF_FILE_NAME;
+
   public:
     /** @brief ClockId used for specifying various timeouts  */
     static constexpr sdeventplus::ClockId clockId =
@@ -72,6 +78,45 @@ class SpdmdAppContext
         return std::ref(log);
     }
 
+    /** @brief Verify json conf file, if it contains given property name for given eid
+     *   and if yes, then return this json property value */
+    template <typename T> std::optional<T> getPropertyByEid(uint8_t eid, const std::string& property) const
+    {
+        static constexpr auto confEndpoints = "endpoints";
+        static constexpr auto confEID = "eid";
+        nlohmann::json ret;
+
+        if (!conf.contains(confEndpoints))
+        {
+            return std::nullopt;
+        }
+
+        auto eps = conf[confEndpoints];
+        if (!eps.is_array())
+        {
+            return std::nullopt;
+        }
+
+        for (const auto& it : eps)
+        {
+            if (!it.contains(confEID)) {
+                continue;
+            }
+            if(!it[confEID].is_number_unsigned()) {
+                continue;
+            }
+            if(it[confEID] != eid) {
+                continue;
+            }
+            if (it.contains(property))
+            {
+                return it[property].get<T>();
+            }
+        }
+        return std::nullopt;
+    }
+
+
   protected:
     /** @brief Set of EIDs to automatically measure, if empty all devices are
      * measured */
@@ -97,6 +142,9 @@ class SpdmdAppContext
 
    /** @brief Log object used to log debug messages */
     spdmcpp::LogClass log;
+
+   /** @brief Configuration data object */
+    nlohmann::json conf;
 
 };
 

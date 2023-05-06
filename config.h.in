@@ -9,3 +9,6 @@
 
 //NOLINTNEXTLINE cppcoreguidelines-macro-usage
 #mesondefine DISCOVERY_ONLY_FROM_MCTP_CONTROL
+
+//NOLINTNEXTLINE cppcoreguidelines-macro-usage
+#mesondefine SPDM_JSON_CONF_FILE_NAME

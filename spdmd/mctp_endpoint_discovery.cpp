@@ -1,4 +1,5 @@
 #include "mctp_endpoint_discovery.hpp"
+#include "spdmd_app_context.hpp"
 
 #include <algorithm>
 #include <map>
@@ -105,8 +106,14 @@ void MctpDiscovery::mctpNewObjectSignal(
     }
     auto invPath = getInventoryPath(uuid);
     if (invPath.filename().empty()) {
-        spdmApp.getLog().iprintln("SPDM mctpNewObjectSignal couldn't get inventory path for UUID'"s + uuid + '\'');
-        return;
+        static constexpr auto confName = "name";
+        const auto eidName = spdmApp.getPropertyByEid<const std::string>(eid, confName);
+        if(!eidName.has_value()) {
+            spdmApp.getLog().iprintln("SPDM mctpNewObjectSignal couldn't get inventory path for UUID'"s
+                + uuid + " EID " + std::to_string(eid) );
+            return;
+        }
+        invPath = "/" + eidName.value();
     }
 #endif
 

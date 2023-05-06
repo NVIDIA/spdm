@@ -22,7 +22,9 @@ executable(
 		phosphor_dbus_interfaces,
 		sdbusplus, 
 		sdeventplus,
-		crypto_deps],
+		crypto_deps,
+		nlohmann_json,
+		],
 	install: true
 )
 

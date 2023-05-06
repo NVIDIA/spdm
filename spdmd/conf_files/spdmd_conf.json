@@ -1,0 +1,25 @@
+{
+    "endpoints" : [
+        {
+            "eid" : 96,
+            "name" : "erot96_name_without_inventory",
+            "hidden" : true,
+            "description" : "Description hidden without inventory for eid number 96"
+        },
+        {
+            "eid" : 95,
+            "hidden" : true,
+            "description" : "Description hidden with inventory for eid number 95"
+        },
+        {
+            "eid" : 94,
+            "hidden" : false,
+            "description" : "Description hidden with inventory for eid number 94"
+        },
+        {
+            "eid" : 93,
+            "name" : "erot93_name_without_inventory",
+            "description" : "Description public without inventory for eid number 93"
+        }
+    ]
+}

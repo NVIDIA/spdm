@@ -3,12 +3,22 @@
 
 namespace spdmd
 {
+    using json = nlohmann::json;
+
     SpdmdAppContext::SpdmdAppContext(sdeventplus::Event&& e, sdbusplus::bus::bus&& b,
                      std::ostream& logOutStream) :
         event(std::move(e)),
         bus(std::move(b)), log(logOutStream)
     {
-        // Intentionally lefty empty for future usage
+        try
+        {
+            std::ifstream ifs(confFile);
+            conf = json::parse(ifs);
+        }
+        catch(json::parse_error& e)
+        {
+            logOutStream << "Unable to open config file: "  << e.what() << std::endl;
+        }
     }
 
     bool SpdmdAppContext::shouldMeasureEID(uint8_t eid) const
