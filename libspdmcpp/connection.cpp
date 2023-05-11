@@ -1,4 +1,3 @@
-
 #include <spdmcpp/connection.hpp>
 #include <spdmcpp/connection_inl.hpp>
 #include <spdmcpp/context.hpp>
@@ -8,12 +7,12 @@
 #include <algorithm>
 #include <fstream>
 
-
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs)                                 \
     do                                                                         \
     {                                                                          \
-        if (isError(rs)) {                                                     \
+        if (isError(rs))                                                       \
+        {                                                                      \
             SPDMCPP_LOG_TRACE(Log, (rs));                                      \
             SPDMCPP_LOG_TRACE(Log, m_eid);                                     \
             SPDMCPP_LOG_TRACE(Log, SendBuffer);                                \
@@ -26,17 +25,19 @@
 #define SPDMCPP_CONNECTION_RS_ERROR_LOG(print_send_buf)                        \
     do                                                                         \
     {                                                                          \
-            SPDMCPP_LOG_TRACE(Log, m_eid);                                     \
-            if((print_send_buf))                                               \
-                SPDMCPP_LOG_TRACE(Log, SendBuffer);                            \
-            SPDMCPP_LOG_TRACE(Log, ResponseBuffer);                            \
+        SPDMCPP_LOG_TRACE(Log, m_eid);                                         \
+        if ((print_send_buf))                                                  \
+            SPDMCPP_LOG_TRACE(Log, SendBuffer);                                \
+        SPDMCPP_LOG_TRACE(Log, ResponseBuffer);                                \
     } while (false)
 
 namespace spdmcpp
 {
 
-ConnectionClass::ConnectionClass(const ContextClass& cont, LogClass& log, uint8_t eid) :
-    context(cont), Log(log), m_eid(eid)
+ConnectionClass::ConnectionClass(const ContextClass& cont, LogClass& log,
+                                 uint8_t eid) :
+    context(cont),
+    Log(log), m_eid(eid)
 {
     resetConnection();
 }
@@ -167,7 +168,8 @@ bool ConnectionClass::getCertificatesPEM(std::string& str,
             reinterpret_cast<unsigned char*>(span.data()), span.size(), &size);
         if (ret)
         {
-            if (Log.logLevel >= spdmcpp::LogClass::Level::Error) {
+            if (Log.logLevel >= spdmcpp::LogClass::Level::Error)
+            {
                 Log.iprint(
                     "ConnectionClass::getCertificatesPEM() mbedtls_pem_write_buffer failed with: ");
                 Log.println(ret);
@@ -186,10 +188,10 @@ RetStat ConnectionClass::parseCertChain(SlotClass& slot,
     SPDMCPP_LOG_TRACE_FUNC(Log);
     PacketCertificateChain certChain;
     size_t off = 0;
-    auto rs = packetDecodeInternal(Log,certChain, cert, off);
+    auto rs = packetDecodeInternal(Log, certChain, cert, off);
     SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
 
-    if(certChain.Length != cert.size())
+    if (certChain.Length != cert.size())
     {
         SPDMCPP_LOG_TRACE(Log, certChain.Length);
         SPDMCPP_LOG_TRACE(Log, cert.size());
@@ -199,9 +201,10 @@ RetStat ConnectionClass::parseCertChain(SlotClass& slot,
 
     {
         rootCertHash.resize(getHashSize(Algorithms.Min.BaseHashAlgo));
-        rs = packetDecodeBasic(Log,rootCertHash, cert, off);
+        rs = packetDecodeBasic(Log, rootCertHash, cert, off);
         SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
-        if (Log.logLevel >= spdmcpp::LogClass::Level::Informational) {
+        if (Log.logLevel >= spdmcpp::LogClass::Level::Informational)
+        {
             Log.iprint("provided root certificate hash = ");
             Log.println(rootCertHash);
         }
@@ -210,7 +213,8 @@ RetStat ConnectionClass::parseCertChain(SlotClass& slot,
     slot.CertificateOffset = off;
 
     Log.iprint("Full Certificate Chain: ");
-    Log.println(std::span{cert.begin() + static_cast<ptrdiff_t>(off), cert.end()});
+    Log.println(
+        std::span{cert.begin() + static_cast<ptrdiff_t>(off), cert.end()});
 
     do
     {
@@ -238,7 +242,8 @@ RetStat ConnectionClass::verifyCertificateChain(const SlotClass& slot)
         int ret = mbedtls_x509_crt_verify(*slot.MCertificates[i - 1],
                                           *slot.MCertificates[i], nullptr,
                                           nullptr, &rflags, nullptr, nullptr);
-        if (Log.logLevel >= spdmcpp::LogClass::Level::Informational) {
+        if (Log.logLevel >= spdmcpp::LogClass::Level::Informational)
+        {
             Log.iprint("mbedtls_x509_crt_verify ret = ");
             Log.println(ret);
         }
@@ -250,7 +255,8 @@ RetStat ConnectionClass::verifyCertificateChain(const SlotClass& slot)
                                                rflags);
             SPDMCPP_ASSERT(ret >= 0);
             info.resize(ret);
-            if (Log.logLevel >= spdmcpp::LogClass::Level::Error) {
+            if (Log.logLevel >= spdmcpp::LogClass::Level::Error)
+            {
                 Log.print(info);
             }
             return RetStat::ERROR_CERTIFICATE_CHAIN_VERIFIY_FAILED;
@@ -297,7 +303,8 @@ RetStat ConnectionClass::handleRecv<PacketVersionResponseVar>()
     rs = chooseVersion();
     SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
 
-    if (Log.logLevel >= spdmcpp::LogClass::Level::Informational) {
+    if (Log.logLevel >= spdmcpp::LogClass::Level::Informational)
+    {
         Log.iprint("chosen MessageVersion: ");
         Log.println(MessageVersion);
     }
@@ -605,7 +612,7 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
         }
     }
 
-    //rs = verifyCertificateChain(slot);
+    // rs = verifyCertificateChain(slot);
     SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
 
     slot.markInfo(SlotInfoEnum::CERTIFICATES);
@@ -697,7 +704,8 @@ RetStat ConnectionClass::handleRecv<PacketChallengeAuthResponseVar>()
             SPDMCPP_LOG_TRACE_RS(Log, ret);
             if (!ret)
             {
-                if (Log.logLevel >= spdmcpp::LogClass::Level::Informational) {
+                if (Log.logLevel >= spdmcpp::LogClass::Level::Informational)
+                {
                     Log.iprintln(
                         "challenge_auth_response SIGNATURE verify PASSED!");
                 }
@@ -732,7 +740,8 @@ RetStat ConnectionClass::tryGetMeasurements()
         MeasurementIndices.reset(idx);
         return tryGetMeasurements(idx);
     }
-    if (Log.logLevel >= spdmcpp::LogClass::Level::Warning) {
+    if (Log.logLevel >= spdmcpp::LogClass::Level::Warning)
+    {
         Log.iprintln("Warning: no measurements were requested?!");
     }
     return RetStat::OK;
@@ -788,19 +797,22 @@ RetStat ConnectionClass::handleRecv<PacketMeasurementsResponseVar>()
             if (DMTFMeasurements.find(block.Min.Index) !=
                 DMTFMeasurements.end())
             {
-                if (Log.logLevel >= spdmcpp::LogClass::Level::Error) {
+                if (Log.logLevel >= spdmcpp::LogClass::Level::Error)
+                {
                     Log.iprintln("DUPLICATE MeasurementBlock Index!");
                 }
             }
             else
             {
                 size_t off = 0;
-                rs = packetDecodeInternal(Log, DMTFMeasurements[block.Min.Index],
-                                          block.MeasurementVector, off);
+                rs =
+                    packetDecodeInternal(Log, DMTFMeasurements[block.Min.Index],
+                                         block.MeasurementVector, off);
                 SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
                 if (off != block.MeasurementVector.size())
                 {
-                    if (Log.logLevel >= spdmcpp::LogClass::Level::Error) {
+                    if (Log.logLevel >= spdmcpp::LogClass::Level::Error)
+                    {
                         Log.iprintln("MeasurementBlock not fully parsed!");
                     }
                 }
@@ -819,7 +831,7 @@ RetStat ConnectionClass::handleRecv<PacketMeasurementsResponseVar>()
 
                         packetDecodeInfo.SignatureSize);
 
-        if(skipVerifySignature)
+        if (skipVerifySignature)
         {
             if (Log.logLevel >= spdmcpp::LogClass::Level::Informational)
             {
@@ -842,16 +854,18 @@ RetStat ConnectionClass::handleRecv<PacketMeasurementsResponseVar>()
 #else
         hashBuf(hash, getSignatureHashEnum(), BufEnum::L);
 #endif
-        if (Log.logLevel >= spdmcpp::LogClass::Level::Informational) {
+        if (Log.logLevel >= spdmcpp::LogClass::Level::Informational)
+        {
             Log.iprint("computed l2 hash = ");
             Log.println(hash);
         }
         auto ret = verifySignature(Slots[CertificateSlotIdx].getLeafCert(),
-                                  resp.SignatureVector, hash);
+                                   resp.SignatureVector, hash);
         SPDMCPP_LOG_TRACE_RS(Log, ret);
         if (!ret)
         {
-            if (Log.logLevel >= spdmcpp::LogClass::Level::Informational) {
+            if (Log.logLevel >= spdmcpp::LogClass::Level::Informational)
+            {
                 Log.iprintln("measurements SIGNATURE verify PASSED!");
             }
             markInfo(ConnectionInfoEnum::MEASUREMENTS);
@@ -885,7 +899,8 @@ RetStat ConnectionClass::handleRecv(EventReceiveClass& event)
     // TODO however it's error prone, so we should pass the event to each
     // function that needs it instead (via const references)
     std::swap(event.buffer, ResponseBuffer);
-    if (Log.logLevel >= spdmcpp::LogClass::Level::Informational) {
+    if (Log.logLevel >= spdmcpp::LogClass::Level::Informational)
+    {
         Log.iprint("ResponseBuffer.size() = ");
         Log.println(ResponseBuffer.size());
         Log.iprint("ResponseBuffer = ");
@@ -898,7 +913,7 @@ RetStat ConnectionClass::handleRecv(EventReceiveClass& event)
     RequestResponseEnum code;
     // the above conflict with cppcheck redundantInitialization
 
-    { // transport decode
+    {                                   // transport decode
         TransportClass::LayerState lay; // TODO double decode
         if (transport)
         {
@@ -921,7 +936,8 @@ RetStat ConnectionClass::handleRecv(EventReceiveClass& event)
     // "custom" response handling for ERRORS
     if (code == RequestResponseEnum::RESPONSE_ERROR)
     {
-        if (Log.logLevel >= spdmcpp::LogClass::Level::Error) {
+        if (Log.logLevel >= spdmcpp::LogClass::Level::Error)
+        {
             Log.iprint("RESPONSE_ERROR while waiting for response: ");
             Log.println(WaitingForResponse);
         }
@@ -936,18 +952,23 @@ RetStat ConnectionClass::handleRecv(EventReceiveClass& event)
     // if we're not expecting this response return an error
     if (code != WaitingForResponse)
     {
-        if (Log.logLevel >= spdmcpp::LogClass::Level::Error) {
-            if(isWaitingForResponse()) {
+        if (Log.logLevel >= spdmcpp::LogClass::Level::Error)
+        {
+            if (isWaitingForResponse())
+            {
                 Log.iprint("ERROR_WRONG_REQUEST_RESPONSE_CODE: ");
                 Log.println(code);
                 Log.iprint(" while waiting for response: ");
                 Log.println(WaitingForResponse);
-            } else {
+            }
+            else
+            {
                 Log.iprint("Received unexpected response CODE: ");
                 Log.print(code);
                 Log.print(" From EID: ");
                 Log.print(m_eid);
-                Log.println(" while not waiting for any response, discarding this message");
+                Log.println(
+                    " while not waiting for any response, discarding this message");
             }
             SPDMCPP_CONNECTION_RS_ERROR_LOG(isWaitingForResponse());
         }

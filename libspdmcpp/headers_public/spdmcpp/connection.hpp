@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include "assert.hpp"
@@ -17,8 +16,8 @@
 #include <iostream>
 #include <limits>
 #include <map>
-#include <vector>
 #include <memory>
+#include <vector>
 
 namespace spdmcpp
 {
@@ -138,21 +137,23 @@ class ConnectionClass : public NonCopyable
      * information
      *  @param[in] log - the LogClass to use for logging
      */
-    explicit ConnectionClass(const ContextClass& context, LogClass& log, uint8_t eid);
+    explicit ConnectionClass(const ContextClass& context, LogClass& log,
+                             uint8_t eid);
     ~ConnectionClass() = default;
 
-
     /** @brief get send timeout during the connection
-     * 
-    */
-    auto getSendTimeoutValue() const noexcept {
+     *
+     */
+    auto getSendTimeoutValue() const noexcept
+    {
         return SendTimeout;
     }
 
     /** @brief Get send buffer value
-     * 
-    */
-    const auto& getSendBufferRef() const noexcept {
+     *
+     */
+    const auto& getSendBufferRef() const noexcept
+    {
         return SendBuffer;
     }
 
@@ -270,7 +271,7 @@ class ConnectionClass : public NonCopyable
     }
 
     /* @brief Get wait for state*/
-    auto getDbgLastWaitState() const noexcept 
+    auto getDbgLastWaitState() const noexcept
     {
         return DbgLastWaitingForResponse;
     }
@@ -692,9 +693,10 @@ class ConnectionClass : public NonCopyable
     RequestResponseEnum WaitingForResponse = RequestResponseEnum::INVALID;
 
     /** @brief The last response we are wating for debug purpose only
-     * 
-    */
-    RequestResponseEnum DbgLastWaitingForResponse = RequestResponseEnum::INVALID;
+     *
+     */
+    RequestResponseEnum DbgLastWaitingForResponse =
+        RequestResponseEnum::INVALID;
 
     /** @brief Bitmask for which ConnectionInfoEnum we're holding used by
      * markInfo and hasInfo
@@ -741,7 +743,7 @@ class ConnectionClass : public NonCopyable
     /// If not cert capab getDiggest/getCert
     bool skipCertificate{};
 
-public:
+  public:
     const uint8_t m_eid;
 };
 
