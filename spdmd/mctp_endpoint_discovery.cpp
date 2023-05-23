@@ -348,17 +348,25 @@ sdbusplus::message::object_path
 
 std::optional<spdmcpp::TransportMedium> MctpDiscovery::getMediumType(const dbus::InterfaceMap& interfaces)
 {
-    auto intf = interfaces.find(mctpEndpointIntfName);
+    auto intf = interfaces.find(mctpBindingIntfName);
+    if(intf != interfaces.end())
+    {
+        return getInternalMediumType(intf->second, mctpBindingIntfPropertyBindType);
+    }
+    intf = interfaces.find(mctpEndpointIntfName);
     if (intf != interfaces.end())
     {
-        return getMediumType(intf->second);
+        return getInternalMediumType(intf->second, mctpEndpointIntfPropertyMediumType);
     }
+
     return std::nullopt;
 }
 
-std::optional<spdmcpp::TransportMedium> MctpDiscovery::getMediumType(const std::map<std::string, dbus::Value>& properties)
+std::optional<spdmcpp::TransportMedium> MctpDiscovery::getInternalMediumType(
+    const std::map<std::string, dbus::Value>& properties,
+    std::string_view propName)
 {
-    if (!properties.contains(mctpEndpointIntfPropertyMediumType))
+    if (!properties.contains(std::string(propName)))
     {
         return spdmcpp::TransportMedium::PCIe;
     }
@@ -366,7 +374,7 @@ std::optional<spdmcpp::TransportMedium> MctpDiscovery::getMediumType(const std::
 
     try
     {
-        mediumTypeStr = std::get<std::string>(properties.at(mctpEndpointIntfPropertyMediumType));
+        mediumTypeStr = std::get<std::string>(properties.at(std::string(propName)));
         mediumTypeStr = mediumTypeStr.substr(mediumTypeStr.find_last_of('.')+1);
     }
     catch (const std::bad_variant_access& e)
@@ -391,7 +399,6 @@ std::optional<spdmcpp::TransportMedium> MctpDiscovery::getMediumType(const std::
     }
     return std::nullopt;
 }
-
 
 
 } // namespace spdmd

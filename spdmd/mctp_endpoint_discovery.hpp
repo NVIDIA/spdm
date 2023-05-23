@@ -99,6 +99,13 @@ class MctpDiscovery
     //     static constexpr auto mctpEndpointIntfPropertyUUID =
     //         "SupportedMessageTypes";
 
+    /** @brief MCTP d-bus Binding interface name  */
+    static constexpr auto mctpBindingIntfName =
+        "xyz.openbmc_project.MCTP.Binding";
+
+    static constexpr auto mctpBindingIntfPropertyBindType =
+        "BindingType";
+
     /** @brief Get EID value from MCTP objects, which implement SPDM
      *  @returns EID or invalidEid (256) in case of error
      */
@@ -118,12 +125,14 @@ class MctpDiscovery
     std::optional<spdmcpp::TransportMedium> getMediumType(const dbus::InterfaceMap& interfaces);
 
     /**
-     * @brief Extracts transport medium value from the object's interfaces
+     * @brief Extracts Internal transport medium value from the object's interfaces
      *
      * @param properties collection of properties that comes from proper interface
      * @return std::optional<spdmcpp::TransportMedium>
      */
-    std::optional<spdmcpp::TransportMedium> getMediumType(const std::map<std::string, dbus::Value>& properties);
+    std::optional<spdmcpp::TransportMedium> getInternalMediumType(
+        const std::map<std::string, dbus::Value>& properties, std::string_view propName);
+
 
     /** @brief Extract UUID value from the object's interfaces */
     std::string getUUID(const dbus::InterfaceMap& interfaces);
