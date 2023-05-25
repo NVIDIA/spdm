@@ -274,7 +274,7 @@ class ConnectionClass : public NonCopyable
     /* @brief Get wait for state */
     auto getDbgLastWaitState() const noexcept
     {
-        return DbgLastWaitingForResponse;
+        return LastWaitingForResponse;
     }
 
     /* @brief Get wait for response state */
@@ -413,7 +413,7 @@ class ConnectionClass : public NonCopyable
     template <class T>
     [[nodiscard]] RetStat handleRecv();
     [[nodiscard]] RetStat handleRecv(EventReceiveClass& event);
-    [[nodiscard]] RetStat handleTimeout(EventTimeoutClass& event);
+    [[nodiscard]] RetStat handleTimeoutOrRetry(EventTimeoutClass& event);
 
     /** @brief This enum is used for selecting the buffer for computing the
      * M1/M2 and L1/L2 hash
@@ -580,9 +580,17 @@ class ConnectionClass : public NonCopyable
      */
     void clearTimeout();
 
+    /**
+     * Retry command n times with timeout between packets
+    */
+    RetStat retryTimeout(RetStat lastError, timeout_ms_t timeout=3000,
+                         uint16_t retry=4);
+
     std::vector<uint8_t> SendBuffer;
     timeout_ms_t SendTimeout = 0;
     uint16_t SendRetry = 0;
+    bool retryNeeded = false;
+    RetStat lastRetryError {};
 
     /** @brief Buffer for the received response from which interpretResponse
      * decodes the packet
@@ -704,7 +712,7 @@ class ConnectionClass : public NonCopyable
     /** @brief The last response we are wating for debug purpose only
      *
      */
-    RequestResponseEnum DbgLastWaitingForResponse =
+    RequestResponseEnum LastWaitingForResponse =
         RequestResponseEnum::INVALID;
 
     /** @brief Bitmask for which ConnectionInfoEnum we're holding used by
@@ -752,10 +760,16 @@ class ConnectionClass : public NonCopyable
     /// If not cert capab getDiggest/getCert
     bool skipCertificate{};
 
-private:
+  private:
     TransportMedium currentMedium;
 
-public:
+  public:
+    /// Try retry certificate count
+    uint8_t retryCertCount {};
+  private:
+    /// Return true if retry is needed
+    static bool checkErrorCodeForRetry(RetStat ec);
+  public:
     const uint8_t m_eid;
 };
 

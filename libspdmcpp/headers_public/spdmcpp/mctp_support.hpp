@@ -164,12 +164,15 @@ class MctpIoClass : public IOClass
         if (::connect(Socket, (struct sockaddr*)&addr,
             path.length() + sizeof(addr.sun_family)) == -1)
         {
-            Log.iprint("connect() error to mctp-demux-daemon, path = \"");
-            Log.print(path);
-            Log.print("\", errno = ");
-            Log.print(errno);
-            Log.print(" ");
-            Log.println(std::strerror(errno));
+            if (Log.logLevel >= LogClass::Level::Critical)
+            {
+                Log.iprint("connect() error to mctp-demux-daemon, path = \"");
+                Log.print(path);
+                Log.print("\", errno = ");
+                Log.print(errno);
+                Log.print(" ");
+                Log.println(std::strerror(errno));
+            }
             deleteSocket();
             return false;
         }
@@ -178,10 +181,12 @@ class MctpIoClass : public IOClass
             ssize_t ret = ::write(Socket, &type, sizeof(type));
             if (ret == -1)
             {
-                Log.iprint("Failed to write spdm code to socket, errno = ");
-                Log.print(errno);
-                Log.print(" ");
-                Log.println(strerror(errno));
+                if (Log.logLevel >= LogClass::Level::Critical) {
+                    Log.iprint("Failed to write spdm code to socket, errno = ");
+                    Log.print(errno);
+                    Log.print(" ");
+                    Log.println(strerror(errno));
+                }
                 deleteSocket();
                 return false;
             }
@@ -224,8 +229,10 @@ inline RetStat MctpIoClass::write(const std::vector<uint8_t>& buf,
         ssize_t ret = send(Socket, (void*)&buf[sent], buf.size() - sent, 0);
         if (ret == -1)
         {
-            Log.iprint("Send error:");
-            Log.println(errno);
+            if (Log.logLevel >= LogClass::Level::Critical) {
+                Log.iprint("Send error:");
+                Log.println(errno);
+            }
             return RetStat::ERROR_UNKNOWN;
         }
         sent += ret;
@@ -242,8 +249,10 @@ inline RetStat MctpIoClass::read(std::vector<uint8_t>& buf,
     if (result == -1 || result == 0)
     {
         buf.clear();
-        Log.iprint("Receive error: ");
-        Log.println(errno);
+        if (Log.logLevel >= LogClass::Level::Critical) {
+            Log.iprint("Receive error: ");
+            Log.println(errno);
+        }
         return RetStat::ERROR_UNKNOWN;
     }
     buf.resize(result);

@@ -204,28 +204,29 @@ void Responder::handleError(spdmcpp::RetStat rs)
         case RetStat::ERROR_TIMEOUT:
             status(Responder::SPDMStatus::Error_ConnectionTimeout);
             appContext.reportError("SPDM timeout on " + dbgIdName
-                + ", while waiting on: " + get_cstr(connection.getDbgLastWaitState()) 
+                + ", while waiting on: " + get_cstr(connection.getDbgLastWaitState())
                 + ", timeout value: " + std::to_string(connection.getSendTimeoutValue()) + "ms"
             );
             getLog().print("sendBuffer=");
             getLog().println(connection.getSendBufferRef());
             break;
         case RetStat::ERROR_INVALID_FLAG_SIZE:
-            appContext.reportError("Invalid flag size");
-            break;
-        case RetStat:: ERROR_INDICES_INVALID_SIZE:
-            appContext.reportError("Invalid Indices size");
+        case RetStat::ERROR_INDICES_INVALID_SIZE:
+        case RetStat::ERROR_WRONG_ALGO_BITS:
+        case RetStat::ERROR_INVALID_PARAMETER:
+        case RetStat::ERROR_INVALID_RESERVED:
+            appContext.reportError("Packet corrupted on " + dbgIdName);
             break;
         default:
             status(SPDMStatus::Error_Other);
             appContext.reportError(std::string("SPDM other error: ") +
                                    get_cstr(rs) + " on " + dbgIdName);
     }
-    SPDMCPP_ASSERT(!connection.isWaitingForResponse());
 }
 
 spdmcpp::RetStat Responder::handleEventForRefresh(spdmcpp::EventClass& ev)
 {
+
     auto rs = connection.handleEvent(ev);
 
     if (isError(rs))
@@ -394,7 +395,7 @@ spdmcpp::RetStat
         }
         return rs;
     }
-    
+
     if (connection.hasInfo(ConnectionInfoEnum::MEASUREMENTS))
     {
         const ConnectionClass::DMTFMeasurementsContainer& src =

@@ -103,7 +103,7 @@ RetStat ConnectionClass::setupResponseWait(timeout_ms_t timeout, uint16_t retry)
     }
     SPDMCPP_STATIC_ASSERT(isResponse(T::requestResponseCode));
     WaitingForResponse = T::requestResponseCode;
-    DbgLastWaitingForResponse = WaitingForResponse;
+    LastWaitingForResponse = WaitingForResponse;
 
     if (timeout != timeoutMsInfinite)
     {

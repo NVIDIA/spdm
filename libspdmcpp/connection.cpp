@@ -6,6 +6,8 @@
 
 #include <algorithm>
 #include <fstream>
+#include <bit>
+#include <type_traits>
 
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs)                                 \
@@ -301,7 +303,18 @@ RetStat ConnectionClass::handleRecv<PacketVersionResponseVar>()
     // DSP0274_1.1.1 page 34
     if (resp.Min.Header.MessageVersion != MessageVersionEnum::SPDM_1_0)
     {
-        return RetStat::ERROR_INVALID_HEADER_VERSION;
+        rs = RetStat::ERROR_INVALID_HEADER_VERSION;
+        SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+    }
+    if (resp.Min.Header.Param1 != 0 || resp.Min.Header.Param2 != 0)
+    {
+        rs = RetStat::ERROR_INVALID_PARAMETER;
+        SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+    }
+    if (resp.Min.Reserved != 0)
+    {
+        rs = RetStat::ERROR_INVALID_RESERVED;
+        SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
     }
 
     std::swap(SupportedVersions, resp.VersionNumberEntries);
@@ -395,6 +408,17 @@ RetStat ConnectionClass::handleRecv<PacketCapabilitiesResponse>()
     auto rs = interpretResponse(resp);
     SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
 
+    if (resp.Header.Param1 != 0 || resp.Header.Param2 != 0)
+    {
+        rs = RetStat::ERROR_INVALID_PARAMETER;
+        SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+    }
+    if (resp.Reserved0 != 0 || resp.Reserved1 != 0)
+    {
+        rs = RetStat::ERROR_INVALID_RESERVED;
+        SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+    }
+
     markInfo(ConnectionInfoEnum::CAPABILITIES);
     appendRecvToBuf(BufEnum::A);
 
@@ -472,6 +496,39 @@ RetStat ConnectionClass::handleRecv<PacketAlgorithmsResponseVar>()
     auto rs = interpretResponse(resp);
     SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
 
+    if (resp.Min.Header.Param2 != 0)
+    {
+        rs = RetStat::ERROR_INVALID_PARAMETER;
+        SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+    }
+    if (resp.Min.Reserved0 != 0 || resp.Min.Reserved1 != 0 ||
+        resp.Min.Reserved2 != 0 || resp.Min.Reserved3 != 0)
+    {
+        rs = RetStat::ERROR_INVALID_RESERVED;
+        SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+    }
+    if(std::popcount(
+        static_cast<std::underlying_type_t<MeasurementHashAlgoFlags>>
+            (resp.Min.MeasurementHashAlgo))>1)
+    {
+        rs = RetStat::ERROR_WRONG_ALGO_BITS;
+        SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+    }
+    if(std::popcount(
+        static_cast<std::underlying_type_t<BaseAsymAlgoFlags>>
+            (resp.Min.BaseAsymAlgo))>1)
+    {
+        rs = RetStat::ERROR_WRONG_ALGO_BITS;
+        SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+    }
+    if(std::popcount(
+        static_cast<std::underlying_type_t<BaseHashAlgoFlags>>
+            (resp.Min.BaseHashAlgo))>1)
+    {
+        rs = RetStat::ERROR_WRONG_ALGO_BITS;
+        SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+    }
+
     markInfo(ConnectionInfoEnum::ALGORITHMS);
 
     appendRecvToBuf(BufEnum::A);
@@ -525,7 +582,11 @@ RetStat ConnectionClass::handleRecv<PacketDigestsResponseVar>()
     PacketDigestsResponseVar resp;
     auto rs = interpretResponse(resp, packetDecodeInfo);
     SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
-
+    if (resp.Min.Header.Param1 != 0)
+    {
+        rs = RetStat::ERROR_INVALID_PARAMETER;
+        SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+    }
     bool skipCert = false;
     for (SlotIdx i = 0; i < slotNum; ++i)
     {
@@ -561,6 +622,7 @@ RetStat ConnectionClass::handleRecv<PacketDigestsResponseVar>()
     }
     else
     {
+        retryCertCount = 0;
         rs = tryGetCertificate(CertificateSlotIdx);
         SPDMCPP_LOG_TRACE_RS(Log, rs);
     }
@@ -606,6 +668,11 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
     SlotIdx idx = CertificateSlotIdx;
     SlotClass& slot = Slots[idx];
     std::vector<uint8_t>& cert = slot.Certificates;
+    if(resp.Min.PortionLength> getResponseBufferRef().size()) {
+        rs = RetStat::ERROR_CERTIFICATE_CHAIN_SIZE_INVALID;
+        SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+    }
+
     if (cert.empty())
     { // first chunk so reserve space for what's expected to come
         cert.reserve(resp.Min.PortionLength + resp.Min.RemainderLength);
@@ -625,22 +692,36 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
 
     // parse chain and store in the respective SlotClass
     rs = parseCertChain(slot, cert);
-    SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
 
-    if (Log.logLevel >= LogClass::Level::Informational)
+    static constexpr auto numCertRetries = 3U;
+    if(isError(rs) && retryCertCount < numCertRetries)
     {
-        for (auto& c : slot.MCertificates)
+        rs = tryGetCertificate(idx);
+        SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+        ++retryCertCount;
+        if (Log.logLevel >= LogClass::Level::Error)
         {
-            Log.print(mbedtlsToInfoString(*c));
+            Log.print("Try retry certificate ");
+            Log.print(retryCertCount);
+            Log.print("/");
+            Log.print(numCertRetries);
+            Log.println("...");
         }
     }
-
-    // rs = verifyCertificateChain(slot);
-    SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
-
-    slot.markInfo(SlotInfoEnum::CERTIFICATES);
-
-    rs = tryChallengeIfSupported();
+    else
+    {
+        if (Log.logLevel >= LogClass::Level::Informational)
+        {
+            for (auto& c : slot.MCertificates)
+            {
+                Log.print(mbedtlsToInfoString(*c));
+            }
+        }
+        // rs = verifyCertificateChain(slot);
+        SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+        slot.markInfo(SlotInfoEnum::CERTIFICATES);
+        rs = tryChallengeIfSupported();
+    }
     SPDMCPP_LOG_TRACE_RS(Log, rs);
     return rs;
 }
@@ -917,7 +998,6 @@ RetStat ConnectionClass::handleRecv(EventReceiveClass& event)
 {
     SPDMCPP_LOG_TRACE_FUNC(Log);
 
-    clearTimeout();
 
     // swap to avoid copy, this is currently safe because nothing else would
     // want to access the data afterwards
@@ -957,7 +1037,6 @@ RetStat ConnectionClass::handleRecv(EventReceiveClass& event)
         code = packetMessageHeaderGetRequestresponsecode(
             ResponseBuffer, ResponseBufferSPDMOffset);
     }
-
     // "custom" response handling for ERRORS
     if (code == RequestResponseEnum::RESPONSE_ERROR)
     {
@@ -1038,6 +1117,9 @@ RetStat ConnectionClass::handleRecv(EventReceiveClass& event)
         #undef DTYPE
         } // clang-format on
     }
+    if(checkErrorCodeForRetry(rs)) {
+        WaitingForResponse = LastWaitingForResponse;
+    }
     SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
     return rs;
 }
@@ -1046,16 +1128,54 @@ RetStat ConnectionClass::handleRecv(EventReceiveClass& event)
 {
     if (auto e = event.getAs<EventReceiveClass>())
     {
-        return handleRecv(*e);
+        const auto ec = handleRecv(*e);
+        if(checkErrorCodeForRetry(ec) && !retryNeeded)
+        {
+            const auto timeout =
+                WaitingForResponse==RequestResponseEnum::RESPONSE_MEASUREMENTS ?
+                Timings.getT2() : Timings.getT1();
+            const auto rs = retryTimeout(ec, timeout);
+            SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+        }
+        // Waiting for repeated message
+        if(retryNeeded)
+        {
+            if(Log.logLevel >= spdmcpp::LogClass::Level::Warning) {
+                Log.iprint("Command: ");
+                Log.iprint(LastWaitingForResponse);
+                Log.iprint(" retried because of error: ");
+                Log.iprintln(ec);
+            }
+            // Success after retry
+            if(ec == RetStat::OK)
+            {
+                retryNeeded = false;
+                clearTimeout();
+                return ec;
+            }
+            if(ec == RetStat::ERROR_RESPONSE)
+            {
+                retryNeeded = false;
+                clearTimeout();
+                return tryGetVersion();
+            }
+            WaitingForResponse = LastWaitingForResponse;
+            lastRetryError = ec;
+        }
+        else
+        {
+            return ec;
+        }
     }
-    if (auto e = event.getAs<EventTimeoutClass>())
+    if (auto e = event.getAs<EventTimeoutClass>(); e)
     {
-        return handleTimeout(*e);
+        WaitingForResponse = LastWaitingForResponse;
+        return handleTimeoutOrRetry(*e);
     }
     return RetStat::ERROR_UNKNOWN;
 }
 
-RetStat ConnectionClass::handleTimeout(EventTimeoutClass& event)
+RetStat ConnectionClass::handleTimeoutOrRetry(EventTimeoutClass& event)
 {
     SPDMCPP_LOG_TRACE_FUNC(Log);
     if (SendRetry)
@@ -1068,8 +1188,13 @@ RetStat ConnectionClass::handleTimeout(EventTimeoutClass& event)
         SPDMCPP_LOG_TRACE_RS(Log, rs);
         return rs;
     }
+    const auto lastRetryCorrupted = retryNeeded;
+    retryNeeded = false;
     WaitingForResponse = RequestResponseEnum::INVALID;
-    return RetStat::ERROR_TIMEOUT;
+
+    const auto rs = lastRetryCorrupted?lastRetryError: RetStat::ERROR_TIMEOUT;
+    SPDMCPP_LOG_TRACE_RS(Log, rs);
+    return rs;
 }
 
 void ConnectionClass::clearTimeout()
@@ -1080,6 +1205,38 @@ void ConnectionClass::clearTimeout()
     }
     SendTimeout = 0;
     SendRetry = 0;
+}
+
+
+RetStat ConnectionClass::retryTimeout(RetStat lastError, timeout_ms_t timeout,  uint16_t retry)
+{
+    WaitingForResponse = LastWaitingForResponse;
+    lastRetryError = lastError;
+    retryNeeded = true;
+    SendRetry = retry;
+    SendTimeout = timeout;
+    const auto rs = transport->setupTimeout(SendTimeout);
+    SPDMCPP_LOG_TRACE_RS(getLog(),rs);
+    return rs;
+}
+
+bool ConnectionClass::checkErrorCodeForRetry(RetStat ec)
+{
+    switch(ec) {
+        case RetStat::ERROR_WRONG_REQUEST_RESPONSE_CODE:
+        case RetStat::ERROR_UNKNOWN_REQUEST_RESPONSE_CODE:
+        case RetStat::ERROR_BUFFER_TOO_SMALL:
+        case RetStat::ERROR_INVALID_HEADER_VERSION:
+        case RetStat::ERROR_CERTIFICATE_CHAIN_SIZE_INVALID:
+        case RetStat::ERROR_MISSING_CAPABILITY_MEAS:
+        case RetStat::ERROR_MISSING_CAPABILITY_CERT:
+        case RetStat::ERROR_WRONG_ALGO_BITS:
+        case RetStat::ERROR_INVALID_PARAMETER:
+        case RetStat::ERROR_INVALID_RESERVED:
+            return true;
+        default:
+            return false;
+    }
 }
 
 } // namespace spdmcpp
