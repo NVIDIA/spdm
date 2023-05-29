@@ -1,0 +1,6 @@
+GLIBC_2.4 {
+    global:
+        connect;
+        close;
+        recv;
+};
