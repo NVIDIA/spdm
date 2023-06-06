@@ -177,13 +177,14 @@ void SpdmdApp::connectMCTP()
 #ifdef USE_I2C
     if (!mctpIoI2C.isSocketOpen())
     {
-        if mctpIoI2C.createSocket("\0mctp-i2c-mux"s))
+        if (mctpIoI2C.createSocket("\0mctp-i2c-mux"s))
         {
             auto callback = [this](sdeventplus::source::IO& /*io*/, int /*fd*/,
                             uint32_t revents) {
                 mctpCallback(revents, mctpIoI2C);
             };
             mctpEventI2C = new sdeventplus::source::IO(event, mctpIoI2C.getSocket(), EPOLLIN,
+                                                       std::move(callback));
 
         } else {
             if (getLog().logLevel >= spdmcpp::LogClass::Level::Warning) {
