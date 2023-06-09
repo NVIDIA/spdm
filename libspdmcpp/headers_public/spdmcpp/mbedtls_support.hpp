@@ -5,6 +5,7 @@
 #include "flag.hpp"
 #include "log.hpp"
 
+#include <cerrno>
 #include <mbedtls/ecdh.h>
 #include <mbedtls/ecdsa.h>
 #include <mbedtls/error.h>
@@ -173,6 +174,11 @@ inline int verifySignature(mbedtls_x509_crt* cert,
                            const std::vector<uint8_t>& signature,
                            const std::vector<uint8_t>& hash)
 {
+    if(!cert)
+    {
+        errno = -EINVAL;
+        return -1;
+    }
 #if 0
 
 		// mbedtls_pk_context argh;
@@ -199,14 +205,12 @@ inline int verifySignature(mbedtls_x509_crt* cert,
                                       MBEDTLS_ECDH_OURS);
     if (ret != 0)
     {
-        SPDMCPP_ASSERT(false);
         return ret;
     }
 
     size_t halfSize = getHalfSize(ctx);
     if (signature.size() != halfSize * 2)
     {
-        SPDMCPP_ASSERT(false);
         return -1;
     }
 
@@ -215,13 +219,11 @@ inline int verifySignature(mbedtls_x509_crt* cert,
     ret = mbedtls_mpi_read_binary(bnR, signature.data(), halfSize);
     if (ret != 0)
     {
-        SPDMCPP_ASSERT(false);
         return ret;
     }
     ret = mbedtls_mpi_read_binary(bnS, &signature[halfSize], halfSize);
     if (ret != 0)
     {
-        SPDMCPP_ASSERT(false);
         return ret;
     }
     ret = mbedtls_ecdsa_verify(&ctx->grp, hash.data(), hash.size(), &ctx->Q,
