@@ -77,9 +77,12 @@ RetStat ConnectionClass::refreshMeasurements(
 }
 RetStat ConnectionClass::refreshMeasurementsInternal()
 {
-    if (MeasurementIndices[0] || MeasurementIndices[255])
+    if (MeasurementIndices[255])
     {
-        SPDMCPP_ASSERT(MeasurementIndices.count() == 1);
+        if (MeasurementIndices.count()!=1)
+        {
+            return RetStat::ERROR_INDICES_INVALID_SIZE;
+        }
     }
     auto rs = tryGetVersion();
     SPDMCPP_LOG_TRACE_RS(Log, rs);

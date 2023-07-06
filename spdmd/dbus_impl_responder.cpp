@@ -213,6 +213,9 @@ void Responder::handleError(spdmcpp::RetStat rs)
         case RetStat::ERROR_INVALID_FLAG_SIZE:
             appContext.reportError("Invalid flag size");
             break;
+        case RetStat:: ERROR_INDICES_INVALID_SIZE:
+            appContext.reportError("Invalid Indices size");
+            break;
         default:
             status(SPDMStatus::Error_Other);
             appContext.reportError(std::string("SPDM other error: ") +
