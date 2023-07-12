@@ -127,7 +127,10 @@ class ConnectionFixture
         size_t off = lay.getEndOffset();
         if (hashidx < MessageHashEnum::NUM)
         {
-            getHash(hashidx).update(buf, off);
+            rs = getHash(hashidx).update(buf, off);
+            if(rs != RetStat::OK) {
+                return rs;
+            }
         }
         rs = packetDecode(log, packet, buf, off, fargs...);
         SPDMCPP_LOG_TRACE_RS(Connection.getLog(), rs);
@@ -160,7 +163,11 @@ class ConnectionFixture
         }
         if (hashidx < MessageHashEnum::NUM)
         {
-            getHash(hashidx).update(buf, start);
+            rs = getHash(hashidx).update(buf, start);
+            if(isError(rs)) {
+                IO.ReadQueue.pop_back();
+                return rs;
+            }
         }
         Trans.encodePost(buf, lay);
 
@@ -387,7 +394,7 @@ void testConnectionFlow(BaseAsymAlgoFlags asymAlgo, BaseHashAlgoFlags hashAlgo)
             {
                 std::vector<uint8_t> buf;
                 ASSERT_EQ(packetEncode(resp, buf), RetStat::OK);
-                hc.update(buf);
+                ASSERT_EQ(hc.update(buf), RetStat::OK);
             }
             std::vector<uint8_t> hash;
             hc.hashFinish(hash);
@@ -445,7 +452,7 @@ void testConnectionFlow(BaseAsymAlgoFlags asymAlgo, BaseHashAlgoFlags hashAlgo)
             {
                 std::vector<uint8_t> buf;
                 ASSERT_EQ(packetEncode(resp, buf), RetStat::OK);
-                hc.update(buf);
+                ASSERT_EQ(hc.update(buf), RetStat::OK);
             }
             std::vector<uint8_t> hash;
             hc.hashFinish(hash);

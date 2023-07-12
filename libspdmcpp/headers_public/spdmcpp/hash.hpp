@@ -193,18 +193,20 @@ class HashClass
 
     /** @brief function used to continue computing the hash with the given data
      */
-    void update(const std::vector<uint8_t>& buf, size_t off = 0,
+    [[nodiscard]] RetStat update(const std::vector<uint8_t>& buf, size_t off = 0,
                 size_t len = std::numeric_limits<size_t>::max())
     {
         if (off > buf.size())
+        {
             std::cerr << "Wrong offset in the buffer: off = " << off <<", buf.size() = " << buf.size() << std::endl;
-
-        SPDMCPP_ASSERT(off <= buf.size());
+            return RetStat::ERROR_BUFFER_TOO_SMALL;
+        }
         len = std::min(len, buf.size() - off);
         if (len > 0)
         {
             mbedtls_md_update(&Ctx, &buf[off], len);
         }
+        return RetStat::OK;
     }
 
     /** @brief function used to finish computing the hash and writing it out

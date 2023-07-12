@@ -711,7 +711,9 @@ RetStat ConnectionClass::handleRecv<PacketChallengeAuthResponseVar>()
             {
                 if (!buf.empty())
                 {
-                    ha.update(buf);
+                    if(rs = ha.update(buf); rs!=RetStat::OK) {
+                        return rs;
+                    }
                 }
             }
             ha.hashFinish(hash);

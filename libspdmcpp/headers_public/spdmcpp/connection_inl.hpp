@@ -97,7 +97,10 @@ RetStat ConnectionClass::setupResponseWait(timeout_ms_t timeout, uint16_t retry)
         Log.print(typeid(T).name());
         Log.println("):");
     }
-    SPDMCPP_ASSERT(WaitingForResponse == RequestResponseEnum::INVALID);
+    //SPDMCPP_ASSERT(WaitingForResponse == RequestResponseEnum::INVALID);
+    if(WaitingForResponse != RequestResponseEnum::INVALID) {
+        return RetStat::ERROR_RESPONSE;
+    }
     SPDMCPP_STATIC_ASSERT(isResponse(T::requestResponseCode));
     WaitingForResponse = T::requestResponseCode;
     DbgLastWaitingForResponse = WaitingForResponse;
