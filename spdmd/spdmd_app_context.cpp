@@ -10,6 +10,7 @@ namespace spdmd
         event(std::move(e)),
         bus(std::move(b)), log(logOutStream)
     {
+        event.set_watchdog(true);
         try
         {
             std::ifstream ifs(confFile);
