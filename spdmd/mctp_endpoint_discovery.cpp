@@ -197,10 +197,19 @@ void MctpDiscovery::inventoryNewObjectSignal(
 
 size_t MctpDiscovery::getEid(const dbus::InterfaceMap& interfaces)
 {
-    auto intf = interfaces.find(mctpEndpointIntfName);
-    if (intf != interfaces.end())
+    SPDMCPP_LOG_TRACE_FUNC(spdmApp.getLog());
+
+    try
     {
-        return getEid(intf->second);
+        auto intf = interfaces.find(mctpEndpointIntfName);
+        if (intf != interfaces.end())
+        {
+            return getEid(intf->second);
+        }
+    }
+    catch (const std::exception& e)
+    {
+        spdmApp.getLog().println(e.what());
     }
     return invalidEid;
 }
@@ -208,6 +217,9 @@ size_t MctpDiscovery::getEid(const dbus::InterfaceMap& interfaces)
 size_t
     MctpDiscovery::getEid(const std::map<std::string, dbus::Value>& properties)
 {
+
+    SPDMCPP_LOG_TRACE_FUNC(spdmApp.getLog());
+
     if (!properties.contains(mctpEndpointIntfPropertyEid))
     {
         return invalidEid;
@@ -258,22 +270,31 @@ size_t
 
 std::string MctpDiscovery::getUUID(const dbus::InterfaceMap& interfaces)
 {
-    auto intf = interfaces.find(uuidIntfName);
-    if (intf != interfaces.end())
+    SPDMCPP_LOG_TRACE_FUNC(spdmApp.getLog());
+
+    try
     {
-        const auto& properties = intf->second;
-        auto uuid = properties.find(uuidIntfPropertyUUID);
-        if (uuid != properties.end())
+        auto intf = interfaces.find(uuidIntfName);
+        if (intf != interfaces.end())
         {
-            try
+            const auto& properties = intf->second;
+            auto uuid = properties.find(uuidIntfPropertyUUID);
+            if (uuid != properties.end())
             {
-                return std::get<std::string>(uuid->second);
-            }
-            catch (const std::bad_variant_access& e)
-            {
-                spdmApp.getLog().println(e.what());
+                try
+                {
+                    return std::get<std::string>(uuid->second);
+                }
+                catch (const std::bad_variant_access& e)
+                {
+                    spdmApp.getLog().println(e.what());
+                }
             }
         }
+    }
+    catch (const std::exception& e)
+    {
+        spdmApp.getLog().print(e.what());
     }
     return {};
 }
@@ -348,15 +369,22 @@ sdbusplus::message::object_path
 
 std::optional<spdmcpp::TransportMedium> MctpDiscovery::getMediumType(const dbus::InterfaceMap& interfaces)
 {
-    auto intf = interfaces.find(mctpBindingIntfName);
-    if(intf != interfaces.end())
+    try
     {
-        return getInternalMediumType(intf->second, mctpBindingIntfPropertyBindType);
+        auto intf = interfaces.find(mctpBindingIntfName);
+        if(intf != interfaces.end())
+        {
+            return getInternalMediumType(intf->second, mctpBindingIntfPropertyBindType);
+        }
+        intf = interfaces.find(mctpEndpointIntfName);
+        if (intf != interfaces.end())
+        {
+            return getInternalMediumType(intf->second, mctpEndpointIntfPropertyMediumType);
+        }
     }
-    intf = interfaces.find(mctpEndpointIntfName);
-    if (intf != interfaces.end())
+    catch (const std::exception& e)
     {
-        return getInternalMediumType(intf->second, mctpEndpointIntfPropertyMediumType);
+        spdmApp.getLog().print(e.what());
     }
 
     return std::nullopt;
