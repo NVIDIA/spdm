@@ -1140,20 +1140,21 @@ RetStat ConnectionClass::handleRecv(EventReceiveClass& event)
         // Waiting for repeated message
         if(retryNeeded)
         {
-            if(Log.logLevel >= spdmcpp::LogClass::Level::Warning) {
+            if (Log.logLevel >= spdmcpp::LogClass::Level::Error)
+            {
                 Log.iprint("Command: ");
                 Log.iprint(LastWaitingForResponse);
                 Log.iprint(" retried because of error: ");
-                Log.iprintln(ec);
+                Log.iprintln(lastRetryError);
             }
             // Success after retry
-            if(ec == RetStat::OK)
+            if (ec == RetStat::OK)
             {
                 retryNeeded = false;
                 clearTimeout();
                 return ec;
             }
-            if(ec == RetStat::ERROR_RESPONSE)
+            if (ec == RetStat::ERROR_RESPONSE)
             {
                 retryNeeded = false;
                 clearTimeout();
@@ -1164,6 +1165,7 @@ RetStat ConnectionClass::handleRecv(EventReceiveClass& event)
         }
         else
         {
+            clearTimeout();
             return ec;
         }
     }
@@ -1183,7 +1185,6 @@ RetStat ConnectionClass::handleTimeoutOrRetry(EventTimeoutClass& event)
         --SendRetry;
         auto rs = context.getIO(event.transportMedium).write(SendBuffer);
         SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
-
         rs = transport->setupTimeout(SendTimeout);
         SPDMCPP_LOG_TRACE_RS(Log, rs);
         return rs;
@@ -1199,17 +1200,20 @@ RetStat ConnectionClass::handleTimeoutOrRetry(EventTimeoutClass& event)
 
 void ConnectionClass::clearTimeout()
 {
+    SPDMCPP_LOG_TRACE_FUNC(getLog());
     if (transport)
     {
         transport->clearTimeout();
     }
     SendTimeout = 0;
     SendRetry = 0;
+    SPDMCPP_LOG_TRACE_RS(getLog(),RetStat::OK);
 }
 
 
 RetStat ConnectionClass::retryTimeout(RetStat lastError, timeout_ms_t timeout,  uint16_t retry)
 {
+    SPDMCPP_LOG_TRACE_FUNC(getLog());
     WaitingForResponse = LastWaitingForResponse;
     lastRetryError = lastError;
     retryNeeded = true;
