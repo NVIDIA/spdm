@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dbus_impl_responder.hpp"
+#include "spdmcpp/common.hpp"
 #include "spdmcpp/context.hpp"
 #include "spdmcpp/log.hpp"
 #include "spdmcpp/mctp_support.hpp"
@@ -49,7 +50,7 @@ class SpdmdApp : public SpdmdAppContext
      *  @details Safe to call redundantly if necessary,
      * it'll create only one connection.
      */
-    void connectMCTP();
+    void connectMCTP(TransportMedium medium);
 
 
     /** @brief Sets up the automatic measurement delay according to commandline

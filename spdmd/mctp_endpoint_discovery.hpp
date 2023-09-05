@@ -1,5 +1,6 @@
 #pragma once
 
+#include "spdmcpp/common.hpp"
 #include "spdmd_app.hpp"
 
 #include <sdbusplus/bus/match.hpp>
@@ -67,7 +68,7 @@ class MctpDiscovery
 #endif
     
     /** @brief Try calling spdmApp.ConnectMCTP() */
-    void tryConnectMCTP();
+    void tryConnectMCTP(TransportMedium medium);
 
     /** MCTP handle callback */
     void mtcpCallback(uint32_t revents, spdmcpp::MctpIoClass &mctpIo);

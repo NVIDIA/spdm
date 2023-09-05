@@ -137,10 +137,10 @@ void SpdmdApp::connectDBus()
 }
 
 
-void SpdmdApp::connectMCTP()
+void SpdmdApp::connectMCTP(TransportMedium medium)
 {
     SPDMCPP_LOG_TRACE_FUNC(getLog());
-    if (!mctpIoPCIe.isSocketOpen())
+    if (!mctpIoPCIe.isSocketOpen() && medium==TransportMedium::PCIe)
     {
         if (mctpIoPCIe.createSocket("\0mctp-pcie-mux"s))
         {
@@ -156,7 +156,7 @@ void SpdmdApp::connectMCTP()
             }
         }
     }
-    if (!mctpIoSPI.isSocketOpen())
+    if (!mctpIoSPI.isSocketOpen() && medium==TransportMedium::SPI)
     {
         if (mctpIoSPI.createSocket("\0mctp-spi-mux"s))
         {
@@ -175,7 +175,7 @@ void SpdmdApp::connectMCTP()
 
 
 #ifdef USE_I2C
-    if (!mctpIoI2C.isSocketOpen())
+    if (!mctpIoI2C.isSocketOpen() && medium==TransportMedium::I2C)
     {
         if (mctpIoI2C.createSocket("\0mctp-i2c-mux"s))
         {

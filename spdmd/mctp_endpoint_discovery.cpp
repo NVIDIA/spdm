@@ -1,4 +1,5 @@
 #include "mctp_endpoint_discovery.hpp"
+#include "spdmcpp/common.hpp"
 #include "spdmd_app_context.hpp"
 
 #include <algorithm>
@@ -104,7 +105,7 @@ MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
 
 
 
-void MctpDiscovery::tryConnectMCTP()
+void MctpDiscovery::tryConnectMCTP(TransportMedium medium)
 {
     // There is some issue with MCTP-PCIE CTRL daemon which starts,so
     // SPDM service gets started and after a moment MCTP daemon fails which is
@@ -112,7 +113,7 @@ void MctpDiscovery::tryConnectMCTP()
     // through the unix socket.
     try
     {
-        spdmApp.connectMCTP();
+        spdmApp.connectMCTP(medium);
     }
     catch (const std::exception& e)
     {
@@ -127,7 +128,6 @@ void MctpDiscovery::mctpNewObjectSignal(
     const dbus::InterfaceMap& interfaces)
 {
     spdmApp.getLog().iprintln("mctpNewObjectSignal: " + std::string(objPath));
-    tryConnectMCTP();
 
     size_t eid = getEid(interfaces);
     if (eid == invalidEid)
@@ -135,7 +135,6 @@ void MctpDiscovery::mctpNewObjectSignal(
         spdmApp.getLog().iprintln("SPDM mctpNewObjectSignal couldn't get EID for path '"s + std::string(objPath) + '\'');
         return;
     }
-
     auto uuid = getUUID(interfaces);
 #ifdef DISCOVERY_ONLY_FROM_MCTP_CONTROL
     std::string invPath;
@@ -158,6 +157,7 @@ void MctpDiscovery::mctpNewObjectSignal(
 #endif
 
     auto mediumType = getMediumType(interfaces);
+    tryConnectMCTP(mediumType.value_or(TransportMedium::PCIe));
     dbus_api::ResponderArgs args { mctp_eid_t(eid), uuid, mediumType, objPath, invPath };
     spdmApp.discoveryUpdateResponder(args);
 
@@ -172,16 +172,12 @@ void MctpDiscovery::inventoryNewObjectSignal(
     {
         return;
     }
-
-    tryConnectMCTP();
-
     auto uuid = getUUID(interfaces);
     if (uuid.empty())
     {
         spdmApp.getLog().iprintln("SPDM inventoryNewObjectSignal couldn't get UUID for path '"s + std::string(objPath) + '\'');
         return;
     }
-
     auto mctp = getMCTP(uuid);
     size_t eid = getEid(mctp.interfaces);
     if (eid == invalidEid)
@@ -190,6 +186,7 @@ void MctpDiscovery::inventoryNewObjectSignal(
         return;
     }
     auto mediumType = getMediumType(interfaces);
+    tryConnectMCTP(mediumType.value_or(TransportMedium::PCIe));
     dbus_api::ResponderArgs args { mctp_eid_t(eid), uuid, mediumType, mctp.path, objPath };
     spdmApp.discoveryUpdateResponder(args);
 }
