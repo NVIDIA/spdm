@@ -84,3 +84,4 @@ if get_option('use_fuzz').enabled()
 else
   subdir('spdmd')
 endif
+subdir('spdmutil')
