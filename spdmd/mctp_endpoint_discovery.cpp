@@ -157,10 +157,26 @@ void MctpDiscovery::mctpNewObjectSignal(
 #endif
 
     auto mediumType = getMediumType(interfaces);
-    tryConnectMCTP(mediumType.value_or(TransportMedium::PCIe));
+    if (!mediumType)
+    {
+        auto& log = spdmApp.getLog();
+        if (log.logLevel >= LogClass::Level::Error)
+        {
+            log.iprint("Unable to get medium type for");
+            log.iprint(" EID = ");
+            log.iprint(eid);
+            log.iprint(" UUID = ");
+            log.iprint(uuid);
+            log.iprint(" PATH = ");
+            log.iprint(objPath.str);
+            log.iprint(" INVPATH = ");
+            log.iprintln(invPath.str);
+        }
+        return;
+    }
+    tryConnectMCTP(mediumType.value());
     dbus_api::ResponderArgs args { mctp_eid_t(eid), uuid, mediumType, objPath, invPath };
     spdmApp.discoveryUpdateResponder(args);
-
 }
 
 #ifndef DISCOVERY_ONLY_FROM_MCTP_CONTROL
@@ -186,7 +202,24 @@ void MctpDiscovery::inventoryNewObjectSignal(
         return;
     }
     auto mediumType = getMediumType(interfaces);
-    tryConnectMCTP(mediumType.value_or(TransportMedium::PCIe));
+    if (!mediumType)
+    {
+        auto& log = spdmApp.getLog();
+        if (log.logLevel >= LogClass::Level::Error)
+        {
+            log.iprint("Unable to get medium type for");
+            log.iprint(" EID = ");
+            log.iprint(eid);
+            log.iprint(" UUID = ");
+            log.iprint(uuid);
+            log.iprint(" MCTPPATH = ");
+            log.iprint(mctp.path.str);
+            log.iprint(" PATH = ");
+            log.iprintln(objPath.str);
+        }
+        return;
+    }
+    tryConnectMCTP(mediumType.value());
     dbus_api::ResponderArgs args { mctp_eid_t(eid), uuid, mediumType, mctp.path, objPath };
     spdmApp.discoveryUpdateResponder(args);
 }
@@ -383,7 +416,17 @@ std::optional<spdmcpp::TransportMedium> MctpDiscovery::getMediumType(const dbus:
     {
         spdmApp.getLog().print(e.what());
     }
-
+    {
+        auto& log = spdmApp.getLog();
+        if (log.logLevel >= LogClass::Level::Error)
+        {
+            log.println("Unable to determine medium type. Interfaces path:");
+            for (const auto& [path,_] : interfaces)
+            {
+                log.println(path);
+            }
+        }
+    }
     return std::nullopt;
 }
 
@@ -402,12 +445,16 @@ std::optional<spdmcpp::TransportMedium> MctpDiscovery::getInternalMediumType(
         mediumTypeStr = std::get<std::string>(properties.at(std::string(propName)));
         mediumTypeStr = mediumTypeStr.substr(mediumTypeStr.find_last_of('.')+1);
     }
-    catch (const std::bad_variant_access& e)
-    {
-        return std::nullopt;
-    }
     catch (const std::exception& e)
     {
+        auto& log = spdmApp.getLog();
+        if (log.logLevel >= LogClass::Level::Error)
+        {
+            log.iprint("Property get exception for: ");
+            log.iprint(std::string(propName));
+            log.iprint(" what: ");
+            log.iprintln(e.what());
+        }
         return std::nullopt;
     }
     if (mediumTypeStr == "PCIe")
@@ -421,6 +468,14 @@ std::optional<spdmcpp::TransportMedium> MctpDiscovery::getInternalMediumType(
     if (mediumTypeStr == "SMBus")
     {
         return spdmcpp::TransportMedium::I2C;
+    }
+    {
+        auto& log = spdmApp.getLog();
+        if (log.logLevel >= LogClass::Level::Error)
+        {
+            log.iprint("Unknown transport medium string: ");
+            log.iprintln(mediumTypeStr);
+        }
     }
     return std::nullopt;
 }

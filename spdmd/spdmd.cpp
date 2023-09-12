@@ -290,7 +290,12 @@ void SpdmdApp::createResponder(const dbus_api::ResponderArgs& args)
         responders[args.eid] = std::make_unique<dbus_api::Responder>(
             *this, path, args.eid, args.mctpPath, args.inventoryPath, args.medium.value_or(TransportMedium::PCIe));
     } else {
-        reportError("Unable to determine responder type for EID = " + std::to_string(args.eid) );
+        reportError("Unable to determine responder type"
+            "EID = " + std::to_string(args.eid)  + " " +
+            "MCTPPATH = " + args.mctpPath.str  + " " +
+            "INVENTORYPATH = " + args.inventoryPath.str
+        );
+        return;
     }
 
 #if FETCH_SERIALNUMBER_FROM_RESPONDER != 0
