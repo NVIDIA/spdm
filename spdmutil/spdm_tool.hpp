@@ -59,6 +59,8 @@ namespace spdmt
         spdmcpp::MctpIoClass mctpIO;
         //! Target EID
         int m_eid {};
+        //! I2C Bus number
+        int m_i2c_bus_no {6};
         //! MCTP transport
         std::unique_ptr<spdmcpp::MctpTransportClass> transport;
         //! Packet decode info

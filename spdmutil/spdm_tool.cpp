@@ -42,6 +42,10 @@ namespace spdmt {
         app.add_option("-e,--eid", m_eid, "Endpoint EID")
             ->check(CLI::Range(0x00, 0xff))
             ->required();
+        // I2C bus number
+        app.add_option("-b,--bus", m_i2c_bus_no, "I2C bus number")
+            ->check(CLI::Range(0x00,0xff))
+            ->default_str("6");
 
         // Target subcommands for processing
         auto getVer = app.add_subcommand("get-version", "Get version command");
@@ -413,7 +417,7 @@ namespace spdmt {
                 sockName = "\0mctp-spi-mux"s;
                 break;
             case TransportMedium::I2C:
-                sockName = "\0mctp-i2c-mux"s;
+                sockName = "\0mctp-i2c"s + std::to_string(m_i2c_bus_no) + "-mux"s;
                 break;
         }
         if (!mctpIO.createSocket(sockName))
