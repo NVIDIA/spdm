@@ -20,7 +20,6 @@ namespace spdmt
     // Negotiate algorithm arguments
     struct NegAlgoCmd
     {
-        uint32_t measHashAlgo;
         uint32_t baseAsymAlgo;
         uint32_t baseHashAlgo;
     };

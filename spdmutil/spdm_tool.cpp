@@ -68,12 +68,7 @@ namespace spdmt {
             ->default_str("0x00");
 
         // Negotiate algorithm
-        NegAlgoCmd algo{0x0000'0001, 0x0000'0190, 0x0000'0007};
-        negAlgo
-            ->add_option("--meas-hash-algo", algo.measHashAlgo,
-                        "Measurement hash algo")
-            ->check(CLI::Range(0x0000'0000, 0x0000'0100))
-            ->default_str("0x00000001");
+        NegAlgoCmd algo{0x0000'0190, 0x0000'0007};
         negAlgo->add_option("--base-asym-algo", algo.baseAsymAlgo, "Base asym algo")
             ->check(CLI::Range(0x0000'0000, 0x0000'0190))
             ->default_str("0x00000090");
@@ -274,7 +269,7 @@ namespace spdmt {
                         req.Min.Length = 32;
                         req.Min.Header.MessageVersion =
                             MessageVersionEnum::SPDM_1_1;
-                        req.Min.MeasurementSpecification = arg.measHashAlgo;
+                        req.Min.MeasurementSpecification = 0x01;
                         req.Min.BaseAsymAlgo =
                             static_cast<BaseAsymAlgoFlags>(arg.baseAsymAlgo);
                         req.Min.BaseHashAlgo =
