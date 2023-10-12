@@ -276,8 +276,14 @@ void Responder::refresh(uint8_t slotIndex, std::vector<uint8_t> nonc,
         // TODO arguably it'd be better to either cancel the current and perform
         // the new refresh or to queue the request for processing after the
         // current one is done
-        getLog().iprintln(
-            "WARNING - refresh ignored because previous one is still processing!");
+        auto& lg = getLog();
+        lg.iprint( "WARNING - refresh ignored because previous req: ");
+        lg.iprint(connection.getWaitingForResponse());
+        lg.iprint(" on eid: ");
+        lg.iprint(eid);
+        lg.iprint(" name: ");
+        lg.iprint(inventoryPath.filename());
+        lg.iprintln(" is still processing!");
         return;
     }
 
