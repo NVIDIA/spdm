@@ -305,6 +305,14 @@ class ConnectionClass : public NonCopyable
         return toHash(Algorithms.Min.MeasurementHashAlgo);
     }
 
+    /** @brief Capabilities flag for responder capabilities
+     *
+    */
+    auto getCapabilitiesFlags() const {
+        SPDMCPP_ASSERT(hasInfo(ConnectionInfoEnum::CAPABILITIES));
+        return responderCapabilitiesFlags;
+    }
+
     /** @brief The SPDM version used during communication
      */
     MessageVersionEnum getMessageVersion() const

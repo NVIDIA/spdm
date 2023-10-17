@@ -60,6 +60,12 @@ void Responder::updateVersionInfo()
     version(static_cast<uint8_t>(connection.getMessageVersion()));
 }
 
+void Responder::updateCapabilities()
+{
+    capabilities(static_cast<std::underlying_type_t
+        <ResponderCapabilitiesFlags>>(connection.getCapabilitiesFlags()));
+}
+
 void Responder::updateAlgorithmsInfo()
 {
     switch (connection.getMeasurementHashEnum())
@@ -129,6 +135,7 @@ void Responder::syncSlotsInfo()
     updateVersionInfo();
     updateAlgorithmsInfo();
     updateCertificatesInfo();
+    updateCapabilities();
 
     if (connection.hasInfo(ConnectionInfoEnum::MEASUREMENTS))
     {
@@ -247,6 +254,11 @@ spdmcpp::RetStat Responder::handleEventForRefresh(spdmcpp::EventClass& ev)
         syncSlotsInfo();
         updateLastUpdateTime();
         status(SPDMStatus::Success);
+    }
+    else if(connection.hasInfo(ConnectionInfoEnum::CAPABILITIES))
+    {
+        updateCapabilities();
+        status(SPDMStatus::GettingCertificates);
     }
     else if (connection.slotHasInfo(slotidx, SlotInfoEnum::CERTIFICATES))
     {

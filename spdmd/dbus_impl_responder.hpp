@@ -159,6 +159,7 @@ class Responder : public ResponderIntf
     void updateAlgorithmsInfo();
     void updateCertificatesInfo();
     void updateLastUpdateTime();
+    void updateCapabilities();
     void syncSlotsInfo();
 
     void handleError(spdmcpp::RetStat rs);
