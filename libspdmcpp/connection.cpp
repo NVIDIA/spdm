@@ -932,10 +932,9 @@ RetStat ConnectionClass::handleRecv<PacketMeasurementsResponseVar>()
                         ResponseBuffer.size() - ResponseBufferSPDMOffset -
                             packetDecodeInfo.SignatureSize);*/
 
-        appendToBuf(BufEnum::L, &ResponseBuffer[ResponseBufferSPDMOffset],
-                    ResponseBuffer.size() - ResponseBufferSPDMOffset -
-
-                        packetDecodeInfo.SignatureSize);
+        const auto measSize = ResponseBuffer.size() - ResponseBufferSPDMOffset
+            - (skipVerifySignature?0:packetDecodeInfo.SignatureSize);
+        appendToBuf(BufEnum::L, &ResponseBuffer[ResponseBufferSPDMOffset], measSize);
 
         if (skipVerifySignature)
         {
