@@ -181,7 +181,8 @@ class MctpIoClass : public IOClass
             ssize_t ret = ::write(Socket, &type, sizeof(type));
             if (ret == -1)
             {
-                if (Log.logLevel >= LogClass::Level::Critical) {
+                if (Log.logLevel >= LogClass::Level::Critical)
+                {
                     Log.iprint("Failed to write spdm code to socket, errno = ");
                     Log.print(errno);
                     Log.print(" ");
@@ -191,7 +192,10 @@ class MctpIoClass : public IOClass
                 return false;
             }
         }
-        Log.iprintln("AF_UNIX \\0" + path.substr(1) + ": Connection success!\n");
+        if (Log.logLevel >= LogClass::Level::Informational)
+        {
+            Log.iprintln("AF_UNIX \\0" + path.substr(1) + ": Connection success!\n");
+        }
         return true;
     }
     void deleteSocket()

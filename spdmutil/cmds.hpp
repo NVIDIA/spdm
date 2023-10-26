@@ -7,36 +7,40 @@ namespace spdmt
     // Get version arguments
     struct VerCmd
     {
-        uint8_t ver;
+        uint8_t ver {0x10};
     };
 
     // Get capabilities arguments
     struct CapabCmd
     {
-        uint32_t flags;
-        uint8_t ctExponent;
+        uint32_t flags {0};
+        uint8_t ctExponent {0};
     };
 
     // Negotiate algorithm arguments
     struct NegAlgoCmd
     {
-        uint32_t baseAsymAlgo;
-        uint32_t baseHashAlgo;
+        uint32_t baseAsymAlgo { 0x0000'0080 };
+        uint32_t baseHashAlgo { 0x0000'0002 };
     };
 
     // Cert command arguments
     struct CertCmd
     {
-        uint8_t slot;
-        uint16_t offset;
+        static constexpr auto wholeChain = -1;
+        uint8_t slot {0};
+        int offset {wholeChain};
+        auto needChain() const {
+            return offset==wholeChain;
+        }
     };
 
     // Command measurement arguments
     struct MeasCmd
     {
-        uint8_t attributes;
-        uint8_t blockIndex;
-        uint8_t certSlot;
+        uint8_t attributes { 0x01 };
+        uint8_t blockIndex { 0xFE };
+        uint8_t certSlot { 0x00 };
     };
 
     // Get digest arguments

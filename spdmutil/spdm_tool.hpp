@@ -6,6 +6,10 @@
 #include <vector>
 #include <spdmcpp/mctp_support.hpp>
 #include <spdmcpp/log.hpp>
+#include <nlohmann/json.hpp>
+#include <fstream>
+#include <optional>
+
 namespace spdmt
 {
     class SpdmTool
@@ -48,12 +52,15 @@ namespace spdmt
         template <class T>
         [[nodiscard]] spdmcpp::RetStat handleRecv(std::vector<uint8_t>& buf);
 
+        //! Parse certificate chain
+        auto parseCertChain(std::vector<uint8_t>& vec, std::string &out) -> spdmcpp::RetStat;
+
     private:
-        //! Logger
+        // Logger
         spdmcpp::LogClass log;
-        //! Selected medium
+        // Selected medium
         spdmcpp::TransportMedium medium{spdmcpp::TransportMedium::PCIe};
-        //! Current request with args
+        // Current request with args
         std::vector<cmdv> cmdList;
         // Connection class
         spdmcpp::MctpIoClass mctpIO;
@@ -61,10 +68,21 @@ namespace spdmt
         int m_eid {};
         //! I2C Bus number
         int m_i2c_bus_no {6};
-        //! MCTP transport
+        // Save to json
+        std::ofstream jsonFileStream;
+        // Json object
+        nlohmann::json jsonGen;
+        // MCTP transport
         std::unique_ptr<spdmcpp::MctpTransportClass> transport;
-        //! Packet decode info
+        // Packet decode info
         spdmcpp::PacketDecodeInfo packetDecodeInfo;
+        // Retrive whole cert
+        bool wholeCert {};
+        //! Certificate buffer
+        std::vector<uint8_t> certBuf;
+        // Certifcate slot
+        uint8_t certSlot {};
+        std::optional<spdmcpp::PacketAlgorithmsResponseVar> algoResp;
     };
 
     //! Prepare request
@@ -73,10 +91,13 @@ namespace spdmt
         -> spdmcpp::RetStat
     {
         using namespace spdmcpp;
-        log.iprint("sendRequest(");
-        log.print(typeid(packet).name());
-        log.println("):");
-        packet.printMl(log);
+        if (log.logLevel >= spdmcpp::LogClass::Level::Informational)
+        {
+            log.iprint("sendRequest(");
+            log.print(typeid(packet).name());
+            log.println("):");
+            packet.printMl(log);
+        }
         TransportClass::LayerState lay;
         if (transport)
         {
@@ -116,10 +137,14 @@ namespace spdmt
             }
             return rs;
         }
-        log.iprint("interpretResponse(");
-        log.print(typeid(packet).name());
-        log.println("):");
-        packet.printMl(log);
+
+        if (log.logLevel >= spdmcpp::LogClass::Level::Informational)
+        {
+            log.iprint("interpretResponse(");
+            log.print(typeid(packet).name());
+            log.println("):");
+            packet.printMl(log);
+        }
         return rs;
     }
 

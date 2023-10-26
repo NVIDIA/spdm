@@ -1,9 +1,18 @@
 #include "spdm_tool.hpp"
+#include "str_conv.hpp"
 #include <spdmcpp/common.hpp>
 #include <spdmcpp/packet.hpp>
 #include <CLI/CLI.hpp>
 #include <map>
 #include <poll.h>
+
+#include <mbedtls/ecdh.h>
+#include <mbedtls/ecdsa.h>
+#include <mbedtls/error.h>
+#include <mbedtls/md.h>
+#include <mbedtls/pem.h>
+#include <mbedtls/pk.h>
+#include <mbedtls/x509_crt.h>
 
 namespace spdmt {
     using namespace spdmcpp;
@@ -19,7 +28,7 @@ namespace spdmt {
     // Constructor
     SpdmTool::SpdmTool() : log(std::cout), mctpIO(log)
     {
-        log.setLogLevel(LogClass::Level::Informational);
+        log.setLogLevel(LogClass::Level::Critical);
         packetDecodeInfo.BaseHashSize = defHashAlgoSize;
         packetDecodeInfo.GetMeasurementsParam1 = defMeasParam1;
     }
@@ -28,6 +37,8 @@ namespace spdmt {
     auto SpdmTool::parseArgs(int argc, char** argv) -> int
     {
         CLI::App app{"spdmtool, version: 1.0.0"};
+        std::string jsonFilename;
+        bool debugMode {};
         // Print help
         app.set_help_all_flag("--help-all", "Expand all help");
         // Inteface medium options
@@ -46,24 +57,26 @@ namespace spdmt {
         app.add_option("-b,--bus", m_i2c_bus_no, "I2C bus number")
             ->check(CLI::Range(0x00,0xff))
             ->default_str("6");
-
+        // Add option json file
+        app.add_option("--json", jsonFilename, "Save responses to JSON file");
+        // Add option for the debug tool
+        app.add_flag("--debug",  debugMode, "Enable tool debugging");
         // Target subcommands for processing
         auto getVer = app.add_subcommand("get-version", "Get version command");
         auto getCapab = app.add_subcommand("get-capab", "Get capabilities command");
         auto negAlgo =
             app.add_subcommand("neg-algo", "Negotiate algorithm command");
         /* auto getDigest = */
-        app.add_subcommand("get-digest", "Get digest command");
+            app.add_subcommand("get-digest", "Get digest command");
         auto getCert = app.add_subcommand("get-cert", "Get certificate command");
         auto getMeas = app.add_subcommand("get-meas", "Get measurements command");
         // Version subcommand config
-        VerCmd ver{0x10};
+        VerCmd ver;
         getVer->add_option("--ver", ver.ver, "Version specs")
             ->check(CLI::Range(0x00, 0xff))
             ->default_str("0x10");
-
         // Get capabilities
-        CapabCmd capab{0x00, 0x00};
+        CapabCmd capab;
         getCapab->add_option("--flags", capab.flags, "Capabilities flags")
             ->check(CLI::Range(0x0000'0000, 0x0001'FFFF))
             ->default_str("0x00");
@@ -72,24 +85,23 @@ namespace spdmt {
             ->default_str("0x00");
 
         // Negotiate algorithm
-        NegAlgoCmd algo{0x0000'0190, 0x0000'0007};
+        NegAlgoCmd algo;
         negAlgo->add_option("--base-asym-algo", algo.baseAsymAlgo, "Base asym algo")
             ->check(CLI::Range(0x0000'0000, 0x0000'0190))
-            ->default_str("0x00000090");
+            ->default_str("0x00000080");
         negAlgo->add_option("--base-hash-algo", algo.baseHashAlgo, "Base hash algo")
             ->check(CLI::Range(0x0000'0000, 0x0000'0020))
-            ->default_str("0x00000007");
+            ->default_str("0x00000002");
 
         // Get certificate
-        CertCmd cert{0,0};
+        CertCmd cert;
         getCert->add_option("--slot", cert.slot, "Certificate slot")
             ->check(CLI::Range(0, 7))
             ->default_str("0");
         getCert->add_option("--offset", cert.offset, "Certificate offset")
-            ->check(CLI::Range(0, 0xFFFF))
-            ->default_str("0");
+            ->check(CLI::Range(0, 0xFFFF));
         // Get measurements
-        MeasCmd meas{0x01, 0xFE, 0x00};
+        MeasCmd meas;
         getMeas
             ->add_option("--attributes", meas.attributes, "Measurement attributes")
             ->check(CLI::Range(0x00, 0x03))
@@ -104,6 +116,22 @@ namespace spdmt {
             ->default_str("0x0F");
 
         CLI11_PARSE(app, argc, argv);
+        // Configure debug mode
+        if (debugMode)
+        {
+            log.setLogLevel(LogClass::Level::Informational);
+        }
+
+        // Check if the directory exists and we are able to create file
+        if (!jsonFilename.empty())
+        {
+            jsonFileStream.open(jsonFilename);
+            if (!jsonFileStream)
+            {
+                std::cerr << "Unable to create json file: " << jsonFilename << std::endl;
+                return EXIT_FAILURE;
+            }
+        }
         // Subcommands to commands list
         for (auto* subcom : app.get_subcommands())
         {
@@ -137,7 +165,7 @@ namespace spdmt {
                 throw std::logic_error("Unhandled cmdline command");
             }
         }
-        return 0;
+        return EXIT_SUCCESS;
     }
 
     template <>
@@ -145,6 +173,20 @@ namespace spdmt {
     {
         PacketVersionResponseVar resp;
         auto rs = interpretResponse(buf, resp);
+        if (isError(rs))
+        {
+            jsonGen["GetVersion"] = { {"ResponseCode", get_cstr(rs)}};
+            return rs;
+        }
+        std::vector<std::string> svers;
+        for(const auto& ver: resp.VersionNumberEntries)
+        {
+            svers.push_back(verToString(ver));
+        }
+        jsonGen["GetVersion"] = {
+            { "SPDMVersion", svers },
+            {"ResponseCode", get_cstr(rs) }
+        };
         return rs;
     }
 
@@ -153,6 +195,19 @@ namespace spdmt {
     {
         PacketCapabilitiesResponse resp;
         auto rs = interpretResponse(buf, resp);
+        if (isError(rs))
+        {
+            jsonGen["GetCapabilities"] = {
+                {"ResponseCode", get_cstr(rs) }
+            };
+            return rs;
+        }
+        jsonGen["GetCapabilities"] = {
+            { "SPDMVersion", verToString(resp.Header.MessageVersion) },
+            { "CTExponent",  resp.CTExponent },
+            { "Capabilities", capFlagsToStr(resp.Flags) },
+            {"ResponseCode", get_cstr(rs) }
+        };
         return rs;
     }
 
@@ -161,28 +216,48 @@ namespace spdmt {
     {
         PacketAlgorithmsResponseVar resp;
         auto rs = interpretResponse(buf, resp);
+        do
+        {
+            if (isError(rs))
+            {
+                break;
+            }
+            if (auto hsize = getHashSize(resp.Min.BaseHashAlgo);
+                hsize != invalidFlagSize)
+            {
+                packetDecodeInfo.BaseHashSize = hsize;
+            }
+            else
+            {
+                rs = RetStat::ERROR_INVALID_FLAG_SIZE;
+                break;
+            }
+            if (auto ssize = getSignatureSize(resp.Min.BaseAsymAlgo);
+                ssize != invalidFlagSize)
+            {
+                packetDecodeInfo.SignatureSize = ssize;
+            }
+            else
+            {
+                rs =  RetStat::ERROR_INVALID_FLAG_SIZE;
+                break;
+            }
+        } while(false);
+
         if (isError(rs))
         {
+            jsonGen["NegotiateAlgorithms"] = {
+                {"ResponseCode", get_cstr(rs) }
+            };
             return rs;
         }
-        if (auto hsize = getHashSize(resp.Min.BaseHashAlgo);
-            hsize != invalidFlagSize)
-        {
-            packetDecodeInfo.BaseHashSize = hsize;
-        }
-        else
-        {
-            return RetStat::ERROR_INVALID_FLAG_SIZE;
-        }
-        if (auto ssize = getSignatureSize(resp.Min.BaseAsymAlgo);
-            ssize != invalidFlagSize)
-        {
-            packetDecodeInfo.SignatureSize = ssize;
-        }
-        else
-        {
-            return RetStat::ERROR_INVALID_FLAG_SIZE;
-        }
+        algoResp = resp;
+        jsonGen["NegotiateAlgorithms"] = {
+            {"SPDMVersion", verToString(resp.Min.Header.MessageVersion)},
+            {"SignatureAlgorithm", asymAlgoToStr(resp.Min.BaseAsymAlgo)},
+            {"HashingAlgorithm", hashAlgoToStr(resp.Min.BaseHashAlgo)},
+            {"ResponseCode", get_cstr(rs) }
+        };
         return rs;
     }
 
@@ -191,6 +266,49 @@ namespace spdmt {
     {
         PacketCertificateResponseVar resp;
         auto rs = interpretResponse(buf, resp);
+        if (wholeCert)
+        {
+            if (certBuf.empty())
+            { // first chunk so reserve space for what's expected to come
+                certBuf.reserve(resp.Min.PortionLength + resp.Min.RemainderLength);
+            }
+            { // store chunk data
+                auto off = certBuf.end() - certBuf.begin();
+                certBuf.resize(off + resp.Min.PortionLength);
+                std::copy(resp.CertificateVector.begin(),
+                          resp.CertificateVector.end(),
+                          std::next(certBuf.begin(), off));
+            }
+            if (!resp.Min.RemainderLength)
+            {
+                wholeCert = false;
+                std::string certTxt;
+                rs = parseCertChain(certBuf, certTxt);
+                if (isError(rs))
+                {
+                    jsonGen["GetCertificate"] = {{"ResponseCode", get_cstr(rs)}};
+                    return rs;
+                }
+                jsonGen["GetCertificate"] = {
+                    {"SPDMVersion", verToString(resp.Min.Header.MessageVersion)},
+                    {"ResponseCode", get_cstr(rs)},
+                    {"Slot", resp.Min.Header.Param1},
+                    {"CertChain:", certTxt}};
+            }
+        }
+        else
+        {
+            if (isError(rs))
+            {
+                jsonGen["GetCertificate"] = {{"ResponseCode", get_cstr(rs)}};
+                return rs;
+            }
+            jsonGen["GetCertificate"] = {
+                {"SPDMVersion", verToString(resp.Min.Header.MessageVersion)},
+                {"ResponseCode", get_cstr(rs)},
+                {"Slot", resp.Min.Header.Param1},
+                {"CertChunk:", resp.CertificateVector}};
+        }
         return rs;
     }
 
@@ -199,6 +317,29 @@ namespace spdmt {
     {
         PacketDigestsResponseVar resp;
         auto rs = interpretResponse(buf, resp, packetDecodeInfo);
+        if (isError(rs))
+        {
+            jsonGen["GetDigest"] = {
+                {"ResponseCode", get_cstr(rs) }
+            };
+            return rs;
+        }
+        std::vector<std::vector<int>> digest;
+        digest.reserve(resp.Digests.size());
+        std::transform(resp.Digests.begin(), resp.Digests.end(), std::back_inserter(digest),
+            [](const std::vector<uint8_t> &vec) {
+                std::vector<int> temp;
+                temp.reserve(vec.size());
+                std::transform(vec.begin(), vec.end(), std::back_inserter(temp),
+                                [](uint8_t val) { return static_cast<int>(val); });
+                return temp;
+        });
+        jsonGen["GetDigest"] = {
+            {"SPDMVersion", verToString(resp.Min.Header.MessageVersion)},
+            {"ResponseCode", get_cstr(rs) },
+            {"Slot", resp.Min.Header.Param1 },
+            {"Digest", digest }
+        };
         return rs;
     }
 
@@ -207,6 +348,27 @@ namespace spdmt {
     {
         PacketMeasurementsResponseVar resp;
         auto rs = interpretResponse(buf, resp, packetDecodeInfo);
+        if (isError(rs))
+        {
+            jsonGen["GetMeasurement"] = {
+                {"ResponseCode", get_cstr(rs) }
+            };
+            return rs;
+        }
+        std::vector<std::pair<int,std::vector<uint8_t>>> meas;
+        for (const auto& v : resp.MeasurementBlockVector)
+        {
+            meas.emplace_back(std::make_pair(v.Min.Index,v.MeasurementVector));
+        }
+        jsonGen["GetMeasurement"] = {
+            {"SPDMVersion", verToString(resp.Min.Header.MessageVersion)},
+            {"ResponseCode", get_cstr(rs) },
+            {"Slot", resp.Min.Header.Param2},
+            {"MeasurementRecordLength", resp.Min.getMeasurementRecordLength() },
+            {"MeasurementData",  meas},
+            {"Nonce", resp.Nonce },
+            {"Signature", resp.SignatureVector }
+        };
         return rs;
     }
 
@@ -241,12 +403,14 @@ namespace spdmt {
             return false;
         }
         RetStat rs {};
+        auto fret { true };
         for (const auto& v : cmdList)
         {
             std::vector<uint8_t> sendBuf, recvBuf;
             std::visit(
                 Overloaded{
-                    [&sendBuf, &rs, this](const VerCmd& arg) {
+                    [&sendBuf, &rs, this](const VerCmd& arg)
+                    {
                         PacketGetVersionRequest req{};
                         if (arg.ver == 0x10)
                         {
@@ -260,7 +424,8 @@ namespace spdmt {
                         }
                         rs = prepareRequest(req, sendBuf);
                     },
-                    [&sendBuf, &rs, this](const CapabCmd& arg) {
+                    [&sendBuf, &rs, this](const CapabCmd& arg)
+                    {
                         PacketGetCapabilitiesRequest req{};
                         req.Header.MessageVersion = MessageVersionEnum::SPDM_1_1;
                         req.Flags =
@@ -268,7 +433,8 @@ namespace spdmt {
                         req.CTExponent = arg.ctExponent;
                         rs = prepareRequest(req, sendBuf);
                     },
-                    [&sendBuf, &rs, this](const NegAlgoCmd& arg) {
+                    [&sendBuf, &rs, this](const NegAlgoCmd& arg)
+                    {
                         PacketNegotiateAlgorithmsRequestVar req{};
                         req.Min.Length = 32;
                         req.Min.Header.MessageVersion =
@@ -280,15 +446,27 @@ namespace spdmt {
                             static_cast<BaseHashAlgoFlags>(arg.baseHashAlgo);
                         rs = prepareRequest(req, sendBuf);
                     },
-                    [&sendBuf, &rs, this](const CertCmd& arg) {
+                    [&sendBuf, &rs, this](const CertCmd& arg)
+                    {
                         PacketGetCertificateRequest req{};
                         req.Header.MessageVersion = MessageVersionEnum::SPDM_1_1;
                         req.Header.Param1 = arg.slot;
-                        req.Offset = arg.offset;
+                        certSlot = arg.slot;
+                        if (arg.needChain())
+                        {
+                            certBuf.clear();
+                            req.Offset = certBuf.size();
+                            wholeCert = true;
+                        }
+                        else
+                        {
+                            req.Offset = arg.offset;
+                        }
                         req.Length = std::numeric_limits<uint16_t>::max();
                         rs = prepareRequest(req, sendBuf);
                     },
-                    [&sendBuf, &rs, this](const MeasCmd& arg) {
+                    [&sendBuf, &rs, this](const MeasCmd& arg)
+                    {
                         PacketGetMeasurementsRequestVar req{};
                         req.Min.Header.MessageVersion =
                             MessageVersionEnum::SPDM_1_1;
@@ -298,47 +476,75 @@ namespace spdmt {
                         req.setNonce();
                         rs = prepareRequest(req, sendBuf);
                     },
-                    [&sendBuf, &rs, this](const DigestCmd&) {
+                    [&sendBuf, &rs, this](const DigestCmd&)
+                    {
                         PacketGetDigestsRequest req;
                         req.Header.MessageVersion = MessageVersionEnum::SPDM_1_1;
                         rs = prepareRequest(req, sendBuf);
                     }},
                 v);
-            if (isError(rs))
-            {
-                log.iprint("Unable to decode packet rs=");
-                log.println(rs);
-                return false;
+            do
+            {   if (wholeCert)
+                {
+                    PacketGetCertificateRequest req {};
+                    req.Header.MessageVersion = MessageVersionEnum::SPDM_1_1;
+                    req.Header.Param1 = certSlot;
+                    req.Offset = certBuf.size();
+                    req.Length = std::numeric_limits<uint16_t>::max();
+                    rs = prepareRequest(req, sendBuf);
+                }
+                if (isError(rs))
+                {
+                    log.iprint("Unable to decode packet rs=");
+                    log.println(rs);
+                    fret = false;
+                    break;
+                }
+                if (rs = sendMctp(sendBuf); rs != RetStat::OK)
+                {
+                    log.iprint("Unable to send packet rs=");
+                    log.println(rs);
+                    fret = false;
+                    break;
+                }
+                if (rs = recvMctp(recvBuf); rs != RetStat::OK)
+                {
+                    log.iprint("Unable to rcv packet rs=");
+                    log.println(rs);
+                    fret = false;
+                    break;
+                }
+                if (rs = parseResp(recvBuf); isError(rs))
+                {
+                    log.iprint("Unable to parse packet rs=");
+                    log.println(rs);
+                    fret = false;
+                    break;
+                }
             }
-            if (rs=sendMctp(sendBuf); rs != RetStat::OK)
-            {
-                log.iprint("Unable to send packet rs=");
-                log.println(rs);
-                return false;
-            }
-            if (rs=recvMctp(recvBuf); rs != RetStat::OK)
-            {
-                log.iprint("Unable to rcv packet rs=");
-                log.println(rs);
-                return false;
-            }
-            if (rs= parseResp(recvBuf);  isError(rs))
-            {
-                log.iprint("Unable to parse packet rs=");
-                log.println(rs);
-                return false;
-            }
+            while(wholeCert);
         }
-        return true;
+        if (jsonFileStream.is_open())
+        {
+            jsonFileStream << jsonGen << std::endl;
+        }
+        else
+        {
+            std::cout << jsonGen << std::endl;
+        }
+        return fret;
     }
 
     // Send request and parse response
     auto SpdmTool::parseResp(std::vector<uint8_t>& buf) -> spdmcpp::RetStat
     {
-        log.iprint("ResponseBuffer.size() = ");
-        log.println(buf.size());
-        log.iprint("ResponseBuffer = ");
-        log.println(buf);
+        if (log.logLevel >= spdmcpp::LogClass::Level::Informational)
+        {
+            log.iprint("ResponseBuffer.size() = ");
+            log.println(buf.size());
+            log.iprint("ResponseBuffer = ");
+            log.println(buf);
+        }
         MessageVersionEnum version {};
         RequestResponseEnum code {};
         TransportClass::LayerState lay {};
@@ -356,9 +562,11 @@ namespace spdmt {
             packetMessageHeaderGetMessageVersion(buf, responseBufferSPDMOffset);
         code = packetMessageHeaderGetRequestresponsecode(buf,
                                                         responseBufferSPDMOffset);
-        log.print("packetVersion= ");
-        log.println(version);
-
+        if (log.logLevel >= spdmcpp::LogClass::Level::Informational)
+        {
+            log.print("packetVersion= ");
+            log.println(version);
+        }
         // "custom" response handling for ERRORS
         if (code == RequestResponseEnum::RESPONSE_ERROR)
         {
@@ -380,25 +588,34 @@ namespace spdmt {
         }
         else
         {
+            if(code != PacketCertificateResponseVar::requestResponseCode && wholeCert) {
+                return RetStat::ERROR_WRONG_REQUEST_RESPONSE_CODE;
+            }
             switch (code)
-            { // clang-format off
-            // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
-            #define DTYPE(type)                                                            \
-                case type::requestResponseCode:                                            \
-                    rs = handleRecv<type>(buf);                                            \
+            {
+                case PacketCapabilitiesResponse::requestResponseCode:
+                    rs = handleRecv<PacketCapabilitiesResponse>(buf);
                     break;
-                DTYPE(PacketCapabilitiesResponse)
-                DTYPE(PacketAlgorithmsResponseVar)
-                DTYPE(PacketDigestsResponseVar)
-                DTYPE(PacketCertificateResponseVar)
-                DTYPE(PacketChallengeAuthResponseVar)
-                DTYPE(PacketMeasurementsResponseVar)
+                case PacketAlgorithmsResponseVar::requestResponseCode:
+                    rs = handleRecv<PacketAlgorithmsResponseVar>(buf);
+                    break;
+                case PacketDigestsResponseVar::requestResponseCode:
+                    rs = handleRecv<PacketDigestsResponseVar>(buf);
+                    break;
+                case PacketCertificateResponseVar::requestResponseCode:
+                    rs = handleRecv<PacketCertificateResponseVar>(buf);
+                    break;
+                case PacketChallengeAuthResponseVar::requestResponseCode:
+                    rs = handleRecv<PacketChallengeAuthResponseVar>(buf);
+                    break;
+                case PacketMeasurementsResponseVar::requestResponseCode:
+                    rs = handleRecv<PacketMeasurementsResponseVar>(buf);
+                    break;
                 default:
-                    log.iprint("!!! Unknown code: ");
+                    log.iprint("Unknown code: ");
                     log.println(code);
                     return RetStat::ERROR_UNKNOWN_REQUEST_RESPONSE_CODE;
-            #undef DTYPE
-            } // clang-format on
+            }
         }
         return rs;
     }
@@ -448,11 +665,95 @@ namespace spdmt {
     // Send data over MCTP
     auto SpdmTool::sendMctp(const std::vector<uint8_t>& buf) -> spdmcpp::RetStat
     {
-        log.print("sendBufer.size() = ");
-        log.println(buf.size());
-        log.print("sendBufer = ");
-        log.println(buf);
+        if (log.logLevel >= spdmcpp::LogClass::Level::Informational)
+        {
+            log.print("sendBufer.size() = ");
+            log.println(buf.size());
+            log.print("sendBufer = ");
+            log.println(buf);
+        }
         return mctpIO.write(buf);
+    }
+
+    //! Parse certificate chain
+    auto SpdmTool::parseCertChain(std::vector<uint8_t>& vec, std::string& out) -> spdmcpp::RetStat
+    {
+        PacketCertificateChain certChain;
+        size_t off = 0;
+        auto rs = packetDecodeInternal(log, certChain, vec, off);
+        if (isError(rs))
+        {
+
+            return rs;
+        }
+        if (certChain.Length != vec.size())
+        {
+            return RetStat::ERROR_CERTIFICATE_CHAIN_SIZE_INVALID;
+        }
+        if (!algoResp)
+        {
+            return RetStat::ERROR_INVALID_FLAG_SIZE;
+        }
+        std::vector<uint8_t> rootCertHash;
+        {
+            if (auto hsize = getHashSize(algoResp->Min.BaseHashAlgo);
+                hsize != invalidFlagSize)
+            {
+                rootCertHash.resize(hsize);
+            }
+            else
+            {
+                return RetStat::ERROR_INVALID_FLAG_SIZE;
+            }
+            rs = packetDecodeBasic(log, rootCertHash, vec, off);
+            if (isError(rs))
+            {
+                return rs;
+            }
+        }
+        do
+        {
+            mbedtls_x509_crt cert;
+            mbedtls_x509_crt_init(&cert);
+            auto ret =
+                mbedtls_x509_crt_parse_der(&cert, &vec[off], vec.size() - off);
+            if (ret)
+            {
+                mbedtls_x509_crt_free(&cert);
+                return RetStat::ERROR_CERTIFICATE_PARSING_ERROR;
+            }
+            size_t asn1Len = 0;
+            {
+                auto s = &vec[off];
+                auto p = s;
+                ret = mbedtls_asn1_get_tag(&p, &vec[vec.size()],
+                    &asn1Len, MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE);
+                if (ret)
+                {
+                    mbedtls_x509_crt_free(&cert);
+                    return RetStat::ERROR_CERTIFICATE_PARSING_ERROR;
+                }
+                asn1Len += (p - s);
+            }
+            size_t sz {};
+            off += asn1Len;
+            std::array<unsigned char, 8192> buf {{}};
+            ret = mbedtls_pem_write_buffer(
+                "-----BEGIN CERTIFICATE-----\n", "-----END CERTIFICATE-----\n",
+                cert.raw.p, cert.raw.len, buf.data(), buf.size(), &sz);
+            if(ret) {
+                return RetStat::ERROR_CERTIFICATE_PARSING_ERROR;
+            }
+            if (sz >= buf.size())
+            {
+                return RetStat::ERROR_CERTIFICATE_PARSING_ERROR;
+            }
+            buf[sz] = '\0';
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+            out += reinterpret_cast<char*>(buf.data());
+            mbedtls_x509_crt_free(&cert);
+        } while (off < vec.size());
+        return rs;
     }
 
 }

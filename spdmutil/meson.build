@@ -7,6 +7,7 @@ spdmd_headers = [
 sources = [
   'spdmtool_app.cpp',
   'spdm_tool.cpp',
+  'str_conv.cpp'
 ]
 
 executable(
@@ -17,7 +18,8 @@ executable(
     link_with: libspdmcpp_requester,
 	dependencies: [
 		CLI11_dep,
-		crypto_deps],
+		crypto_deps,
+    nlohmann_json ],
 	install: true
 )
 
