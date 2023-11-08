@@ -997,6 +997,7 @@ RetStat ConnectionClass::handleRecv(EventReceiveClass& event)
 {
     SPDMCPP_LOG_TRACE_FUNC(Log);
 
+    clearTimeout();
 
     // swap to avoid copy, this is currently safe because nothing else would
     // want to access the data afterwards
@@ -1044,12 +1045,14 @@ RetStat ConnectionClass::handleRecv(EventReceiveClass& event)
             Log.iprint("RESPONSE_ERROR while waiting for response: ");
             Log.println(WaitingForResponse);
         }
-        WaitingForResponse = RequestResponseEnum::INVALID;
 
         PacketErrorResponseVar err;
         auto rs = interpretResponse(err);
         SPDMCPP_LOG_TRACE_RS(Log, rs);
-        return RetStat::ERROR_RESPONSE;
+
+        WaitingForResponse = RequestResponseEnum::RESPONSE_VERSION;
+        return tryGetVersion();
+
     }
 
     // if we're not expecting this response return an error
@@ -1075,24 +1078,29 @@ RetStat ConnectionClass::handleRecv(EventReceiveClass& event)
             }
             SPDMCPP_CONNECTION_RS_ERROR_LOG(isWaitingForResponse());
         }
-        WaitingForResponse = RequestResponseEnum::INVALID;
-        return RetStat::ERROR_WRONG_REQUEST_RESPONSE_CODE;
+        // To the next response retry
+        return retryTimeout(RetStat::ERROR_WRONG_REQUEST_RESPONSE_CODE);
     }
     WaitingForResponse = RequestResponseEnum::INVALID;
 
     RetStat rs = RetStat::ERROR_UNKNOWN;
+
     if (code == RequestResponseEnum::RESPONSE_VERSION)
     {
         // version response is what sets the MessageVersion, so it has to be
         // handled separately from the packets below
         rs = handleRecv<PacketVersionResponseVar>();
+        if (checkErrorCodeForRetry(rs))
+        {
+            return retryTimeout(rs);
+        }
     }
     else
     {
         // all other packets should have the "choosen version" in the header
         if (version != MessageVersion)
         {
-            return RetStat::ERROR_INVALID_HEADER_VERSION;
+            return retryTimeout(RetStat::ERROR_INVALID_HEADER_VERSION);
         }
         switch (code)
         { // clang-format off
@@ -1116,8 +1124,9 @@ RetStat ConnectionClass::handleRecv(EventReceiveClass& event)
         #undef DTYPE
         } // clang-format on
     }
-    if(checkErrorCodeForRetry(rs)) {
-        WaitingForResponse = LastWaitingForResponse;
+    if (checkErrorCodeForRetry(rs))
+    {
+        return retryTimeout(rs);
     }
     SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
     return rs;
@@ -1128,45 +1137,8 @@ RetStat ConnectionClass::handleRecv(EventReceiveClass& event)
     if (auto e = event.getAs<EventReceiveClass>())
     {
         const auto ec = handleRecv(*e);
-        if(checkErrorCodeForRetry(ec) && !retryNeeded)
-        {
-            const auto timeout =
-                WaitingForResponse==RequestResponseEnum::RESPONSE_MEASUREMENTS ?
-                Timings.getT2() : Timings.getT1();
-            const auto rs = retryTimeout(ec, timeout);
-            SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
-        }
-        // Waiting for repeated message
-        if(retryNeeded)
-        {
-            if (Log.logLevel >= spdmcpp::LogClass::Level::Error)
-            {
-                Log.iprint("Command: ");
-                Log.iprint(LastWaitingForResponse);
-                Log.iprint(" retried because of error: ");
-                Log.iprintln(lastRetryError);
-            }
-            // Success after retry
-            if (ec == RetStat::OK)
-            {
-                retryNeeded = false;
-                clearTimeout();
-                return ec;
-            }
-            if (ec == RetStat::ERROR_RESPONSE)
-            {
-                retryNeeded = false;
-                clearTimeout();
-                return tryGetVersion();
-            }
-            WaitingForResponse = LastWaitingForResponse;
-            lastRetryError = ec;
-        }
-        else
-        {
-            clearTimeout();
-            return ec;
-        }
+        SPDMCPP_LOG_TRACE_RS(Log, ec);
+        return ec;
     }
     if (auto e = event.getAs<EventTimeoutClass>(); e)
     {
@@ -1188,13 +1160,9 @@ RetStat ConnectionClass::handleTimeoutOrRetry(EventTimeoutClass& event)
         SPDMCPP_LOG_TRACE_RS(Log, rs);
         return rs;
     }
-    const auto lastRetryCorrupted = retryNeeded;
-    retryNeeded = false;
     WaitingForResponse = RequestResponseEnum::INVALID;
 
-    const auto rs = lastRetryCorrupted?lastRetryError: RetStat::ERROR_TIMEOUT;
-    SPDMCPP_LOG_TRACE_RS(Log, rs);
-    return rs;
+    return RetStat::OK;
 }
 
 void ConnectionClass::clearTimeout()
@@ -1215,11 +1183,14 @@ RetStat ConnectionClass::retryTimeout(RetStat lastError, timeout_ms_t timeout,  
     SPDMCPP_LOG_TRACE_FUNC(getLog());
     WaitingForResponse = LastWaitingForResponse;
     lastRetryError = lastError;
-    retryNeeded = true;
     SendRetry = retry;
     SendTimeout = timeout;
-    const auto rs = transport->setupTimeout(SendTimeout);
-    SPDMCPP_LOG_TRACE_RS(getLog(),rs);
+    RetStat rs { RetStat::ERROR_UNKNOWN };
+    if (transport)
+    {
+        rs = transport->setupTimeout(SendTimeout);
+        SPDMCPP_LOG_TRACE_RS(getLog(),rs);
+    }
     return rs;
 }
 

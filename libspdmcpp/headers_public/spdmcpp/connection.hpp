@@ -597,7 +597,6 @@ class ConnectionClass : public NonCopyable
     std::vector<uint8_t> SendBuffer;
     timeout_ms_t SendTimeout = 0;
     uint16_t SendRetry = 0;
-    bool retryNeeded = false;
     RetStat lastRetryError {};
 
     /** @brief Buffer for the received response from which interpretResponse
@@ -771,7 +770,7 @@ class ConnectionClass : public NonCopyable
   private:
     TransportMedium currentMedium;
 
-  public:
+  private:
     /// Try retry certificate count
     uint8_t retryCertCount {};
   private:
