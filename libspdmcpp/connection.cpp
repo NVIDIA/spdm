@@ -227,17 +227,17 @@ RetStat ConnectionClass::parseCertChain(SlotClass& slot,
     Log.println(
         std::span{cert.begin() + static_cast<ptrdiff_t>(off), cert.end()});
 
+
+    slot.MCertificates.clear();
     do
     {
+        auto [ret, c] = mbedtlsCertParseDer(cert, off);
+        if (ret)
         {
-            auto [ret, c] = mbedtlsCertParseDer(cert, off);
-            if (ret)
-            {
-                mbedtlsPrintErrorLine(Log, "mbedtls_x509_crt_parse_der()", ret);
-                return RetStat::ERROR_CERTIFICATE_PARSING_ERROR;
-            }
-            slot.MCertificates.push_back(std::move(c));
+            mbedtlsPrintErrorLine(Log, "mbedtls_x509_crt_parse_der()", ret);
+            return RetStat::ERROR_CERTIFICATE_PARSING_ERROR;
         }
+        slot.MCertificates.push_back(std::move(c));
     } while (off < cert.size());
 
     return RetStat::OK;
