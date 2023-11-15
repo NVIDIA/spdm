@@ -7,7 +7,8 @@ spdmd_headers = [
 sources = [
   'spdmtool_app.cpp',
   'spdm_tool.cpp',
-  'str_conv.cpp'
+  'str_conv.cpp',
+  'enumerate_endpoints.cpp'
 ]
 
 executable(
@@ -19,7 +20,9 @@ executable(
 	dependencies: [
 		CLI11_dep,
 		crypto_deps,
-    nlohmann_json ],
+    nlohmann_json,
+    sdbusplus
+    ],
 	install: true
 )
 

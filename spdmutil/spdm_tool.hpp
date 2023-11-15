@@ -45,6 +45,10 @@ namespace spdmt
         auto run() -> bool;
 
     private:
+        // Run communication
+        auto runComm() -> bool;
+        // Run enumerate
+        auto runEnumerate() -> bool;
         //! Connect to mctp
         auto connectMctp() -> void;
         //! Send data over MCTP
@@ -72,7 +76,8 @@ namespace spdmt
         auto parseCertChain(std::vector<uint8_t>& vec, std::string &out) -> spdmcpp::RetStat;
 
     private:
-        // Logger
+        static constexpr auto cmdCliInvalid = -1;
+        //! Logger
         spdmcpp::LogClass log;
         // Selected medium
         spdmcpp::TransportMedium medium{spdmcpp::TransportMedium::PCIe};
@@ -81,7 +86,7 @@ namespace spdmt
         // Connection class
         spdmcpp::MctpIoClass mctpIO;
         //! Target EID
-        int m_eid {};
+        int m_eid {cmdCliInvalid};
         //! I2C Bus number
         int m_i2c_bus_no {6};
         // Save to json
@@ -99,6 +104,8 @@ namespace spdmt
         // Certifcate slot
         uint8_t certSlot {};
         std::optional<spdmcpp::PacketAlgorithmsResponseVar> algoResp;
+        //! Need enumerate
+        bool needEnumEps {};
     };
 
     //! Prepare request

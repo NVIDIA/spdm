@@ -15,6 +15,7 @@
  */
 #include "spdm_tool.hpp"
 #include "str_conv.hpp"
+#include "enumerate_endpoints.hpp"
 #include <spdmcpp/common.hpp>
 #include <spdmcpp/packet.hpp>
 #include <CLI/CLI.hpp>
@@ -71,8 +72,7 @@ namespace spdmt {
             ->default_str("pcie");
         // Target EID
         app.add_option("-e,--eid", m_eid, "Endpoint EID")
-            ->check(CLI::Range(0x00, 0xff))
-            ->required();
+            ->check(CLI::Range(0x00, 0xff));
         // I2C bus number
         app.add_option("-b,--bus", m_i2c_bus_no, "I2C bus number")
             ->check(CLI::Range(0x00,0xff))
@@ -81,6 +81,8 @@ namespace spdmt {
         app.add_option("--json", jsonFilename, "Save responses to JSON file");
         // Add option for the debug tool
         app.add_flag("--debug",  debugMode, "Enable tool debugging");
+        // Add option for enumerate endpoints
+        app.add_flag("--enumerate", needEnumEps, "Enumerate spdm endpoints");
         // Target subcommands for processing
         auto getVer = app.add_subcommand("get-version", "Get version command");
         auto getCapab = app.add_subcommand("get-capab", "Get capabilities command");
@@ -142,6 +144,17 @@ namespace spdmt {
             log.setLogLevel(LogClass::Level::Informational);
         }
 
+        // Check for enum or for normal get values
+        if (needEnumEps && (m_eid!=cmdCliInvalid))
+        {
+            std::cerr << "--eid or --enumerate should be choosen at the same time" << std::endl;
+            return EXIT_FAILURE;
+        }
+        if (!needEnumEps && (m_eid==cmdCliInvalid))
+        {
+            std::cerr << "--eid argument not specified" << std::endl;
+            return EXIT_FAILURE;
+        }
         // Check if the directory exists and we are able to create file
         if (!jsonFilename.empty())
         {
@@ -356,7 +369,7 @@ namespace spdmt {
                     {"SPDMVersion", verToString(resp.Min.Header.MessageVersion)},
                     {"ResponseCode", get_cstr(rs)},
                     {"Slot", resp.Min.Header.Param1},
-                    {"CertChain:", certTxt}};
+                    {"CertChain", certTxt}};
             }
         }
         else
@@ -444,7 +457,7 @@ namespace spdmt {
     }
 
     // SPDM tool main loop
-    auto SpdmTool::run() -> bool
+    auto SpdmTool::runComm() -> bool
     {
         if (cmdList.empty())
         {
@@ -821,6 +834,42 @@ namespace spdmt {
             mbedtls_x509_crt_free(&cert);
         } while (off < vec.size());
         return rs;
+    }
+
+    // Run app
+    auto SpdmTool::run() -> bool
+    {
+        bool ret {};
+        do
+        {
+            ret = runEnumerate();
+            if (!ret) 
+            {
+                break;
+            }
+            ret = runComm();
+            if (!ret)
+            {
+                break;
+            }
+        } while(false);
+        return ret;
+    }
+
+
+    // Run enumerate
+    auto SpdmTool::runEnumerate() -> bool
+    {
+        if (!needEnumEps)
+        {
+            return true;
+        }
+        EnumerateEndpoints eobj(jsonGen, medium, m_i2c_bus_no);
+        if (jsonFileStream)
+        {
+            jsonFileStream << jsonGen << std::endl;
+        }
+        return true;
     }
 
 }
