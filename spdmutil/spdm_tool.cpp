@@ -727,7 +727,7 @@ namespace spdmt {
     // Recv data over MCTP with timeout
     auto SpdmTool::recvMctp(std::vector<uint8_t>& buf) -> spdmcpp::RetStat
     {
-        static constexpr auto timeout = 15000U;
+        static constexpr auto timeout = 180'000U;
         std::array<pollfd,1> pfd{};
         pfd[0].fd = mctpIO.getSocket();
         pfd[0].events = POLLIN;

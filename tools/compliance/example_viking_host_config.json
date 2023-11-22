@@ -1,0 +1,28 @@
+{
+  "network": {
+    "hmc" : {
+      "host": "192.168.31.1",
+      "port": 22,
+      "username": "root",
+      "password": "0penBmc"
+    },
+    "bmc" : {
+      "host": "1.2.3.4",
+      "port": 22,
+      "username": "sysadmin",
+      "password": "superuser"
+    },
+    "jump_hosts": [
+      {
+        "host": "5.6.7.8",
+        "port": 22,
+        "username": "jumphostuser1"
+      },
+      {
+        "host": "9.10.11.12",
+        "port": 22,
+        "username": "jumphostuser2"
+      }
+    ]
+  }
+  }

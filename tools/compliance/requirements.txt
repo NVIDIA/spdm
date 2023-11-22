@@ -1,0 +1,2 @@
+paramiko
+paramiko_jump @ git+https://github.com/andrewschenck/paramiko-jump.git@master
