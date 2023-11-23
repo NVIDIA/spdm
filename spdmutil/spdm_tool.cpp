@@ -63,10 +63,10 @@ namespace spdmt {
             ->default_str("0x10");
 
         // Get capabilities
-        CapabCmd capab{0x04, 0x00};
+        CapabCmd capab{0x00, 0x00};
         getCapab->add_option("--flags", capab.flags, "Capabilities flags")
             ->check(CLI::Range(0x0000'0000, 0x0001'FFFF))
-            ->default_str("0x04");
+            ->default_str("0x00");
         getCapab->add_option("--exponent", capab.ctExponent, "Capabilities exponent")
             ->check(CLI::Range(0x00, 0xFF))
             ->default_str("0x00");
