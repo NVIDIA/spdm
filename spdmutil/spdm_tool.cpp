@@ -25,8 +25,13 @@ namespace spdmt {
     template <class... Ts>
     Overloaded(Ts...) -> Overloaded<Ts...>;
 
+    static constexpr auto numSubCmds = 6U;
+
     // Constructor
-    SpdmTool::SpdmTool() : log(std::cout), mctpIO(log)
+    SpdmTool::SpdmTool()
+    : log(std::cout)
+    , cmdList(numSubCmds, std::nullopt)
+    , mctpIO(log)
     {
         log.setLogLevel(LogClass::Level::Critical);
         packetDecodeInfo.BaseHashSize = defHashAlgoSize;
@@ -132,37 +137,80 @@ namespace spdmt {
                 return EXIT_FAILURE;
             }
         }
+        enum { vpos_ver, vpos_capab, vpos_algo, vpos_dig, vpos_cert, vpos_meas };
         // Subcommands to commands list
         for (auto* subcom : app.get_subcommands())
         {
             auto name = subcom->get_name();
             if (name == "get-version")
             {
-                cmdList.emplace_back(ver);
+                cmdList[vpos_ver] = ver;
             }
             else if (name == "get-capab")
             {
-                cmdList.emplace_back(capab);
+                cmdList[vpos_capab] = capab;
             }
             else if (name == "neg-algo")
             {
-                cmdList.emplace_back(algo);
-            }
-            else if (name == "get-cert")
-            {
-                cmdList.emplace_back(cert);
-            }
-            else if (name == "get-meas")
-            {
-                cmdList.emplace_back(meas);
+                cmdList[vpos_algo] = algo;
             }
             else if (name == "get-digest")
             {
-                cmdList.emplace_back(DigestCmd{});
+                cmdList[vpos_dig] = DigestCmd{};
+            }
+            else if (name == "get-cert")
+            {
+                cmdList[vpos_cert] = cert;
+            }
+            else if (name == "get-meas")
+            {
+                cmdList[vpos_meas] = meas;
             }
             else
             {
                 throw std::logic_error("Unhandled cmdline command");
+            }
+        }
+        if( app.get_subcommands().size() > 0 )
+        {
+            auto it = std::find_if(cmdList.rbegin(), cmdList.rend(), [](const auto& opt) {
+                return opt.has_value();
+            });
+            if (it == cmdList.rend())
+            {
+                return EXIT_SUCCESS;
+            }
+            const auto idx = std::min<size_t>(std::distance(it, cmdList.rend()) - 1U, cmdList.size());
+            for (size_t i=0; i<idx; ++i)
+            {
+                if (cmdList[i])
+                {
+                    continue;
+                }
+                if( i==vpos_ver )
+                {
+                    cmdList[i] = VerCmd{};
+                }
+                else if ( i==vpos_capab )
+                {
+                    cmdList[i] = CapabCmd{};
+                }
+                else if ( i==vpos_algo )
+                {
+                    cmdList[i] = NegAlgoCmd{};
+                }
+                else if ( i==vpos_dig )
+                {
+                    cmdList[i] = DigestCmd{};
+                }
+                else if ( i==vpos_cert )
+                {
+                    cmdList[i] = CertCmd{};
+                }
+                else if( i==vpos_meas )
+                {
+                    cmdList[i] = MeasCmd{};
+                }
             }
         }
         return EXIT_SUCCESS;
@@ -407,6 +455,10 @@ namespace spdmt {
         for (const auto& v : cmdList)
         {
             std::vector<uint8_t> sendBuf, recvBuf;
+            if (!v)
+            {
+                break;
+            }
             std::visit(
                 Overloaded{
                     [&sendBuf, &rs, this](const VerCmd& arg)
@@ -482,7 +534,7 @@ namespace spdmt {
                         req.Header.MessageVersion = MessageVersionEnum::SPDM_1_1;
                         rs = prepareRequest(req, sendBuf);
                     }},
-                v);
+                *v);
             do
             {   if (wholeCert)
                 {

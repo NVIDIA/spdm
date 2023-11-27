@@ -4,6 +4,7 @@
 #include "cmds.hpp"
 #include <memory>
 #include <vector>
+#include <optional>
 #include <spdmcpp/mctp_support.hpp>
 #include <spdmcpp/log.hpp>
 #include <nlohmann/json.hpp>
@@ -61,7 +62,7 @@ namespace spdmt
         // Selected medium
         spdmcpp::TransportMedium medium{spdmcpp::TransportMedium::PCIe};
         // Current request with args
-        std::vector<cmdv> cmdList;
+        std::vector<std::optional<cmdv>> cmdList;
         // Connection class
         spdmcpp::MctpIoClass mctpIO;
         //! Target EID
