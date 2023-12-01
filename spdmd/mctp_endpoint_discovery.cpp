@@ -201,7 +201,7 @@ void MctpDiscovery::inventoryNewObjectSignal(
         spdmApp.getLog().iprintln("SPDM inventoryNewObjectSignal couldn't get EID for UUID '"s + uuid + '\'');
         return;
     }
-    auto mediumType = getMediumType(interfaces);
+    auto mediumType = getMediumType(mctp.interfaces);
     if (!mediumType)
     {
         auto& log = spdmApp.getLog();
