@@ -17,6 +17,7 @@
 
 #include "spdm_fuzzer_config.hpp"
 
+#include <cstdint>
 #include <iomanip>
 #include <iostream>
 

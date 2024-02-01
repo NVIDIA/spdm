@@ -98,9 +98,8 @@ inline int computeSignature(mbedtls_pk_context* pkctx,
     mbedtls_ecp_keypair* ctx = mbedtls_pk_ec(*pkctx);
 
     spdmcpp::mbedtls_mpi_raii sigR, sigS;
-
-    int ret = mbedtls_ecdsa_sign(&ctx->grp, sigR, sigS, &ctx->d, message.data(),
-                                 message.size(), fRng, nullptr);
+    int ret = mbedtls_ecdsa_sign(&ctx->private_grp, sigR, sigS, &ctx->private_d,
+                                 message.data(), message.size(), fRng, nullptr);
     if (ret)
     {
         return ret;

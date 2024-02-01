@@ -358,3 +358,4 @@ int corrupt_fake_fd_has_data(void)
 {
     return app_context.saved_response_if_rdy_fd;
 }
+
