@@ -35,3 +35,4 @@ int corrupt_pkt_mod_error_response_is_ready(int sockfd, corrupt_context* ctx,
 int corrupt_pkt_mod_error_resp_fake_recv(int sockfd, corrupt_context* ctx,
                                          char* buf,
                                          size_t buf_size) EXPORT_HIDDEN;
+

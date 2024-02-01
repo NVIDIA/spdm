@@ -134,11 +134,12 @@ inline size_t getHalfSize(const mbedtls_ecp_group& grp)
 }
 inline size_t getHalfSize(const mbedtls_ecp_keypair& ctx)
 {
-    return getHalfSize(ctx.grp);
+    return getHalfSize(ctx.private_grp);
 }
+
 inline size_t getHalfSize(const mbedtls_ecdh_context& ctx)
 {
-    return getHalfSize(ctx.grp);
+    return getHalfSize(ctx.private_grp_id);
 }
 
 template <class T, auto INIT, auto FREE>
@@ -218,17 +219,14 @@ inline int verifySignature(mbedtls_x509_crt* cert,
     {
         SPDMCPP_ASSERT(false);
     }
-    // NOLINTNEXTLINE(cppcoreguidelines-init-variables)
-    mbedtls_ecdh_context_raii ctx{};
-
-    int ret = mbedtls_ecdh_get_params(ctx, mbedtls_pk_ec(cert->pk),
-                                      MBEDTLS_ECDH_OURS);
-    if (ret != 0)
+    int ret;
+    mbedtls_ecp_keypair* ec_key = mbedtls_pk_ec(cert->pk);
+    if (ec_key == nullptr)
     {
-        return ret;
+        return MBEDTLS_ERR_PK_TYPE_MISMATCH;
     }
 
-    size_t halfSize = getHalfSize(ctx);
+    size_t halfSize = getHalfSize(ec_key->private_grp);
     if (signature.size() != halfSize * 2)
     {
         return -1;
@@ -249,8 +247,9 @@ inline int verifySignature(mbedtls_x509_crt* cert,
     {
         return ret;
     }
-    ret = mbedtls_ecdsa_verify(&ctx->grp, hash.data(), hash.size(), &ctx->Q,
-                               bnR.get(), bnS.get());
+
+    ret = mbedtls_ecdsa_verify(&ec_key->private_grp, hash.data(), hash.size(),
+                               &ec_key->private_Q, bnR.get(), bnS.get());
 
     return ret;
 #endif
