@@ -50,6 +50,14 @@ static constexpr auto uuidIntfPropertyUUID = "UUID";
 /** @brief MCTP d-bus Binding interface name  */
 static constexpr auto mctpBindingIntfName = "xyz.openbmc_project.MCTP.Binding";
 
+/** @brief Return binding type*/
 static constexpr auto mctpBindingIntfPropertyBindType = "BindingType";
+
+/** @brief MCTP transport socket interface name */
+static constexpr auto mctpUnixSockIntfName = "xyz.openbmc_project.Common.UnixSocket";
+
+/** @brief MCTP transport sock type */
+static constexpr auto unixSocketIntfAddressProperty = "Address";
+
 
 } // namespace spdmt

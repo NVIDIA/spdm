@@ -16,6 +16,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <memory>
 
 #include <CLI/CLI.hpp>
 
@@ -70,15 +71,16 @@ bool SpdmWrapperApp::run(BaseAsymAlgoFlags asymAlgo, BaseHashAlgoFlags hashAlgo)
     std::list<std::vector<uint8_t>> queue1;
     std::list<std::vector<uint8_t>> queue2;
     FixtureIOClass ioResponder(config.enableLogTrace?"commlog_responder.txt":"", queue1, queue2);
-    FixtureIOClass ioRequester(config.enableLogTrace?"commlog_requester.txt":"", queue2, queue1);
+    auto ioRequester = std::make_shared<FixtureIOClass>(config.enableLogTrace?"commlog_requester.txt":"", queue2, queue1);
     static constexpr auto eid = 14;
+    static constexpr auto transport = "PCIe";
     FixtureTransportClass trans(eid);            //Option add eid to config
-    ConnectionClass Connection(context, log, eid, spdmcpp::TransportMedium::PCIe);
+    ConnectionClass Connection(context, log, eid, "PCIe");
 
-    context.registerIo(ioRequester, spdmcpp::TransportMedium::PCIe);
+    context.registerIo(ioRequester, transport);
     Connection.registerTransport(trans);
 
-    Requester requester(ioRequester, Connection);
+    Requester requester(*ioRequester, Connection);
 
     std::ifstream fileStr;
     if (!config.instructionFilename.empty())
@@ -98,7 +100,7 @@ bool SpdmWrapperApp::run(BaseAsymAlgoFlags asymAlgo, BaseHashAlgoFlags hashAlgo)
         {
             std::cout<<"########### Requester Reset" << std::endl;
             ioResponder.clearTx();
-            ioRequester.clearTx();
+            ioRequester->clearTx();
 
             responder.resetState();
             requester.startRefreshFlow();   // Start new session
@@ -133,7 +135,7 @@ bool SpdmWrapperApp::run(BaseAsymAlgoFlags asymAlgo, BaseHashAlgoFlags hashAlgo)
             break;
     }
     Connection.unregisterTransport(trans);
-    context.unregisterIo(ioRequester, spdmcpp::TransportMedium::PCIe);
+    context.unregisterIo(transport);
 
     return result;
 }
@@ -357,7 +359,7 @@ void SpdmWrapperApp::setupCli(int argc, char** argv)
         std::cout << "Predefined messages (" << predefinedResponses.getAllResponses().size() << ")" << std::endl;
         for (auto& [key, value] : predefinedResponses.getAllResponses())
         {
-            std::cout<<"Type: " << std::hex << (int) key << std::dec << " Value vec len: " << value.size() << std::endl;
+            std::cout<<"Type: " << std::hex << int(key) << std::dec << " Value vec len: " << value.size() << std::endl;
         }
     }
 

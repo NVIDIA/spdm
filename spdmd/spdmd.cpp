@@ -48,32 +48,8 @@ SpdmdApp::SpdmdApp() :
 #endif
                     std::cout
                 )
-    , mctpIoPCIe(getLog()), mctpIoSPI(getLog()), mctpIoI2C(getLog())
 {
-    context.registerIo(mctpIoPCIe, spdmcpp::TransportMedium::PCIe);
-    context.registerIo(mctpIoSPI, spdmcpp::TransportMedium::SPI);
-    context.registerIo(mctpIoI2C, spdmcpp::TransportMedium::I2C);
 }
-
-
-SpdmdApp::~SpdmdApp()
-{
-    try
-    {
-        context.unregisterIo(mctpIoPCIe, spdmcpp::TransportMedium::PCIe);
-        context.unregisterIo(mctpIoSPI, spdmcpp::TransportMedium::SPI);
-        context.unregisterIo(mctpIoI2C, spdmcpp::TransportMedium::I2C);
-        delete mctpEventPCIe;
-        delete mctpEventSPI;
-        delete mctpEventI2C;
-    }
-    catch(const std::exception& exc)
-    {
-        std::cerr << "Unhandled exception when destroying spdmd " <<
-            exc.what() << std::endl;
-    }
-}
-
 
 
 void SpdmdApp::setupCli(int argc, char** argv)
@@ -151,74 +127,35 @@ void SpdmdApp::connectDBus()
     bus.attach_event(event.get(), SD_EVENT_PRIORITY_NORMAL);
 }
 
-
-void SpdmdApp::connectMCTP(TransportMedium medium)
+void SpdmdApp::connectMCTP(const std::string& sockPath)
 {
-    SPDMCPP_LOG_TRACE_FUNC(getLog());
-    if (!mctpIoPCIe.isSocketOpen() && medium==TransportMedium::PCIe)
+    if (!context.isIOPathRegistered(sockPath))
     {
-        if (mctpIoPCIe.createSocket("\0mctp-pcie-mux"s))
+        std::cout << "connectMCTP() " << sockPath << std::endl;
+        auto io = std::make_shared<spdmcpp::MctpIoClass>(getLog());
+        if (io->createSocket(sockPath))
         {
-            auto callback = [this](sdeventplus::source::IO& /*io*/, int /*fd*/,
+            auto callback = [io, this](sdeventplus::source::IO& /*io*/, int /*fd*/,
                             uint32_t revents) {
-                mctpCallback(revents, mctpIoPCIe);
+                mctpCallback(revents, *io);
             };
-            mctpEventPCIe = new sdeventplus::source::IO(event, mctpIoPCIe.getSocket(), EPOLLIN,
-                                                    std::move(callback));
-        } else {
-            if (getLog().logLevel >= spdmcpp::LogClass::Level::Warning) {
-                getLog().iprintln("Unable to connect to mctp-pcie-mux socket");
-            }
+            mctpEvents[sockPath] = std::make_unique<sdeventplus::source::IO>(
+                event, io->getSocket(), EPOLLIN, std::move(callback)
+            );
+            context.registerIo(io, sockPath);
         }
-    }
-    if (!mctpIoSPI.isSocketOpen() && medium==TransportMedium::SPI)
-    {
-        if (mctpIoSPI.createSocket("\0mctp-spi-mux"s))
+        else
         {
-            auto callback = [this](sdeventplus::source::IO& /*io*/, int /*fd*/,
-                            uint32_t revents) {
-                mctpCallback(revents, mctpIoSPI);
-            };
-            mctpEventSPI = new sdeventplus::source::IO(event, mctpIoSPI.getSocket(), EPOLLIN,
-                                                    std::move(callback));
-        } else {
-            if (getLog().logLevel >= spdmcpp::LogClass::Level::Warning) {
-                getLog().iprintln("Unable to connect to mctp-spi-mux socket");
-            }
-        }
-    }
-
-
-#ifdef USE_I2C
-    if (!mctpIoI2C.isSocketOpen() && medium==TransportMedium::I2C)
-    {
-        if (mctpIoI2C.createSocket("\0mctp-i2c-mux"s))
-        {
-            auto callback = [this](sdeventplus::source::IO& /*io*/, int /*fd*/,
-                            uint32_t revents) {
-                mctpCallback(revents, mctpIoI2C);
-            };
-            mctpEventI2C = new sdeventplus::source::IO(event, mctpIoI2C.getSocket(), EPOLLIN,
-                                                       std::move(callback));
-
-        } else {
             if (getLog().logLevel >= spdmcpp::LogClass::Level::Warning) {
                 getLog().iprintln("Unable to connect to mctp-i2c-mux socket");
             }
         }
     }
-#endif
-
-#ifdef USE_I2C
-    if(!mctpEventPCIe && !mctpEventSPI && !mctpEventI2C) {
-#else
-    if(!mctpEventPCIe && !mctpEventSPI) {
-#endif
+    if (mctpEvents.empty())
+    {
         throw std::runtime_error("Couldn't connect to any MCTP endpoint");
     }
 }
-
-
 
 bool SpdmdApp::needRecreateResponder(spdmcpp::TransportMedium currMedium,
                                      spdmcpp::TransportMedium newMedium)
@@ -228,8 +165,10 @@ bool SpdmdApp::needRecreateResponder(spdmcpp::TransportMedium currMedium,
     {
         case tran::PCIe:
             return false;
-        case tran::SPI:
+        case tran::USB:
             return newMedium == tran::PCIe;
+        case tran::SPI:
+            return (newMedium == tran::PCIe || newMedium == tran::USB);
         case tran::I2C:
             return newMedium != tran::I2C;
     }
@@ -243,7 +182,7 @@ void SpdmdApp::discoveryUpdateResponder(const dbus_api::ResponderArgs& respArg)
     if (it == std::end(resp_discovery))
     {
         // Discovery object by UUID not found select first
-        resp_discovery.emplace(std::make_pair(respArg.uuid, respArg));
+        resp_discovery.emplace(respArg.uuid, respArg);
         createResponder(respArg);
         reportNotice("Create first responder UUID: " + respArg.uuid +
                      " EID: " + std::to_string(respArg.eid));
@@ -259,7 +198,7 @@ void SpdmdApp::discoveryUpdateResponder(const dbus_api::ResponderArgs& respArg)
                 reportNotice("Recreate responder UUID: " + respArg.uuid +
                              " EID: " + std::to_string(respArg.eid));
                 responders[it->second.eid].reset();
-                resp_discovery.emplace(std::make_pair(respArg.uuid, respArg));
+                resp_discovery.emplace(respArg.uuid, respArg);
                 createResponder(respArg);
             }
             else
@@ -303,7 +242,7 @@ void SpdmdApp::createResponder(const dbus_api::ResponderArgs& args)
     }
     if(args.medium.has_value()) {
         responders[args.eid] = std::make_unique<dbus_api::Responder>(
-            *this, path, args.eid, args.mctpPath, args.inventoryPath, args.medium.value_or(TransportMedium::PCIe));
+            *this, path, args.eid, args.mctpPath, args.inventoryPath, args.medium.value_or(TransportMedium::PCIe), args.socketPath);
     } else {
         reportError("Unable to determine responder type"
             "EID = " + std::to_string(args.eid)  + " " +

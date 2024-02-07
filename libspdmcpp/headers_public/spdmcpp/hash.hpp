@@ -176,6 +176,7 @@ class HashClass
         mbedtls_md_setup(&Ctx, other.getInfo(), 0);
         // TODO failure possible?
         mbedtls_md_clone(&Ctx, &other.Ctx);
+        return *this;
     }
 
     HashClass(HashClass&&) = delete;

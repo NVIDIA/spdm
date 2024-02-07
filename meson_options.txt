@@ -12,6 +12,4 @@ option('conf_file_name', type: 'string', value : '"/etc/spdmd_conf.json"', descr
 
 option('use_default_dbus', type: 'feature', description: 'Use default DBus bus for tests on x86.', value: 'disabled')
 
-option('use_i2c', type: 'feature', description: 'Use I2C transport medium.', value: 'disabled')
-
 option('use_fuzz', type: 'feature', description: 'Fuzz testing.', value: 'disabled')

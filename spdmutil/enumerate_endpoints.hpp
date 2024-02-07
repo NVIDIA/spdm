@@ -1,8 +1,6 @@
 #pragma once
 
 #include "enumerate_utils.hpp"
-
-#include <nlohmann/json.hpp>
 #include <sdbusplus/bus.hpp>
 #include <spdmcpp/common.hpp>
 
@@ -12,27 +10,37 @@
 namespace spdmt
 {
 
+
+/** @brief Responder info structure used for discovery */
+struct ResponderInfo
+{
+    size_t eid;           //! Endpoint identifier
+    std::string path;     //! Responder path
+    std::string uuid;     //! UUID responder
+    std::string sockPath; //! Unix socket path
+};
+
 class EnumerateEndpoints
 {
   public:
     /**
      * Enumerate MCTP SPDM endpoints
-     * @param json Json object
-     * @param medium Medium type
-     * @param busNum Bus number
+     * @param dbusIfc Dbus inteface
      */
-    explicit EnumerateEndpoints(nlohmann::json& json,
-                                spdmcpp::TransportMedium medium,
-                                std::optional<int> busNum = std::nullopt);
+    explicit EnumerateEndpoints( std::string_view dbusIfc);
+
+    /**
+     * @brief Get enumerated responders information
+    */
+    auto& getRespondersInfo() const noexcept
+    {
+      return respInfos;
+    }
 
   private:
     /** @brief Explore MCTP spdm objects */
-    auto exploreObjects(sdbusplus::bus::bus& bus,
-                        spdmcpp::TransportMedium medium,
-                        std::optional<int> busNum) -> void;
-    /** @brief Convert medium type to string*/
-    static auto mediumDbusIfc(spdmcpp::TransportMedium medium,
-                              std::optional<int> busNum) -> std::string;
+    auto enumerateMCTPDBusObjects(sdbusplus::bus::bus& bus,
+                        std::string_view dbusIfc) -> void;
     /** @brief Explore single item */
     auto exploreMctpItem(const sdbusplus::message::object_path& path,
                          const DbusInterfaceMap& ifc) -> void;
@@ -43,8 +51,10 @@ class EnumerateEndpoints
         -> std::optional<size_t>;
     /** @brief Get endpoint UUID*/
     auto getUUID(const DbusInterfaceMap& ifc) -> std::string;
+    /** @brief Get transport socket */
+    auto getUnixSocketAddress(const DbusInterfaceMap& ifc) -> std::string;
 
   private:
-    nlohmann::json& jsonObj;
+    std::vector<ResponderInfo> respInfos;
 };
 } // namespace spdmt

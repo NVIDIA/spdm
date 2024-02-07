@@ -18,6 +18,8 @@
 #include <limits>
 #include <string>
 #include <iostream>
+#include <cstdint>
+
 class WrapperConfig
 {
   public:

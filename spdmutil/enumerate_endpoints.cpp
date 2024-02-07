@@ -12,49 +12,32 @@ using namespace spdmcpp;
 namespace spdmt
 {
 
-EnumerateEndpoints::EnumerateEndpoints(nlohmann::json& json,
-                                       spdmcpp::TransportMedium medium,
-                                       std::optional<int> busNum) :
-    jsonObj(json)
+EnumerateEndpoints::EnumerateEndpoints(std::string_view dbusIfc)
 {
 #ifdef USE_DEFAULT_DBUS
     auto bus = sdbusplus::bus::new_default();
 #else
     auto bus = sdbusplus::bus::new_system();
 #endif
-    exploreObjects(bus, medium, busNum);
+    enumerateMCTPDBusObjects(bus, dbusIfc);
 }
 
-auto EnumerateEndpoints::mediumDbusIfc(TransportMedium medium,
-                                       std::optional<int> busNum) -> std::string
-{
-    switch (medium)
-    {
-        case TransportMedium::PCIe:
-            return "xyz.openbmc_project.MCTP.Control.PCIe";
-        case TransportMedium::SPI:
-            return "xyz.openbmc_project.MCTP.Control.SPI";
-        case TransportMedium::I2C:
-            return "xyz.openbmc_project.MCTP.Control.SMBus" +
-                   std::to_string(*busNum);
-    }
-    return "";
-}
-auto EnumerateEndpoints::exploreObjects(sdbusplus::bus::bus& bus,
-                                        spdmcpp::TransportMedium medium,
-                                        std::optional<int> busNum) -> void
+
+auto EnumerateEndpoints::enumerateMCTPDBusObjects(sdbusplus::bus::bus& bus,
+        std::string_view dbusIfc) -> void
 {
     constexpr auto interfacePath = "/xyz/openbmc_project/mctp";
-    const auto interfaceName = mediumDbusIfc(medium, busNum);
-    auto method = bus.new_method_call(interfaceName.c_str(), interfacePath,
+    auto method = bus.new_method_call(std::string(dbusIfc).c_str(), interfacePath,
                                       "org.freedesktop.DBus.ObjectManager",
                                       "GetManagedObjects");
     auto reply = bus.call(method);
     DbusObjectValueTree objects;
     reply.read(objects);
-    for (const auto& [path, ifc] : objects)
     {
-        exploreMctpItem(path, ifc);
+        for (const auto& [path, ifc] : objects)
+        {
+            exploreMctpItem(path, ifc);
+        }
     }
 }
 
@@ -62,12 +45,10 @@ auto EnumerateEndpoints::exploreMctpItem(
     const sdbusplus::message::object_path& path, const DbusInterfaceMap& ifc)
     -> void
 {
-    auto eid = getEid(ifc);
-    auto uuid = getUUID(ifc);
-    if (eid.has_value())
+    if (const auto eid = getEid(ifc); eid)
     {
-        jsonObj["Endpoints"].push_back(
-            {{"Path", path.str}, {"EID", *eid}, {"UUID", uuid}});
+        ResponderInfo info { *getEid(ifc), path, getUUID(ifc), getUnixSocketAddress(ifc) };
+        respInfos.emplace_back( info );
     }
 }
 
@@ -130,8 +111,7 @@ auto EnumerateEndpoints::getEid(
     return std::nullopt;
 }
 
-auto EnumerateEndpoints::getUUID(const DbusInterfaceMap& interfaces)
-    -> std::string
+auto EnumerateEndpoints::getUUID(const DbusInterfaceMap& interfaces) -> std::string
 {
     try
     {
@@ -155,5 +135,36 @@ auto EnumerateEndpoints::getUUID(const DbusInterfaceMap& interfaces)
     {}
     return {};
 }
+
+
+auto EnumerateEndpoints::getUnixSocketAddress(const DbusInterfaceMap& interfaces) -> std::string
+{
+    try
+    {
+        const auto intf = interfaces.find(mctpUnixSockIntfName);
+        if (intf != interfaces.end())
+        {
+            const auto& properties = intf->second;
+            const auto addr = properties.find(unixSocketIntfAddressProperty);
+            if (addr != properties.end())
+            {
+                try
+                {
+                    const auto vec = std::get<std::vector<uint8_t>>(addr->second);
+                    return {vec.begin(), vec.end()};
+                }
+                catch(const std::exception& e)
+                {
+                }
+            }
+        }
+    }
+    catch(const std::exception& e)
+    {
+    }
+    return {};
+
+}
+ 
 
 } // namespace spdmt

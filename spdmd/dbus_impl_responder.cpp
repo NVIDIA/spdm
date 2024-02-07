@@ -27,8 +27,6 @@
 using namespace sdbusplus::xyz::openbmc_project::Common::Error;
 using namespace spdmcpp;
 
-constexpr auto mctpDefaultPath = "/xyz/openbmc_project/mctp";
-
 namespace spdmd
 {
 namespace dbus_api
@@ -38,10 +36,11 @@ Responder::Responder(SpdmdAppContext& appCtx, const std::string& path,
                      uint8_t eid,
                      const sdbusplus::message::object_path& mctpPath,
                      const sdbusplus::message::object_path& invPath,
-                     spdmcpp::TransportMedium transportMedium
+                     spdmcpp::TransportMedium transportMedium,
+                     std::string socketPath
                      ) :
     ResponderIntf(appCtx.bus, path.c_str(), action::defer_emit),
-    appContext(appCtx), log(appCtx.getLog()), connection(appCtx.context, log, eid, transportMedium),
+    appContext(appCtx), log(appCtx.getLog()), connection(appCtx.context, log, eid, std::move(socketPath)),
     transport(eid, *this, transportMedium), inventoryPath(invPath), transportMedium(transportMedium), eid(eid)
 {
     {

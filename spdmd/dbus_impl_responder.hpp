@@ -50,6 +50,7 @@ struct ResponderArgs {
     std::optional<spdmcpp::TransportMedium> medium;
     sdbusplus::message::object_path mctpPath;
     sdbusplus::message::object_path inventoryPath;
+    std::string socketPath;
 };
 
 /** @class MctpTransportClass
@@ -106,11 +107,13 @@ class Responder : public ResponderIntf
      *  @param[in] eid - MCTP EndpointID of the responder
      *  @param[in] inventoryPath - Used for the object-manager association
      *  @param[in] transportMedium - Responder base transport medium
+     *  @param[in] socketPath      - IO device path
      */
     Responder(SpdmdAppContext& appCtx, const std::string& path, uint8_t eid,
               const sdbusplus::message::object_path& mctpPath,
               const sdbusplus::message::object_path& inventPath,
-              spdmcpp::TransportMedium transportMedium
+              spdmcpp::TransportMedium transportMedium,
+              std::string socketPath
     );
 
     ~Responder() override;

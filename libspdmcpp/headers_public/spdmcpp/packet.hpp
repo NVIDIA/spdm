@@ -93,6 +93,8 @@ struct PacketDecodeInfo
     uint8_t GetMeasurementsParam1 = 0;
 };
 
+
+// NOLINTBEGIN(clang-diagnostic-unknown-pragmas)
 #pragma pack(1)
 
 #include "internal/packet_message_header.hpp"
@@ -131,6 +133,7 @@ struct PacketDecodeInfo
 #include "internal/response/packet_version_response.hpp"
 
 #pragma pack()
+// NOLINTEND(clang-diagnostic-unknown-pragmas)
 
 #undef SPDMCPP_LOG_expr
 #undef SPDMCPP_LOG_iexprln

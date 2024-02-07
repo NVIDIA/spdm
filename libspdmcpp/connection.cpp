@@ -52,8 +52,8 @@ namespace spdmcpp
 {
 
 ConnectionClass::ConnectionClass(const ContextClass& cont, LogClass& log,
-                                 uint8_t eid, TransportMedium medium) :
-    context(cont), Log(log), currentMedium(medium), m_eid(eid)
+                                 uint8_t eid, std::string sockPath) :
+    context(cont), Log(log), sockPath(std::move(sockPath)), m_eid(eid)
 {
     resetConnection();
 }
@@ -316,7 +316,8 @@ RetStat ConnectionClass::handleRecv<PacketVersionResponseVar>()
 
     // the version response should have 1.0 in the header according to
     // DSP0274_1.1.1 page 34
-    if (resp.Min.Header.MessageVersion != MessageVersionEnum::SPDM_1_0)
+    if (resp.Min.Header.MessageVersion != MessageVersionEnum::SPDM_1_0 &&
+        resp.Min.Header.MessageVersion != MessageVersionEnum::SPDM_1_1)
     {
         rs = RetStat::ERROR_INVALID_HEADER_VERSION;
         SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
@@ -1163,13 +1164,13 @@ RetStat ConnectionClass::handleRecv(EventReceiveClass& event)
     return RetStat::ERROR_UNKNOWN;
 }
 
-RetStat ConnectionClass::handleTimeoutOrRetry(EventTimeoutClass& event)
+RetStat ConnectionClass::handleTimeoutOrRetry(EventTimeoutClass&)
 {
     SPDMCPP_LOG_TRACE_FUNC(Log);
     if (SendRetry)
     {
         --SendRetry;
-        auto rs = context.getIO(event.transportMedium).write(SendBuffer);
+        auto rs = context.getIO(sockPath)->write(SendBuffer);
         SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
         rs = transport->setupTimeout(SendTimeout);
         SPDMCPP_LOG_TRACE_RS(Log, rs);

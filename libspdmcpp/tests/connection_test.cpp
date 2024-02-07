@@ -94,15 +94,18 @@ class ConnectionFixture
 {
     static constexpr auto mctpTOBit = 0x08U;
   public:
-    LogClass log;
-    FixtureIOClass IO;
+    LogClass logg;
+    std::shared_ptr<FixtureIOClass> IO;
     FixtureTransportClass Trans;
     ContextClass Context;
     ConnectionClass Connection;
 
-    ConnectionFixture() : log(std::cout), Connection(Context, log, 0,  spdmcpp::TransportMedium::PCIe)
+    ConnectionFixture()
+    : logg(std::cout)
+    , IO(std::make_shared<FixtureIOClass>())
+    , Connection(Context, logg, 0,  "pcie")
     {
-        Context.registerIo(IO, spdmcpp::TransportMedium::PCIe);
+        Context.registerIo(IO, "pcie");
         Connection.registerTransport(Trans);
     }
     ~ConnectionFixture()
@@ -110,7 +113,7 @@ class ConnectionFixture
         try
         {
             Connection.unregisterTransport(Trans);
-            Context.unregisterIo(IO, spdmcpp::TransportMedium::PCIe);
+            Context.unregisterIo("pcie");
         }
         catch(const std::exception& exc)
         {
@@ -129,8 +132,8 @@ class ConnectionFixture
                       MessageHashEnum hashidx = MessageHashEnum::NUM)
     {
         LogClass log(std::cerr);
-        SPDMCPP_ASSERT(IO.WriteQueue.size() == 1);
-        auto& buf = IO.WriteQueue.front();
+        SPDMCPP_ASSERT(IO->WriteQueue.size() == 1);
+        auto& buf = IO->WriteQueue.front();
         if (!buf.empty())
         {
             buf[0] &= ~mctpTOBit;
@@ -156,7 +159,7 @@ class ConnectionFixture
         if (rs == RetStat::OK)
         {
             SPDMCPP_ASSERT(off == buf.size());
-            IO.WriteQueue.pop_front();
+            IO->WriteQueue.pop_front();
         }
         return rs;
     }
@@ -164,9 +167,9 @@ class ConnectionFixture
     template <typename T>
     RetStat push(T& packet, MessageHashEnum hashidx = MessageHashEnum::NUM)
     {
-        IO.ReadQueue.emplace_back();
+        IO->ReadQueue.emplace_back();
 
-        std::vector<uint8_t>& buf = IO.ReadQueue.back();
+        std::vector<uint8_t>& buf = IO->ReadQueue.back();
         buf.clear();
         TransportClass::LayerState lay;
 
@@ -177,14 +180,14 @@ class ConnectionFixture
         auto rs = packetEncode(packet, buf, off);
         if (isError(rs))
         {
-            IO.ReadQueue.pop_back();
+            IO->ReadQueue.pop_back();
             return rs;
         }
         if (hashidx < MessageHashEnum::NUM)
         {
             rs = getHash(hashidx).update(buf, start);
             if(isError(rs)) {
-                IO.ReadQueue.pop_back();
+                IO->ReadQueue.pop_back();
                 return rs;
             }
         }
@@ -196,7 +199,7 @@ class ConnectionFixture
     RetStat handleRecv()
     {
         std::vector<uint8_t> buf;
-        IO.read(buf);
+        IO->read(buf);
         EventReceiveClass ev(buf);
         if (!buf.empty())
         {

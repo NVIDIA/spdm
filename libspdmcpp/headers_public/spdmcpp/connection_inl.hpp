@@ -69,7 +69,7 @@ RetStat ConnectionClass::sendRequest(const T& packet, BufEnum bufidx)
         Log.println(buf);
     }
 
-    rs = context.getIO(currentMedium).write(buf);
+    rs = context.getIO(sockPath)->write(buf);
     return rs;
 }
 

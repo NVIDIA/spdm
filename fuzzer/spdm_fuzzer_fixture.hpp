@@ -36,7 +36,7 @@ class FixtureTransportClass : public MctpTransportClass
 {
   public:
     FixtureTransportClass() = delete;
-    FixtureTransportClass(int eid) : MctpTransportClass(eid) {}
+    explicit FixtureTransportClass(int eid) : MctpTransportClass(eid) {}
 
     spdmcpp::RetStat setupTimeout(spdmcpp::timeout_us_t /*timeout*/) override
     {

@@ -27,7 +27,7 @@
 #include <sdeventplus/source/io.hpp>
 
 #include <memory>
-#include <map>
+#include <unordered_map>
 
 using namespace std;
 using namespace spdmd;
@@ -44,7 +44,7 @@ class SpdmdApp : public SpdmdAppContext
     SpdmdApp(SpdmdApp&&) = delete;
     SpdmdApp& operator=(const SpdmdApp&) = delete;
     SpdmdApp& operator=(SpdmdApp&&) = delete;
-    ~SpdmdApp();
+    ~SpdmdApp() = default;
 
     /** @brief Constructs the SPDM daemon
      *
@@ -65,7 +65,7 @@ class SpdmdApp : public SpdmdAppContext
      *  @details Safe to call redundantly if necessary,
      * it'll create only one connection.
      */
-    void connectMCTP(TransportMedium medium);
+    void connectMCTP(const std::string& sockPath);
 
 
     /** @brief Sets up the automatic measurement delay according to commandline
@@ -115,20 +115,9 @@ class SpdmdApp : public SpdmdAppContext
     /** @brief verbose - debug level for SPDM daemon */
     spdmcpp::LogClass::Level verbose = spdmcpp::LogClass::Level::Emergency;
 
-    /** @brief MCTP interface auxiliary object - used for transmission purposes
-     * over MCTP */
-
-    spdmcpp::MctpIoClass mctpIoPCIe;
-    spdmcpp::MctpIoClass mctpIoSPI;
-    spdmcpp::MctpIoClass mctpIoI2C;
-
-
     /** @brief Event handlar for MCTP events - used for transmission purposes
      * over MCTP */
-    sdeventplus::source::IO* mctpEventPCIe {};
-    sdeventplus::source::IO* mctpEventSPI  {};
-    sdeventplus::source::IO* mctpEventI2C  {};
-
+    std::unordered_map<std::string, std::unique_ptr<sdeventplus::source::IO>> mctpEvents;
 
     /** @brief Array of all responder objects, managed by SPDM daemon */
     std::vector<std::unique_ptr<dbus_api::Responder>> responders;

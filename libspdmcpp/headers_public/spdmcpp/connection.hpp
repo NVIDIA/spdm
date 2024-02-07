@@ -153,7 +153,7 @@ class ConnectionClass : public NonCopyable
      *  @param[in] log - the LogClass to use for logging
      */
     explicit ConnectionClass(const ContextClass& context, LogClass& log,
-                             uint8_t eid, TransportMedium medium);
+                             uint8_t eid, std::string sockPath);
 
     ~ConnectionClass() = default;
 
@@ -783,7 +783,7 @@ class ConnectionClass : public NonCopyable
     bool skipCertificate{};
 
   private:
-    TransportMedium currentMedium;
+    const std::string sockPath;
 
   private:
     /// Try retry certificate count

@@ -26,7 +26,7 @@ conf_data.set('FETCH_SERIALNUMBER_FROM_RESPONDER', get_option('fetch_serialnumbe
 conf_data.set('DISCOVERY_ONLY_FROM_MCTP_CONTROL', get_option('discovery_only_from_mctp_control').enabled())
 conf_data.set('SPDM_JSON_CONF_FILE_NAME', get_option('conf_file_name'))
 conf_data.set('USE_DEFAULT_DBUS', get_option('use_default_dbus').enabled())
-conf_data.set('USE_I2C', get_option('use_i2c').enabled())
+
 
 configure_file(
   input: 'config.h.in',
@@ -43,7 +43,6 @@ crypto_deps = declare_dependency(
 	]
 )
 
-if not get_option('use_fuzz').enabled()
 sdbusplus = dependency(
   'sdbusplus',
   fallback: ['sdbusplus', 'sdbusplus_dep'],
@@ -52,7 +51,6 @@ phosphor_dbus_interfaces = dependency(
   'phosphor-dbus-interfaces',
   fallback: ['phosphor-dbus-interfaces', 'phosphor_dbus_interfaces_dep'],
 )
-endif
 
 sdeventplus = dependency(
   'sdeventplus',

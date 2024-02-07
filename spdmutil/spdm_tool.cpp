@@ -63,18 +63,21 @@ namespace spdmt {
         // Print help
         app.set_help_all_flag("--help-all", "Expand all help");
         // Inteface medium options
-        const std::map<std::string, TransportMedium> mediumMap{
-            {"pcie", TransportMedium::PCIe},
-            {"spi", TransportMedium::SPI},
-            {"i2c", TransportMedium::I2C}};
-        app.add_option("-i,--interface", medium, "Transport medium")
+        const std::map<std::string, std::string> mediumMap {
+            {"pcie", dbusIfcPCIe},
+            {"spi", dbusIfcSPI},
+            {"i2c", dbusIfcI2C},
+            {"usb", dbusIfcUSB },
+        };
+        app.add_option("-i,--interface", dbusIfc, "Transport medium")
             ->transform(CLI::CheckedTransformer(mediumMap, CLI::ignore_case))
             ->default_str("pcie");
         // Target EID
         app.add_option("-e,--eid", m_eid, "Endpoint EID")
             ->check(CLI::Range(0x00, 0xff));
         // I2C bus number
-        app.add_option("-b,--bus", m_i2c_bus_no, "I2C bus number")
+        int i2cBusNo {6};
+        app.add_option("-b,--bus", i2cBusNo, "I2C bus number")
             ->check(CLI::Range(0x00,0xff))
             ->default_str("6");
         // Add option json file
@@ -154,6 +157,10 @@ namespace spdmt {
         {
             std::cerr << "--eid argument not specified" << std::endl;
             return EXIT_FAILURE;
+        }
+        if (dbusIfc == dbusIfcI2C)
+        {
+            dbusIfc += std::to_string(i2cBusNo);
         }
         // Check if the directory exists and we are able to create file
         if (!jsonFilename.empty())
@@ -255,6 +262,7 @@ namespace spdmt {
             return rs;
         }
         std::vector<std::string> svers;
+        svers.reserve(resp.VersionNumberEntries.size());
         for(const auto& ver: resp.VersionNumberEntries)
         {
             svers.push_back(verToString(ver));
@@ -432,9 +440,10 @@ namespace spdmt {
             return rs;
         }
         std::vector<std::pair<int,std::vector<uint8_t>>> meas;
+        meas.reserve(resp.MeasurementBlockVector.size());
         for (const auto& v : resp.MeasurementBlockVector)
         {
-            meas.emplace_back(std::make_pair(v.Min.Index,v.MeasurementVector));
+            meas.emplace_back(v.Min.Index,v.MeasurementVector);
         }
         jsonGen["GetMeasurement"] = {
             {"SPDMVersion", verToString(resp.Min.Header.MessageVersion)},
@@ -459,7 +468,9 @@ namespace spdmt {
     // SPDM tool main loop
     auto SpdmTool::runComm() -> bool
     {
-        if (cmdList.empty())
+        if (std::all_of(cmdList.begin(), cmdList.end(),
+                [](const std::optional<cmdv>& opt) {
+                    return !opt.has_value();}))
         {
             return true;
         }
@@ -604,14 +615,6 @@ namespace spdmt {
             }
             while(wholeCert);
         }
-        if (jsonFileStream.is_open())
-        {
-            jsonFileStream << jsonGen << std::endl;
-        }
-        else
-        {
-            std::cout << jsonGen << std::endl;
-        }
         return fret;
     }
 
@@ -703,24 +706,18 @@ namespace spdmt {
     // Try connect MCTP
     auto SpdmTool::connectMctp() -> void
     {
-        using namespace std::string_literals;
-        std::string sockName;
-        switch (medium)
+        EnumerateEndpoints enumerate(dbusIfc);
+        auto& respInfo = enumerate.getRespondersInfo();
+        if (respInfo.empty() || respInfo.back().sockPath.empty())
         {
-            case TransportMedium::PCIe:
-                sockName = "\0mctp-pcie-mux"s;
-                break;
-            case TransportMedium::SPI:
-                sockName = "\0mctp-spi-mux"s;
-                break;
-            case TransportMedium::I2C:
-                sockName = "\0mctp-i2c"s + std::to_string(m_i2c_bus_no) + "-mux"s;
-                break;
+            throw std::logic_error("Unable to get transport socket");
         }
-        if (!mctpIO.createSocket(sockName))
+        const auto& unixSock =  respInfo.back().sockPath;
+        if (!mctpIO.createSocket(unixSock))
         {
+            using namespace std::string_literals;
             throw std::logic_error(
-                "Unable connect to MCTP socket "s + sockName.substr(1)
+                "Unable connect to MCTP socket "s + unixSock.substr(1)
             );
         }
     }
@@ -852,6 +849,17 @@ namespace spdmt {
             {
                 break;
             }
+            if (!jsonGen.empty())
+            {
+                if (jsonFileStream.is_open())
+                {
+                    jsonFileStream << jsonGen << std::endl;
+                }
+                else
+                {
+                    std::cout << jsonGen << std::endl;
+                }
+            }
         } while(false);
         return ret;
     }
@@ -864,7 +872,12 @@ namespace spdmt {
         {
             return true;
         }
-        EnumerateEndpoints eobj(jsonGen, medium, m_i2c_bus_no);
+        EnumerateEndpoints eobj(dbusIfc);
+        for (const auto& epInfo : eobj.getRespondersInfo())
+        {
+            jsonGen["Endpoints"].push_back(
+                {{"Path", epInfo.path}, {"EID", epInfo.eid}, {"UUID", epInfo.uuid}});
+        }
         if (jsonFileStream)
         {
             jsonFileStream << jsonGen << std::endl;

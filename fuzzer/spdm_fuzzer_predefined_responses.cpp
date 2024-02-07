@@ -44,7 +44,7 @@ bool PredefinedResponses::readFromLogFile(fs::path path)
     std::ifstream responesFile(path);
     std::string line;
 
-    int noOfReadLines;
+    int noOfReadLines {};
     while (std::getline(responesFile, line))
     {
         noOfReadLines++;

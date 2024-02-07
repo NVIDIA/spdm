@@ -154,7 +154,10 @@ RetStat FuzzingResponder::updateHash(MessageHashEnum hashIdx)
 
     std::vector<uint8_t> buf;
     auto rs = io.read(buf);
-
+    if (rs != RetStat::OK)
+    {
+        return rs;
+    }
     TransportClass::LayerState lay;
 
     rs = trans.decode(buf, lay);
@@ -945,14 +948,13 @@ bool FuzzingResponder::FuzzPacketMeasurementBlockVar(struct PacketMeasurementBlo
     }
     uint16_t randHalfWord = 0;
     getFuzzingData(randHalfWord);
-    bool alteredVector = false;
     if (doAlter)
     {
         bool changeVectorLen = (config.fuseRespMearurement.measurementBlockLen <= randHalfWord);
         getFuzzingData(randHalfWord);
         if (changeVectorLen)
         {
-            alteredVector = (val.Min.MeasurementSize != randHalfWord);
+            auto alteredVector = (val.Min.MeasurementSize != randHalfWord);
             result |= alteredVector;
             val.Min.MeasurementSize = randHalfWord;
         }
@@ -967,10 +969,10 @@ bool FuzzingResponder::FuzzPacketMeasurementBlockVar(struct PacketMeasurementBlo
         val.MeasurementVector.resize(val.Min.MeasurementSize);
 
         srand(randWord);
-        for (uint8_t &val : val.MeasurementVector)
+        for (uint8_t &meas : val.MeasurementVector)
         {
             if (config.fuseRespMearurement.measurementBlockVal <= (uint32_t) rand())
-                val = rand();
+                meas = rand();
         }
     }
 

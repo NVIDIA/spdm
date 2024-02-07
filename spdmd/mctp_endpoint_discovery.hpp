@@ -17,6 +17,7 @@
 
 #include "spdmcpp/common.hpp"
 #include "spdmd_app.hpp"
+#include <unordered_set>
 
 #include <sdbusplus/bus/match.hpp>
 
@@ -69,9 +70,8 @@ class MctpDiscovery
     sdbusplus::bus::match_t inventoryMatch;
 #endif
     /** @brief Used to watch for new MCTP endpoints */
-    sdbusplus::bus::match_t mctpMatchPCIe;
-    sdbusplus::bus::match_t mctpMatchSPI;
-    sdbusplus::bus::match_t mctpMatchI2C;
+    std::vector<unique_ptr<sdbusplus::bus::match_t>> mctpMatch;
+    std::vector<unique_ptr<dbus::ServiceHelper>> mctpControlServices;
 
 
     /** @brief Called when a new mctp endpoint is discovered */
@@ -81,9 +81,9 @@ class MctpDiscovery
     /** @brief Called when a new PLDM inventory object is discovered */
     void inventoryNewObjectSignal(const sdbusplus::message::object_path& objectPath, const dbus::InterfaceMap& interfaces);
 #endif
-    
+
     /** @brief Try calling spdmApp.ConnectMCTP() */
-    void tryConnectMCTP(TransportMedium medium);
+    void tryConnectMCTP(const std::string& sockPath);
 
     /** MCTP handle callback */
     void mtcpCallback(uint32_t revents, spdmcpp::MctpIoClass &mctpIo);
@@ -109,18 +109,33 @@ class MctpDiscovery
     static constexpr auto inventorySPDMResponderIntfName =
         "xyz.openbmc_project.Inventory.Item.SPDMResponder";
 
+    /** @brief MCTP d-bus interface, property UUID */
     static constexpr auto uuidIntfName = "xyz.openbmc_project.Common.UUID";
+
+    /** @brief MCTP transport socket interface name */
+    static constexpr auto mctpTransportSockIntfName =
+        "xyz.openbmc_project.Common.UnixSocket";
+
+    /** @brief MCTP transport sock type */
+    static constexpr auto mctpTransportSockIntfType =
+        "Address";
 
     static constexpr auto uuidIntfPropertyUUID = "UUID";
     //     static constexpr auto mctpEndpointIntfPropertyUUID =
     //         "SupportedMessageTypes";
 
     /** @brief MCTP d-bus Binding interface name  */
-    static constexpr auto mctpBindingIntfName =
+    static constexpr auto mctpBindingIntfProperty =
         "xyz.openbmc_project.MCTP.Binding";
 
     static constexpr auto mctpBindingIntfPropertyBindType =
         "BindingType";
+
+    /** @brief MCTP discovery path */
+    static constexpr auto mctpPath = "/xyz/openbmc_project/mctp";
+
+    /** @brief Object manager service */
+    static constexpr auto objMgrSvc = "org.freedesktop.DBus.ObjectManager";
 
     /** @brief Get EID value from MCTP objects, which implement SPDM
      *  @returns EID or invalidEid (256) in case of error
@@ -149,17 +164,23 @@ class MctpDiscovery
     std::optional<spdmcpp::TransportMedium> getInternalMediumType(
         const std::map<std::string, dbus::Value>& properties, std::string_view propName);
 
+    /** @brief Get Transport Unix socket from the endpoint */
+    std::string getTransportSocket(const dbus::InterfaceMap& interfaces);
 
     /** @brief Extract UUID value from the object's interfaces */
     std::string getUUID(const dbus::InterfaceMap& interfaces);
 
     /** @brief get an object from MCTP.Control with the provided uuid
      */
-    Object getMCTP(const std::string& uuid);
+    Object getMCTPObject(const std::string& uuid);
 
     /** @brief get a path from the inventory to an object with the provided uuid
      */
     sdbusplus::message::object_path getInventoryPath(const std::string& uuid);
+
+    /** @brief Get the unique service from the object mapper */
+    std::unordered_set<std::string> getMCTPServices();
+
 };
 
 } // namespace spdmd

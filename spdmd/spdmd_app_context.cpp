@@ -31,9 +31,9 @@ namespace spdmd
             std::ifstream ifs(confFile);
             conf = json::parse(ifs);
         }
-        catch(json::parse_error& e)
+        catch(json::parse_error& err)
         {
-            logOutStream << "Unable to open config file: "  << e.what() << std::endl;
+            logOutStream << "Unable to open config file: "  << err.what() << std::endl;
         }
     }
 
