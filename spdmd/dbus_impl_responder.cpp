@@ -56,12 +56,9 @@ Responder::Responder(SpdmdAppContext& appCtx, const std::string& path,
     }
     connection.registerTransport(transport);
 
-    /*
-     *  This code is commented out because it is intended for
-     *  later use after merge change related to phosphor-dbus-interface
-     */
     // Update hidden property
-    /* hidden(appCtx.getHiddenPropByEIDFromConf(eid).value_or(false)); */
+    static constexpr auto confName = "visible";
+    enabled(appCtx.getPropertyByEid<bool>(eid, confName).value_or(true));
     emit_object_added();
 }
 

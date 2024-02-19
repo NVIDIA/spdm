@@ -3,17 +3,17 @@
         {
             "eid" : 96,
             "name" : "erot96_name_without_inventory",
-            "hidden" : true,
+            "visible" : false,
             "description" : "Description hidden without inventory for eid number 96"
         },
         {
             "eid" : 95,
-            "hidden" : true,
+            "visible" : true,
             "description" : "Description hidden with inventory for eid number 95"
         },
         {
             "eid" : 94,
-            "hidden" : false,
+            "visible" : false,
             "description" : "Description hidden with inventory for eid number 94"
         },
         {
