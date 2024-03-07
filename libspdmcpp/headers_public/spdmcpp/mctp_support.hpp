@@ -32,6 +32,7 @@
 #include <iostream>
 #include <limits>
 #include <vector>
+#include <libmctp-externals.h>
 
 namespace spdmcpp
 {
@@ -62,6 +63,7 @@ class MctpTransportClass : public TransportClass
     RetStat encodePost(std::vector<uint8_t>& buf, LayerState& lay) override
     {
         auto& header = getHeaderRef<HeaderType>(buf, lay);
+        header.mctpTag(MCTP_TAG_SPDM);
         header.eid = EID;
         header.type = MCTPMessageTypeEnum::SPDM;
         return RetStat::OK;
@@ -82,6 +84,14 @@ class MctpTransportClass : public TransportClass
         if (header.eid != EID)
         {
             return RetStat::ERROR_WRONG_EID;
+        }
+        if (header.mctpTag() != MCTP_TAG_SPDM)
+        {
+            return RetStat::ERROR_WRONG_MCTP_TAG;
+        }
+        if (header.mctpTO())
+        {
+            return RetStat::ERROR_WRONG_MCTP_TO;
         }
         return RetStat::OK;
     }
@@ -109,6 +119,14 @@ class MctpTransportClass : public TransportClass
         {
             return RetStat::ERROR_WRONG_MCTP_TYPE;
         }
+        if (header.mctpTag() != MCTP_TAG_SPDM)
+        {
+            return RetStat::ERROR_WRONG_MCTP_TAG;
+        }
+        if (header.mctpTO())
+        {
+            return RetStat::ERROR_WRONG_MCTP_TO;
+        }
         eid = header.eid;
         return RetStat::OK;
     }
@@ -126,6 +144,11 @@ class MctpTransportClass : public TransportClass
      */
     struct HeaderType
     {
+
+        /** @brief MCTP header data
+        */
+        uint8_t mctpHeader;
+
         /** @brief Either source or the destination EndpointID, depending on
          * whether the packet is being sent or received. Regandless though it
          * should always
@@ -136,6 +159,26 @@ class MctpTransportClass : public TransportClass
          * MCTPMessageTypeEnum::SPDM
          */
         MCTPMessageTypeEnum type;
+
+        /** @brief Get The MCTP tag type
+        */
+        auto mctpTag() const noexcept -> mctp_tag_t
+        {
+            return static_cast<mctp_tag_t>(mctpHeader & 0x07);
+        }
+
+        /** @brief Set MCTP header to specific tag*/
+        void mctpTag(mctp_tag_t tag) noexcept
+        {
+            mctpHeader = static_cast<uint8_t>(tag) | 0x08U;
+        }
+
+        /** @brieg Get MCTO TO bit
+        */
+        auto mctpTO() const noexcept -> bool
+        {
+            return mctpHeader & 0x08;
+        }
     };
 
     /** @brief The EndpointID that this instance communicates with, it's checked

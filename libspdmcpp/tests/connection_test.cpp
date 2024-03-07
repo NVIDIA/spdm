@@ -92,6 +92,7 @@ enum class MessageHashEnum : uint8_t
 // NOLINTNEXTLINE cppcoreguidelines-special-member-functions
 class ConnectionFixture
 {
+    static constexpr auto mctpTOBit = 0x08U;
   public:
     LogClass log;
     FixtureIOClass IO;
@@ -109,7 +110,7 @@ class ConnectionFixture
         try
         {
             Connection.unregisterTransport(Trans);
-            Context.unregisterIo(IO, spdmcpp::TransportMedium::PCIe );
+            Context.unregisterIo(IO, spdmcpp::TransportMedium::PCIe);
         }
         catch(const std::exception& exc)
         {
@@ -130,7 +131,10 @@ class ConnectionFixture
         LogClass log(std::cerr);
         SPDMCPP_ASSERT(IO.WriteQueue.size() == 1);
         auto& buf = IO.WriteQueue.front();
-
+        if (!buf.empty())
+        {
+            buf[0] &= ~mctpTOBit;
+        }
         TransportClass::LayerState lay;
 
         auto rs = Trans.decode(buf, lay);
@@ -194,6 +198,10 @@ class ConnectionFixture
         std::vector<uint8_t> buf;
         IO.read(buf);
         EventReceiveClass ev(buf);
+        if (!buf.empty())
+        {
+            buf[0] &= ~mctpTOBit;
+        }
         return Connection.handleEvent(ev);
     }
 
