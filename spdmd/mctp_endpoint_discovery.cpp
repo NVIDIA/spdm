@@ -152,7 +152,7 @@ void MctpDiscovery::mctpNewObjectSignal(
     }
     auto uuid = getUUID(interfaces);
 #ifdef DISCOVERY_ONLY_FROM_MCTP_CONTROL
-    std::string invPath;
+    sdbusplus::message::object_path invPath;
 #else
     if (uuid.empty()) {
         spdmApp.getLog().iprintln("SPDM mctpNewObjectSignal couldn't get UUID for path '"s + std::string(objPath) + '\'');
