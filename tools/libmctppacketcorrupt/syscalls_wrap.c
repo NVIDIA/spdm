@@ -9,11 +9,16 @@
 #include <stdbool.h>
 #include "pktcorrupt.h"
 
+/* Functions pointers defs*/
+typedef int (*real_close_t)(int __fd);
+typedef int (*real_connect_t)(int __fd, const struct sockaddr * __addr, socklen_t __len);
+typedef ssize_t (*real_recv_t)(int sockfd, void *buf, size_t len, int flags);
 
 /* Global read function wrappers */
-static int (*real_close)(int __fd) = NULL;
-static int (*real_connect)(int __fd, const struct sockaddr * __addr, socklen_t __len) = NULL;
-static ssize_t (*real_recv)(int sockfd, void *buf, size_t len, int flags) = NULL;
+static real_close_t real_close = NULL;
+static real_connect_t real_connect = NULL;
+static real_recv_t real_recv = NULL;
+
 
 static const char* mctp_pcie_sock =  "\0mctp-pcie-mux";
 static const char* mctp_spi_sock =  "\0mctp-spi-mux";
@@ -27,7 +32,7 @@ int _iosys_connect(int __fd, const struct sockaddr * __addr, socklen_t __len)
 {
     bool need_init = false;
     if(!real_connect) {
-        real_connect = dlsym(RTLD_NEXT, "connect");
+        real_connect = (real_connect_t)(uintptr_t)dlsym(RTLD_NEXT, "connect");
         need_init = true;
     }
     if(!real_connect) {
@@ -68,7 +73,7 @@ __asm__(".symver _iosys_connect,connect@GLIBC_2.4");
 ssize_t _iosys_recv(int sockfd, void *buf, size_t len, int flags)
 {
     if(!real_recv) {
-        real_recv = dlsym(RTLD_NEXT, "recv");
+        real_recv = (real_recv_t)(uintptr_t)dlsym(RTLD_NEXT, "recv");
     }
     if(!real_recv) {
         perror("## Recv: Unable to load symbol for real recv ##");
@@ -96,7 +101,7 @@ __asm__(".symver _iosys_recv,recv@GLIBC_2.4");
 int _iosys_close(int __fd)
 {
     if(!real_close) {
-        real_close = dlsym(RTLD_NEXT, "close");
+        real_close = (real_close_t)(uintptr_t)dlsym(RTLD_NEXT, "close");
     }
     if(!real_close) {
         perror("## Close: Unable to load symbol ##");

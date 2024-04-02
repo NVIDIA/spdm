@@ -1,5 +1,5 @@
 project('spdmcpp',
-	'cpp',
+	'cpp', 'c',
 	version: '0.1.0',
 	meson_version: '>=0.58.0',
 	default_options: ['cpp_std=c++20', 'warning_level=3']
@@ -11,7 +11,7 @@ if get_option('tests').enabled()
 endif
 
 #at the moment we can't use default_option werror=true because it's passed to subprojects and subproject dependencies, and atm specifically fmt fails
-add_project_arguments('-Werror', language: ['c', 'cpp'])
+add_project_arguments([ '-Werror', '-fno-sanitize=alignment'], language: ['c', 'cpp'])
 
 # Wno-psabi reduces the number of "Note:" messages when cross-compiling some STL
 # stuff for ARM. See https://stackoverflow.com/questions/48149323/strange-gcc-warning-when-compiling-qt-project
@@ -76,6 +76,7 @@ else
 endif
 
 subdir('libspdmcpp')
+subdir('tools/libmctppacketcorrupt')
 
 if get_option('use_fuzz').enabled()
   subdir('fuzzer')

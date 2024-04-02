@@ -93,9 +93,13 @@ struct PacketDecodeInfo
     uint8_t GetMeasurementsParam1 = 0;
 };
 
-
-// NOLINTBEGIN(clang-diagnostic-unknown-pragmas)
+/*
+ * Pragma pack is temporary disabled due to bug in LLVM
+ * https://www.mail-archive.com/llvm-bugs@lists.llvm.org/msg69115.html
+*/
+#ifndef __clang__
 #pragma pack(1)
+#endif
 
 #include "internal/packet_message_header.hpp"
 
@@ -121,7 +125,7 @@ struct PacketDecodeInfo
 #include "internal/request/packet_get_version_request.hpp"
 #include "internal/request/packet_negotiate_algorithms_request.hpp"
 
-// separator for clang-format ordering
+// separator for lang-format ordering
 
 #include "internal/response/packet_algorithms_response.hpp"
 #include "internal/response/packet_capabilities_response.hpp"
@@ -132,8 +136,13 @@ struct PacketDecodeInfo
 #include "internal/response/packet_measurements_response.hpp"
 #include "internal/response/packet_version_response.hpp"
 
+/*
+ * Pragma pack is temporary disabled due to bug in LLVM
+ * https://www.mail-archive.com/llvm-bugs@lists.llvm.org/msg69115.html
+*/
+#ifndef __clang__
 #pragma pack()
-// NOLINTEND(clang-diagnostic-unknown-pragmas)
+#endif
 
 #undef SPDMCPP_LOG_expr
 #undef SPDMCPP_LOG_iexprln

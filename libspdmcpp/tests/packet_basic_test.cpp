@@ -28,6 +28,12 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+/*
+ * Pragma pack is temporary disabled due to bug in LLVM
+ * https://www.mail-archive.com/llvm-bugs@lists.llvm.org/msg69115.html
+*/
+#ifndef __clang__
+
 using namespace spdmcpp;
 
 // clang-format off
@@ -560,3 +566,4 @@ TEST(packet_pseudorandom_encode_decode, PacketMeasurementsResponseVar_1)
 
     EXPECT_TRUE(packetEncodeDecode(p, info));
 }
+#endif

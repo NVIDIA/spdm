@@ -214,7 +214,8 @@ inline int verifySignature(mbedtls_x509_crt* cert,
     {
         SPDMCPP_ASSERT(false);
     }
-    mbedtls_ecdh_context_raii ctx;
+    // NOLINTNEXTLINE(cppcoreguidelines-init-variables)
+    mbedtls_ecdh_context_raii ctx {};
 
     int ret = mbedtls_ecdh_get_params(ctx, mbedtls_pk_ec(cert->pk),
                                       MBEDTLS_ECDH_OURS);
@@ -229,7 +230,10 @@ inline int verifySignature(mbedtls_x509_crt* cert,
         return -1;
     }
 
-    mbedtls_mpi_raii bnR, bnS;
+    // NOLINTNEXTLINE(cppcoreguidelines-init-variables)
+    mbedtls_mpi_raii bnR {}; 
+    // NOLINTNEXTLINE(cppcoreguidelines-init-variables)
+    mbedtls_mpi_raii bnS {};
 
     ret = mbedtls_mpi_read_binary(bnR, signature.data(), halfSize);
     if (ret != 0)

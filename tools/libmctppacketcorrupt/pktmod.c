@@ -21,6 +21,8 @@ int corrupt_pkt_mod_cmd(char* buf, size_t len)
 // Corrupted packet response code
 int corrupt_pkt_mod_len(char* buf, size_t buf_size, size_t recv_size)
 {
+    (void)buf;
+    (void)recv_size;
     u32 rand_val = 0;
     int error = random_value(&rand_val);
     if(error) {

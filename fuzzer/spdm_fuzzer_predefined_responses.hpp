@@ -15,7 +15,7 @@
  */
 #pragma once
 
-#include <stdint.h>
+#include <cstdint>
 #include <string>
 #include <regex>
 #include <vector>
@@ -27,10 +27,10 @@ namespace fs = std::filesystem;
 class PredefinedResponses
 {
 public:
-    PredefinedResponses() {};
+    PredefinedResponses() = default;
 
-    bool readFromHexFile(fs::path path);
-    bool readFromLogFile(fs::path path);
+    bool readFromHexFile(const fs::path& path);
+    bool readFromLogFile(const fs::path& path);
 
     const std::vector<uint8_t>& getResponse(uint8_t msgType, int index = 0) const;
 

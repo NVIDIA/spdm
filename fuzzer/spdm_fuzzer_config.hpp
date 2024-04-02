@@ -40,7 +40,9 @@ class WrapperConfig
 
         bool operator<=(uint8_t rho) const {
             if (!enabled)
+            {
                 return false;
+	    }
             return (bool) (value <= rho);
         }
     };
@@ -107,7 +109,7 @@ class WrapperConfig
     static Threshold proc2thr(double proc);
     static double thr2proc(Threshold thr);
 
-    typedef bool(*CustomReader)(char &);
+    using CustomReader = bool (*)(char &);
 
     //void readerAddSource(std::istream &stream)
     //{

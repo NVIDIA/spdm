@@ -53,6 +53,7 @@ enum class MessageHashEnum : uint8_t
 class FuzzingResponder
 {
   public:
+    // NOLINTNEXTLINE cppcoreguidelines-pro-type-member-init
     FuzzingResponder(IOClass &io, TransportClass &trans, const WrapperConfig &config, const PredefinedResponses &predefinedResponses,
         BaseAsymAlgoFlags asymAlgo, BaseHashAlgoFlags hashAlgo, std::istream &str = std::cin):
         io(io), trans(trans), config(config), predefinedResponses(predefinedResponses),
@@ -113,7 +114,7 @@ class FuzzingResponder
     bool fuzzResponseMessageChallengeAuth(PacketChallengeAuthResponseVar &msg);
 
     bool fuzzResponseMessageMeasurements(PacketMeasurementsResponseVar &msg);
-    bool FuzzPacketMeasurementBlockVar(struct PacketMeasurementBlockVar &val, bool doAlter);
+    bool fuzzPacketMeasurementBlockVar(struct PacketMeasurementBlockVar &val, bool doAlter);
 
     bool getFuzzingData(uint8_t *buf, size_t len);
     bool getFuzzingData(uint8_t &value);
@@ -135,9 +136,13 @@ class FuzzingResponder
         case WrapperConfig::Source::RandomStream:
             modified = doRandomize(threshold);
             if (modified)
+            {
                 sendRandomData(hashIdx);
+            }
             else
+            {
                 sendMessage(resp, hashIdx);
+            }
             break;
 
         case WrapperConfig::Source::File:

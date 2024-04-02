@@ -44,9 +44,13 @@ int main(int argc, char** argv)
         bool result = app.run(BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P521,
             BaseHashAlgoFlags::TPM_ALG_SHA_512);
         if (result)
+        {
             std::cout<<"All OK"<<std::endl;
+        }
         else
+        {
             std::cout<<"Flow failed"<<std::endl;
+        }
         return 0;
     }
     catch (const std::exception& e)
@@ -75,16 +79,18 @@ bool SpdmWrapperApp::run(BaseAsymAlgoFlags asymAlgo, BaseHashAlgoFlags hashAlgo)
     static constexpr auto eid = 14;
     static constexpr auto transport = "PCIe";
     FixtureTransportClass trans(eid);            //Option add eid to config
-    ConnectionClass Connection(context, log, eid, "PCIe");
+    ConnectionClass connection(context, log, eid, "PCIe");
 
     context.registerIo(ioRequester, transport);
-    Connection.registerTransport(trans);
+    connection.registerTransport(trans);
 
-    Requester requester(*ioRequester, Connection);
+    Requester requester(*ioRequester, connection);
 
     std::ifstream fileStr;
     if (!config.instructionFilename.empty())
+    {
         fileStr.open(config.instructionFilename, std::ifstream::in);
+    }
 
     std::istream &str = config.instructionFilename.empty() ? std::cin : fileStr;
     FuzzingResponder responder(ioResponder, trans, config, predefinedResponses, asymAlgo, hashAlgo, str);
@@ -117,12 +123,18 @@ bool SpdmWrapperApp::run(BaseAsymAlgoFlags asymAlgo, BaseHashAlgoFlags hashAlgo)
                 //All OK End.
             }
             if (rs != RetStat::OK)
+            {
                 doReset = true;
+            }
             if (config.exitAfterFirstFuzzing)
+            {
                 break;
+            }
         }
         if (doReset)
+        {
             continue;
+        }
 
     //  Responder sends message
         std::cout<<"########### Response no " << iter << " ("
@@ -132,9 +144,11 @@ bool SpdmWrapperApp::run(BaseAsymAlgoFlags asymAlgo, BaseHashAlgoFlags hashAlgo)
 
     //  Taking decision about next iteration
         if (++iter > config.maxIter)
+        {
             break;
+        }
     }
-    Connection.unregisterTransport(trans);
+    connection.unregisterTransport(trans);
     context.unregisterIo(transport);
 
     return result;
@@ -146,7 +160,7 @@ void SpdmWrapperApp::setupCli(int argc, char** argv)
     CLI::App app{spdm_wrapper::description::name + ", version " +
                  spdm_wrapper::description::version};
 
-    bool useGrammar;
+    bool useGrammar {};
     app.add_flag("-e, --exitAfterFirstFuzzing", config.exitAfterFirstFuzzing, "Exit after first fuzzing");
     app.add_flag("-g, --grammar",               useGrammar,                   "Use grammar in fuzz generator");
     app.add_flag("--enableLogTrace",            config.enableLogTrace,        "Log communication to files");
@@ -308,7 +322,7 @@ void SpdmWrapperApp::setupCli(int argc, char** argv)
     app.add_option("--alterHeaderParam",   alterHeaderProb.param,       "Probability of altering param1 or param2 in header (0-100)")
         ->check(CLI::Range(0.0, 100.0));
 
-    double alterDataProb;
+    double alterDataProb = NAN;
     app.add_option("--alterPayloadData",   alterDataProb,               "Probability of altering payloads' data (0-100)")
         ->check(CLI::Range(0.0, 100.0));
 
@@ -379,73 +393,129 @@ void SpdmWrapperApp::setupCli(int argc, char** argv)
     std::cout << "doFuseResponseMessages.algorithms = " << doFuseResponseMessages.algorithms << std::endl;
 
     if (doFuseResponseMessages.version > 0)
+    {
         config.fuseThrRespMessages.version       = WrapperConfig::proc2thr(doFuseResponseMessages.version);
+    }
 
     if (doFuseResponseMessages.capability > 0)
+    {
         config.fuseThrRespMessages.capability    = WrapperConfig::proc2thr(doFuseResponseMessages.capability);
+    }
 
     if (doFuseResponseMessages.algorithms > 0)
+    {
         config.fuseThrRespMessages.algorithms    = WrapperConfig::proc2thr(doFuseResponseMessages.algorithms);
+    }
 
     if (doFuseResponseMessages.digests > 0)
+    {
         config.fuseThrRespMessages.digests       = WrapperConfig::proc2thr(doFuseResponseMessages.digests);
+    }
 
     if (doFuseResponseMessages.certificate > 0)
+    {
         config.fuseThrRespMessages.certificate   = WrapperConfig::proc2thr(doFuseResponseMessages.certificate);
+    }
 
 // Options for fuzzing response challenge authentication message
     if (doFuseResponseMessages.challengeAuth > 0)
+    {
         config.fuseThrRespMessages.challengeAuth = WrapperConfig::proc2thr(doFuseResponseMessages.challengeAuth);
+    }
     if (fuseRespChallengeAuthentication.nonce > 0)
+    {
         config.fuseRespChallengeAuthentication.nonce  = WrapperConfig::proc2thr(fuseRespChallengeAuthentication.nonce);
+    }
     if (fuseRespChallengeAuthentication.hashChain > 0)
+    {
         config.fuseRespChallengeAuthentication.hashChain  = WrapperConfig::proc2thr(fuseRespChallengeAuthentication.hashChain);
-    if (fuseRespChallengeAuthentication.hashChainLen > 0)
-        config.fuseRespChallengeAuthentication.hashChainLen  = WrapperConfig::proc2thr(fuseRespChallengeAuthentication.hashChainLen);
+    }
+    config.fuseRespChallengeAuthentication.hashChainLen  = WrapperConfig::proc2thr(fuseRespChallengeAuthentication.hashChainLen);
     if (fuseRespChallengeAuthentication.hashChainVal > 0)
+    {
         config.fuseRespChallengeAuthentication.hashChainVal  = WrapperConfig::proc2thr(fuseRespChallengeAuthentication.hashChainVal);
+    }
     if (fuseRespChallengeAuthentication.measurementSummary > 0)
+    {
         config.fuseRespChallengeAuthentication.measurementSummary  = WrapperConfig::proc2thr(fuseRespChallengeAuthentication.measurementSummary);
+    }
     if (fuseRespChallengeAuthentication.measurementSummaryLen > 0)
+    {
         config.fuseRespChallengeAuthentication.measurementSummaryLen  = WrapperConfig::proc2thr(fuseRespChallengeAuthentication.measurementSummaryLen);
+    }
     if (fuseRespChallengeAuthentication.measurementSummaryVal > 0)
+    { 
         config.fuseRespChallengeAuthentication.measurementSummaryVal  = WrapperConfig::proc2thr(fuseRespChallengeAuthentication.measurementSummaryVal);
+    }
     if (fuseRespChallengeAuthentication.opaque > 0)
+    {
         config.fuseRespChallengeAuthentication.opaque  = WrapperConfig::proc2thr(fuseRespChallengeAuthentication.opaque);
+    }
     if (fuseRespChallengeAuthentication.opaqueLen > 0)
+    {
         config.fuseRespChallengeAuthentication.opaqueLen  = WrapperConfig::proc2thr(fuseRespChallengeAuthentication.opaqueLen);
+    }
     if (fuseRespChallengeAuthentication.opaqueVal > 0)
+    {
         config.fuseRespChallengeAuthentication.opaqueVal  = WrapperConfig::proc2thr(fuseRespChallengeAuthentication.opaqueVal);
+    }
     if (fuseRespChallengeAuthentication.signature > 0)
+    {
         config.fuseRespChallengeAuthentication.signature  = WrapperConfig::proc2thr(fuseRespChallengeAuthentication.signature);
+    }
     if (fuseRespChallengeAuthentication.signatureLen > 0)
+    {
         config.fuseRespChallengeAuthentication.signatureLen  = WrapperConfig::proc2thr(fuseRespChallengeAuthentication.signatureLen);
+    }
     if (fuseRespChallengeAuthentication.signatureVal > 0)
+    {
         config.fuseRespChallengeAuthentication.signatureVal  = WrapperConfig::proc2thr(fuseRespChallengeAuthentication.signatureVal);
-
+    }
 // Options for fuzzing response measurements message
     if (doFuseResponseMessages.measurements > 0)
+    {
         config.fuseThrRespMessages.measurements  = WrapperConfig::proc2thr(doFuseResponseMessages.measurements);
+    }
     if (respMearurement.nonce > 0)
+    {
         config.fuseRespMearurement.nonce  = WrapperConfig::proc2thr(respMearurement.nonce);
+    }
     if (respMearurement.measurementBlock > 0)
+    {
         config.fuseRespMearurement.measurementBlock  = WrapperConfig::proc2thr(respMearurement.measurementBlock);
+    }
     if (respMearurement.measurementBlockLen > 0)
+    {
         config.fuseRespMearurement.measurementBlockLen  = WrapperConfig::proc2thr(respMearurement.measurementBlockLen);
+    }
     if (respMearurement.measurementBlockVal > 0)
+    {
         config.fuseRespMearurement.measurementBlockVal  = WrapperConfig::proc2thr(respMearurement.measurementBlockVal);
+    }
     if (respMearurement.opaqueData > 0)
+    {
         config.fuseRespMearurement.opaqueData  = WrapperConfig::proc2thr(respMearurement.opaqueData);
+    }
     if (respMearurement.opaqueDataLen > 0)
+    {
         config.fuseRespMearurement.opaqueDataLen  = WrapperConfig::proc2thr(respMearurement.opaqueDataLen);
+    }
     if (respMearurement.opaqueDataVal > 0)
+    {
         config.fuseRespMearurement.opaqueDataVal  = WrapperConfig::proc2thr(respMearurement.opaqueDataVal);
+    }
     if (respMearurement.signature > 0)
+    {
         config.fuseRespMearurement.signature  = WrapperConfig::proc2thr(respMearurement.signature);
+    }
     if (respMearurement.signatureLen > 0)
+    {
         config.fuseRespMearurement.signatureLen  = WrapperConfig::proc2thr(respMearurement.signatureLen);
+    }
     if (respMearurement.signatureVal > 0)
+    {
         config.fuseRespMearurement.signatureVal  = WrapperConfig::proc2thr(respMearurement.signatureVal);
+    }
 
     config.alterHeaderThr.all                = WrapperConfig::proc2thr(alterHeaderProb.all);
     config.alterHeaderThr.version            = WrapperConfig::proc2thr(alterHeaderProb.version);

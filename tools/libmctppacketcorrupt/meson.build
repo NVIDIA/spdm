@@ -1,4 +1,4 @@
-project('mctp packet corrupt library', 'c')
+#project('mctp packet corrupt library', 'c')
 
 source_files = [
   'syscalls_wrap.c',
@@ -22,7 +22,7 @@ gen_version_script = custom_target('gen_version_script',
 libpacket_corrupt = shared_library(library_name,
 	sources: source_files,
 	link_depends: gen_version_script,
-	link_args: ['-Wl,--version-script=' + version_script_output]
+	link_args: ['-Wl,--version-script=' + join_paths(meson.current_build_dir(), version_script_output)]
 )
 
 

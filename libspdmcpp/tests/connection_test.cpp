@@ -31,6 +31,11 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+/*
+ * Pragma pack is temporary disabled due to bug in LLVM
+ * https://www.mail-archive.com/llvm-bugs@lists.llvm.org/msg69115.html
+*/
+#ifndef __clang__
 using namespace spdmcpp;
 
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
@@ -502,6 +507,7 @@ void testConnectionFlow(BaseAsymAlgoFlags asymAlgo, BaseHashAlgoFlags hashAlgo)
     mbedtls_pk_free(&pkctx);
 }
 
+
 TEST(Connection, FullFlow_ECDSA_256_SHA_256)
 {
     testConnectionFlow(BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P256,
@@ -531,3 +537,4 @@ TEST(Connection, FullFlow_ECDSA_521_SHA_512)
     testConnectionFlow(BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P521,
                        BaseHashAlgoFlags::TPM_ALG_SHA_512);
 }
+#endif

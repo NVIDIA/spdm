@@ -22,11 +22,17 @@ WrapperConfig::Threshold WrapperConfig::proc2thr(double proc)
 {
     WrapperConfig::Threshold result { true, 0 };
     if (proc >=100)
+    {
         result.value = 0;
+    }
     else if (proc <= 0)
+    {
         result.enabled = false;
+    }
     else
+    {
         result.value = (uint8_t) ((double)(std::numeric_limits<uint8_t>::max()) * (1.0 - proc/100.0));
+    }
     return result;
 }
 
@@ -57,7 +63,9 @@ std::ostream & operator<<(std::ostream &out, const WrapperConfig::Threshold &thr
 std::ostream& operator<<(std::ostream &out, const WrapperConfig &config)
 {
     if (config.exitAfterFirstFuzzing)
+    {
         out << "Wrapper exits after first fuzzed message" << std::endl;
+    }
     out << "Input data source (Scenario): " << (int) config.source << std::endl;
 
     out << "Fuzzing messages:" << std::endl;

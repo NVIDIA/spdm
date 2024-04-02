@@ -39,7 +39,7 @@ size_t countBits(T value)
 }
 
 template <typename T>
-std::string to_string_hex(T v)
+std::string toStringHex(T v)
 {
     std::ostringstream stream;
     stream << "0x" << std::setfill('0') << std::setw(sizeof(T) * 2) << std::hex
@@ -115,7 +115,7 @@ std::string to_string_hex(T v)
 #define FLAG_START(T, UT)                                                      \
     inline std::string get_debug_string(T flags)                               \
     {                                                                          \
-        std::string ret = "(" + to_string_hex(static_cast<UT>(flags)) + " ";   \
+        std::string ret = "(" + toStringHex(static_cast<UT>(flags)) + " ";   \
         bool first = true;
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define FLAG_VALUE(T, N, V)                                                    \
@@ -129,7 +129,7 @@ std::string to_string_hex(T v)
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define FLAG_END(T, UT)                                                        \
     return !first ? ret + ")"                                                  \
-                  : "(" + to_string_hex(static_cast<UT>(flags)) + " 0)";       \
+                  : "(" + toStringHex(static_cast<UT>(flags)) + " 0)";       \
     }
 
 #include "flag_defs.hpp"

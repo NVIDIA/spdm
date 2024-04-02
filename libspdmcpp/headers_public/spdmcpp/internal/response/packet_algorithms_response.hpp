@@ -13,10 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include "../../packet.hpp"
 
 #pragma once
 
-#include "../../packet.hpp"
+
 
 #ifdef SPDMCPP_PACKET_HPP
 

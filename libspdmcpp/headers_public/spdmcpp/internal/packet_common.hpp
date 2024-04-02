@@ -177,6 +177,10 @@ inline void packetEncodeBasic(const uint8_t* src, size_t size,
     {
         buf.resize(start + size);
     }
+    if(!src)
+    {
+        return;
+    }
     memcpy(&buf[start], src, size);
     start += size;
 }
@@ -204,7 +208,10 @@ inline void packetEncodeBasic(const std::array<uint8_t, N>& src,
         SPDMCPP_LOG_TRACE(logg,buf.size());
         return RetStat::ERROR_BUFFER_TOO_SMALL;
     }
-    memcpy(dst, &buf[start], size);
+    if (dst)
+    {
+        memcpy(dst, &buf[start], size);
+    }
     start += size;
     return RetStat::OK;
 }

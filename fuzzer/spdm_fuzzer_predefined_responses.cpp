@@ -13,17 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <string.h>
+#include <cstring>
 #include <cassert>
 #include <iostream>
 #include <fstream>
 
 #include "spdm_fuzzer_predefined_responses.hpp"
 
-constexpr char responseBegin[] = "ResponseBuffer = ";
-constexpr size_t responseBeginLen = strlen(responseBegin);
+const auto responseBegin = "ResponseBuffer = ";
+const size_t responseBeginLen = std::strlen(responseBegin);
 
-bool PredefinedResponses::readFromHexFile(fs::path path)
+bool PredefinedResponses::readFromHexFile(const fs::path& path)
 {
     std::ifstream responesFile(path);
 
@@ -33,13 +33,15 @@ bool PredefinedResponses::readFromHexFile(fs::path path)
     {
         std::vector<uint8_t> msg = readMsgRaw(line);
         if (msg.size() > 3)
+	{
             responses.emplace(3, msg);
+	}
     }
 
     return responses.size() > 0;
 }
 
-bool PredefinedResponses::readFromLogFile(fs::path path)
+bool PredefinedResponses::readFromLogFile(const fs::path& path)
 {
     std::ifstream responesFile(path);
     std::string line;
@@ -48,9 +50,11 @@ bool PredefinedResponses::readFromLogFile(fs::path path)
     while (std::getline(responesFile, line))
     {
         noOfReadLines++;
-        size_t pos;
-        if (std::string::npos == (pos = line.find(responseBegin)))
+        size_t pos = line.find(responseBegin);
+        if (std::string::npos == pos)
+        {
             continue;
+        }
 
         std::cerr<<"Parsing line: " << line << std::endl;
 
@@ -59,12 +63,15 @@ bool PredefinedResponses::readFromLogFile(fs::path path)
         std::vector<uint8_t> msg = readMsgRaw(line, pos);
 
         if (msg.size() > 3)
+        {
             responses.emplace(msg[3], msg);
+        }
     }
     std::cerr<<"Parsed "<<noOfReadLines<<" lines" << std::endl;
     return responses.size() > 0;
 }
 
+//NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 const std::vector<uint8_t>& PredefinedResponses::getResponse(uint8_t msgType, int index) const
 {
     if (responses.count(msgType) == 0)
@@ -77,7 +84,9 @@ const std::vector<uint8_t>& PredefinedResponses::getResponse(uint8_t msgType, in
     auto itr2 = responses.upper_bound(msgType);
 
     if (itr1 == std::end(responses) && std::distance(itr1, itr2) < index)
+    {
         return empty;
+    }
 
     std::advance(itr1, index);
     return itr1->second;

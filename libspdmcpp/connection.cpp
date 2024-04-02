@@ -1197,7 +1197,7 @@ void ConnectionClass::clearTimeout()
 RetStat ConnectionClass::retryTimeout(RetStat lastError, timeout_ms_t timeout,  uint16_t retry)
 {
     SPDMCPP_LOG_TRACE_FUNC(getLog());
-    WaitingForResponse = LastWaitingForResponse;
+   WaitingForResponse = LastWaitingForResponse;
     lastRetryError = lastError;
     SendRetry = retry;
     SendTimeout = timeout;

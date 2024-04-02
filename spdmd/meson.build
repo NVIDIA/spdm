@@ -1,8 +1,3 @@
-spdmd_headers = [
-  '.',
-  '..',
-  '../libspdmcpp/headers_public'
-]
 
 sources = [
   'spdmd.cpp',
@@ -14,8 +9,6 @@ sources = [
 executable(
 	'spdmd',
 	sources,
-    implicit_include_directories: false,
-    include_directories: include_directories(spdmd_headers),	
     link_with: libspdmcpp_requester,
 	dependencies: [
 		CLI11_dep,
@@ -24,6 +17,7 @@ executable(
 		sdeventplus,
 		crypto_deps,
 		nlohmann_json,
+		libspdmcpp_requester_dep,
 		],
 	install: true
 )

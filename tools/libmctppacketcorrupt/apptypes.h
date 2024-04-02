@@ -73,4 +73,4 @@ typedef struct corrupt_context {
 
 
 // Hidden visibility
-#define _EXPORT_HIDDEN  __attribute__((visibility("hidden")));
+#define EXPORT_HIDDEN  __attribute__((visibility("hidden")))
