@@ -25,10 +25,10 @@
 #include <spdmcpp/common.hpp>
 #include <spdmcpp/connection.hpp>
 #include <spdmcpp/context.hpp>
+#include <spdmcpp/helpers.hpp>
 #include <spdmcpp/mbedtls_support.hpp>
 #include <spdmcpp/mctp_support.hpp>
 
-#include <libspdmcpp/headers/spdmcpp/helpers.hpp>
 #include <fstream>
 #include <string>
 

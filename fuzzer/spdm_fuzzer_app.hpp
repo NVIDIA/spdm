@@ -20,7 +20,7 @@
 
 #pragma once
 
-#include "libspdmcpp/headers_public/spdmcpp/flag.hpp"
+#include "spdmcpp/flag.hpp"
 
 #include "spdm_fuzzer_config.hpp"
 #include "spdm_fuzzer_predefined_responses.hpp"

@@ -27,11 +27,13 @@ conf_data.set('DISCOVERY_ONLY_FROM_MCTP_CONTROL', get_option('discovery_only_fro
 conf_data.set('SPDM_JSON_CONF_FILE_NAME', get_option('conf_file_name'))
 conf_data.set('USE_DEFAULT_DBUS', get_option('use_default_dbus').enabled())
 
-
-configure_file(
-  input: 'config.h.in',
-  output: 'config.h',
-  configuration: conf_data
+conf_h_dep = declare_dependency(
+    include_directories: include_directories('.'),
+    sources: configure_file(
+      input: 'config.h.in',
+      output: 'config.h',
+      configuration: conf_data
+    )
 )
 
 comp = meson.get_compiler('cpp')
@@ -78,9 +80,6 @@ endif
 subdir('libspdmcpp')
 subdir('tools/libmctppacketcorrupt')
 
-if get_option('use_fuzz').enabled()
-  subdir('fuzzer')
-else
-  subdir('spdmd')
-endif
+subdir('fuzzer')
+subdir('spdmd')
 subdir('spdmutil')

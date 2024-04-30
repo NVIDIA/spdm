@@ -1,6 +1,7 @@
 spdmd_headers = [
   '.',
   '..',
+  '../libspdmcpp/headers',
   '../libspdmcpp/headers_public'
 ]
 
@@ -14,14 +15,14 @@ sources = [
 ]
 
 executable(
-	'spdm_wrapper',
-	sources,
-    implicit_include_directories: false,
-    include_directories: include_directories(spdmd_headers),	
-    link_with: libspdmcpp_requester,
-	dependencies: [
-		CLI11_dep, 
-		crypto_deps],
-	install: true
+  'spdm_wrapper',
+  sources,
+  implicit_include_directories: false,
+  include_directories: include_directories(spdmd_headers),
+  link_with: libspdmcpp_requester,
+  dependencies: [
+    conf_h_dep,
+    CLI11_dep,
+    crypto_deps],
+  install: get_option('use_fuzz').enabled()
 )
-
