@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
-
-
-
 
 #include "mctp_endpoint_discovery.hpp"
 #include "spdmcpp/common.hpp"
@@ -39,56 +34,66 @@ MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
     bus(spdmApp.getBus()), spdmApp(spdmApp)
 #ifndef DISCOVERY_ONLY_FROM_MCTP_CONTROL
     ,inventoryMatch(spdmApp.getBus(),
-        sdbusplus::bus::match::rules::interfacesAdded(
-            inventoryService.getPath()
-        ),
-        [this](sdbusplus::message::message& msg) {
-            sdbusplus::message::object_path objPath;
-            dbus::InterfaceMap interfaces;
-            msg.read(objPath, interfaces);
-            inventoryNewObjectSignal(objPath, interfaces);
-        })
+                   sdbusplus::bus::match::rules::interfacesAdded(
+                       inventoryService.getPath()
+                    ),
+                   [this](sdbusplus::message::message& msg) {
+                       sdbusplus::message::object_path objPath;
+                       dbus::InterfaceMap interfaces;
+                       msg.read(objPath, interfaces);
+                       inventoryNewObjectSignal(objPath, interfaces);
+                   })
 #endif
 {
     SPDMCPP_LOG_TRACE_FUNC(spdmApp.getLog());
 
+    mctpMatch = std::make_unique<sdbusplus::bus::match_t>(
+        spdmApp.getBus(),
+        sdbusplus::bus::match::rules::interfacesAdded(mctpPath),
+        [this](sdbusplus::message::message& msg) {
+            sdbusplus::message::object_path objPath;
+            dbus::InterfaceMap interfaces;
+            msg.read(objPath, interfaces);
+            using namespace std::chrono_literals;
+            setupMCTPServices();
+            mctpNewObjectSignal(objPath, interfaces);
+        });
+    setupMCTPServices();
+}
+
+void MctpDiscovery::setupMCTPServices()
+{
     auto svcNames = getMCTPServices();
     if (svcNames.empty())
     {
         if (spdmApp.getLog().logLevel >= LogClass::Level::Error)
         {
-            spdmApp.getLog().iprint("Unable to get interfaces from object mapper");
+            spdmApp.getLog().iprint(
+                "Unable to get interfaces from object mapper");
         }
     }
     for (const auto& svc : svcNames)
     {
-        mctpControlServices.emplace_back(
-            std::make_unique<dbus::ServiceHelper>(mctpPath, objMgrSvc, svc.c_str())
-        );
-        mctpMatch.emplace_back(
-            std::make_unique<sdbusplus::bus::match_t>(
-                spdmApp.getBus(),
-                sdbusplus::bus::match::rules::interfacesAdded(
-                    mctpControlServices.back()->getPath()
-                ),
-                [this](sdbusplus::message::message& msg) {
-                    sdbusplus::message::object_path objPath;
-                    dbus::InterfaceMap interfaces;
-                    msg.read(objPath, interfaces);
-                    mctpNewObjectSignal(objPath, interfaces);
-                }
-            )
-        );
+        if (mctpControlServices.count(svc))
+        {
+            continue;
+        }
+        mctpControlServices[svc] = std::make_unique<dbus::ServiceHelper>(
+            mctpPath, objMgrSvc, svc.c_str());
         dbus::ObjectValueTree objects;
-        try {
-            auto method = mctpControlServices.back()->new_method_call(bus, "GetManagedObjects");
+        try
+        {
+            auto method = bus.new_method_call(
+                svc.c_str(), mctpPath, "org.freedesktop.DBus.ObjectManager",
+                "GetManagedObjects");
             auto reply = bus.call(method);
             reply.read(objects);
         }
         catch (const std::exception& e)
         {
             using namespace std::string_literals;
-            spdmApp.getLog().iprintln("Warning: Discovery->GetManagedObjects "s + e.what());
+            spdmApp.getLog().iprintln(
+                "Warning: Discovery->GetManagedObjects "s + e.what());
             continue;
         }
         for (const auto& [objectPath, interfaces] : objects)
@@ -97,7 +102,6 @@ MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
         }
     }
 }
-
 
 std::unordered_set<std::string> MctpDiscovery::getMCTPServices()
 {
@@ -448,10 +452,11 @@ MctpDiscovery::Object MctpDiscovery::getMCTPObject(const std::string& uuid)
 
     try
     {
-        for (auto &service: mctpControlServices)
+        for (auto &[name, service]: mctpControlServices)
         {
-            auto method =
-                service->new_method_call(bus, "GetManagedObjects");
+            auto method = bus.new_method_call(
+                name.c_str(), mctpPath, "org.freedesktop.DBus.ObjectManager",
+                "GetManagedObjects");
             auto reply = bus.call(method);
             reply.read(objects);
 

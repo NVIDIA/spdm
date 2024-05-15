@@ -205,6 +205,7 @@ void SpdmdApp::discoveryUpdateResponder(const dbus_api::ResponderArgs& respArg)
                 reportNotice("Recreate responder UUID: " + respArg.uuid +
                              " EID: " + std::to_string(respArg.eid));
                 responders[it->second.eid].reset();
+                resp_discovery.erase(it);
                 resp_discovery.emplace(respArg.uuid, respArg);
                 createResponder(respArg);
             }
@@ -247,15 +248,18 @@ void SpdmdApp::createResponder(const dbus_api::ResponderArgs& args)
             path += std::to_string(args.eid);
         }
     }
-    if(args.medium.has_value()) {
+    if (args.medium.has_value())
+    {
         responders[args.eid] = std::make_unique<dbus_api::Responder>(
             *this, path, args.eid, args.mctpPath, args.inventoryPath, args.medium.value_or(TransportMedium::PCIe), args.socketPath);
-    } else {
+    }
+    else
+    {
         reportError("Unable to determine responder type"
-            "EID = " + std::to_string(args.eid)  + " " +
-            "MCTPPATH = " + args.mctpPath.str  + " " +
-            "INVENTORYPATH = " + args.inventoryPath.str
-        );
+                    "EID = " +
+                    std::to_string(args.eid) + " " +
+                    "MCTPPATH = " + args.mctpPath.str + " " +
+                    "INVENTORYPATH = " + args.inventoryPath.str);
         return;
     }
 

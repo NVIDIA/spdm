@@ -75,8 +75,8 @@ class MctpDiscovery
     sdbusplus::bus::match_t inventoryMatch;
 #endif
     /** @brief Used to watch for new MCTP endpoints */
-    std::vector<unique_ptr<sdbusplus::bus::match_t>> mctpMatch;
-    std::vector<unique_ptr<dbus::ServiceHelper>> mctpControlServices;
+    unique_ptr<sdbusplus::bus::match_t> mctpMatch;
+    std::unordered_map<std::string, unique_ptr<dbus::ServiceHelper>> mctpControlServices;
 
 
     /** @brief Called when a new mctp endpoint is discovered */
@@ -185,6 +185,9 @@ class MctpDiscovery
 
     /** @brief Get the unique service from the object mapper */
     std::unordered_set<std::string> getMCTPServices();
+
+    /** @brief Setup MCTP services */
+    void setupMCTPServices();
 
 };
 
