@@ -139,7 +139,7 @@ def find_slot_with_certs(certs, eid, bus):
         for port, num_certs in data[bus]:
             if port == eid:
                 if num_certs > 0:
-                    return slot 
+                    return slot
     return None
 
 # Load all measurements data
@@ -155,6 +155,8 @@ def load_measurements(conn, endpoints, certs):
                 if slot is None:
                     continue
                 jsons = spdmt_cmd_exec(conn, bus, f"--eid {eid} get-cert --slot {slot} get-meas --block-index 255")
+                if jsons == {}:
+                    jsons = spdmt_cmd_exec(conn, bus, f"--eid {eid} get-cert --slot {slot}")
                 if (verbose_level >= 2):
                     print(f"Collecting measurements for eid={eid}, bus={bus} -> succeded")
                 if (verbose_level >= 3):
@@ -215,7 +217,8 @@ def verify_spdm_capabilities(conf, meas):
                 if cap and (set(cap_req) != set(cap)):
                     errors.append( { 'bus': bus, 'endpoint': ep_num, 'reason' : 'CheckCapabilities' ,
                                     'error' : 'Value not match', 'val': ', '.join(cap)} )
-                report.append( { 'bus': bus, 'endpoint': ep_num, 'reason' : 'CheckCapabilities' ,
+                else:
+                    report.append( { 'bus': bus, 'endpoint': ep_num, 'reason' : 'CheckCapabilities' ,
                                     'status' : 'Success', 'val': rc, 'cap' : cap} )
             else:
                 errors.append( { 'bus': bus, 'endpoint': ep_num, 'reason' : 'CheckCapabilities' ,
@@ -302,6 +305,8 @@ def verify_spdm_measurements_serial_and_debug_token(certs, meas):
 
     errors = []
     for bus, ep, meas in match_meas:
+        if not meas:
+            continue
         rc =  meas.get('ResponseCode')
         if rc != 'RetStat::OK':
             errors.append( { 'bus': bus, 'endpoint': ep, 'reason' : 'CheckMeasurements' ,
@@ -367,7 +372,7 @@ def show_compliance_tool_report(errors, reports):
         if endpoint not in sorted_by_endpoint:
             sorted_by_endpoint[endpoint] = []
         sorted_by_endpoint[endpoint].append(msg)
-    
+
     for endpoint, msgs in sorted_by_endpoint.items():
         print(f'Endpoint: {endpoint}')
         #sorted_msgs = sorted(msgs, key=lambda x: x['reason'], reverse=False)
