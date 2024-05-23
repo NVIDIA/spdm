@@ -418,27 +418,59 @@ std::string MctpDiscovery::getUUID(const dbus::InterfaceMap& interfaces)
 
     try
     {
-        auto intf = interfaces.find(uuidIntfName);
+        auto intf = interfaces.find(mctpUUIDIntfName);
+        if (intf == interfaces.end())
+        {
+            intf = interfaces.find(uuidIntfName);
+        }
         if (intf != interfaces.end())
         {
             const auto& properties = intf->second;
             auto uuid = properties.find(uuidIntfPropertyUUID);
             if (uuid != properties.end())
             {
-                try
-                {
-                    return std::get<std::string>(uuid->second);
-                }
-                catch (const std::bad_variant_access& e)
-                {
-                    spdmApp.getLog().println(e.what());
-                }
+                return std::get<std::string>(uuid->second);
+            }
+            if (spdmApp.getLog().logLevel >= LogClass::Level::Error)
+            {
+                spdmApp.getLog().iprint("UUID interface was not found for: ");
+                spdmApp.getLog().iprintln(intf->first);
             }
         }
     }
     catch (const std::exception& e)
     {
         spdmApp.getLog().print(e.what());
+    }
+    return {};
+}
+
+std::string MctpDiscovery::getPropertyValue(const std::string& service,
+                                            const std::string& path,
+                                            const std::string& interface,
+                                            const std::string& property)
+{
+    try
+    {
+        auto method =
+            bus.new_method_call(service.c_str(), path.c_str(),
+                                "org.freedesktop.DBus.Properties", "Get");
+        method.append(interface);
+        method.append(property);
+        auto reply = bus.call(method);
+        std::variant<std::string> value;
+        reply.read(value);
+        return std::get<std::string>(value);
+    }
+    catch (const sdbusplus::exception_t& e)
+    {
+        if (spdmApp.getLog().logLevel >= LogClass::Level::Error)
+        {
+            spdmApp.getLog().iprint("Failed to get UUID for: ");
+            spdmApp.getLog().iprint(path);
+            spdmApp.getLog().iprint(" error: ");
+            spdmApp.getLog().iprintln(e.what());
+        }
     }
     return {};
 }
@@ -477,37 +509,67 @@ MctpDiscovery::Object MctpDiscovery::getMCTPObject(const std::string& uuid)
 
 }
 
-
 sdbusplus::message::object_path
     MctpDiscovery::getInventoryPath(const std::string& uuid)
 {
-    dbus::ObjectValueTree objects;
 
     SPDMCPP_LOG_TRACE_FUNC(spdmApp.getLog());
 
-    // TODO couldn't test/verify so this is most likely invalid/broken
+    static constexpr auto mapperService = "xyz.openbmc_project.ObjectMapper";
+    static constexpr auto mapperPath = "/xyz/openbmc_project/object_mapper";
+    static constexpr auto mapperInterface = "xyz.openbmc_project.ObjectMapper";
+    static constexpr auto method = "GetSubTree";
+
+    std::string path = "/";
+    int depth = 0;
+    const std::vector<std::string> interfaces = {
+        "xyz.openbmc_project.Inventory.Item.SPDMResponder"};
     try
     {
-        auto method =
-            inventoryService.new_method_call(bus, "GetManagedObjects");
-        auto reply = bus.call(method);
-        reply.read(objects);
-
-        for (const auto& [objectPath, interfaces] : objects)
+        auto reply = bus.new_method_call(mapperService, mapperPath,
+                                         mapperInterface, method);
+        reply.append(path, depth, interfaces);
+        std::map<std::string, std::map<std::string, std::set<std::string>>>
+            response;
+        bus.call(reply).read(response);
+        for (const auto& [objectPath, serviceMap] : response)
         {
-            if (interfaces.contains(inventorySPDMResponderIntfName))
+            for (const auto& [service, interfaceMap] : serviceMap)
             {
-                auto id = getUUID(interfaces);
-                if (id == uuid)
+                auto intf = interfaceMap.find(mctpUUIDIntfName);
+                if (intf == interfaceMap.end())
                 {
-                    return objectPath;
+                    intf = interfaceMap.find(uuidIntfName);
+                }
+                if (intf != interfaceMap.end())
+                {
+                    const auto currUUID = getPropertyValue(
+                        service, objectPath, *intf, uuidIntfPropertyUUID);
+                    if (uuid == currUUID)
+                    {
+                        return objectPath;
+                    }
+                }
+                else
+                {
+                    if (spdmApp.getLog().logLevel >= LogClass::Level::Error)
+                    {
+                        spdmApp.getLog().iprint("UUID interface was not found for: ");
+                        spdmApp.getLog().iprintln(objectPath);
+                    }
                 }
             }
         }
     }
     catch (const std::exception& e)
     {
-        spdmApp.getLog().print(e.what());
+        if (spdmApp.getLog().logLevel >= LogClass::Level::Error)
+        {
+            spdmApp.getLog().iprint("Failed to get inventory path for: ");
+            spdmApp.getLog().iprint(uuid);
+            spdmApp.getLog().iprint(" error: ");
+            spdmApp.getLog().iprintln(e.what());
+        }
     }
     return {};
 }

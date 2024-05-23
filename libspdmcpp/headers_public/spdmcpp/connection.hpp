@@ -327,7 +327,7 @@ class ConnectionClass : public NonCopyable
 
     /** @brief Capabilities flag for responder capabilities
      *
-    */
+     */
     auto getCapabilitiesFlags() const {
         SPDMCPP_ASSERT(hasInfo(ConnectionInfoEnum::CAPABILITIES));
         return responderCapabilitiesFlags;
@@ -423,7 +423,6 @@ class ConnectionClass : public NonCopyable
      */
     [[nodiscard]] RetStat handleEvent(EventClass& event);
 
- 
 
   protected:
     [[nodiscard]] RetStat tryGetVersion();
@@ -777,23 +776,41 @@ class ConnectionClass : public NonCopyable
         return 255;
     }
 
+  private:
     /** @brief Helper function for choosing the SPDM version that should be used
      * for communication
      */
     RetStat chooseVersion();
 
-    /// If signature should be skipped
-    bool skipVerifySignature{};
-    /// If not cert capab getDiggest/getCert
-    bool skipCertificate{};
+    /** @brief Helper function for checking measurements capabilities */
+    bool skipMeasurements() const noexcept
+    {
+        return !(responderCapabilitiesFlags &
+                 (ResponderCapabilitiesFlags::MEAS_CAP_10 |
+                  ResponderCapabilitiesFlags::MEAS_CAP_01));
+    }
 
-  private:
+    /** @brief Helper function for checking certificate capabilities */
+    bool skipCertificate() const noexcept
+    {
+        return !(responderCapabilitiesFlags &
+                 ResponderCapabilitiesFlags::CERT_CAP);
+    }
+
+    /** @brief Helper function for checking signature capabilities */
+    bool skipVerifySignature() const noexcept
+    {
+        return ((responderCapabilitiesFlags &
+                 ResponderCapabilitiesFlags::MEAS_CAP_01) ==
+                ResponderCapabilitiesFlags::MEAS_CAP_01);
+    }
+
+    /// Connection socket path
     const std::string sockPath;
 
-  private:
     /// Try retry certificate count
     uint8_t retryCertCount {};
-  private:
+
     /// Return true if retry is needed
     static bool checkErrorCodeForRetry(RetStat ec);
   public:

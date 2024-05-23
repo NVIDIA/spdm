@@ -1,7 +1,6 @@
 /*
  * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -14,9 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
-
 
 #pragma once
 
@@ -78,7 +74,6 @@ class MctpDiscovery
     unique_ptr<sdbusplus::bus::match_t> mctpMatch;
     std::unordered_map<std::string, unique_ptr<dbus::ServiceHelper>> mctpControlServices;
 
-
     /** @brief Called when a new mctp endpoint is discovered */
     void mctpNewObjectSignal(const sdbusplus::message::object_path& objectPath, const dbus::InterfaceMap& interfaces);
 
@@ -91,8 +86,8 @@ class MctpDiscovery
     void tryConnectMCTP(const std::string& sockPath);
 
     /** MCTP handle callback */
-    void mtcpCallback(uint32_t revents, spdmcpp::MctpIoClass &mctpIo);
 
+    void mtcpCallback(uint32_t revents, spdmcpp::MctpIoClass& mctpIo);
 
     /** @brief SPDM type of an MCTP message */
     static constexpr uint8_t mctpTypeSPDM = 5;
@@ -114,8 +109,11 @@ class MctpDiscovery
     static constexpr auto inventorySPDMResponderIntfName =
         "xyz.openbmc_project.Inventory.Item.SPDMResponder";
 
-    /** @brief MCTP d-bus interface, property UUID */
+    /** @brief Common d-bus interface, property UUID */
     static constexpr auto uuidIntfName = "xyz.openbmc_project.Common.UUID";
+
+    /** @brief MCTP d-bus interface, property UUID */
+    static constexpr auto mctpUUIDIntfName = "xyz.openbmc_project.MCTP.UUID";
 
     /** @brief MCTP transport socket interface name */
     static constexpr auto mctpTransportSockIntfName =
@@ -175,6 +173,12 @@ class MctpDiscovery
     /** @brief Extract UUID value from the object's interfaces */
     std::string getUUID(const dbus::InterfaceMap& interfaces);
 
+    /** @brief Extract UUID value from the service and path */
+    std::string getPropertyValue(const std::string& service,
+                                 const std::string& path,
+                                 const std::string& interface,
+                                 const std::string& property);
+
     /** @brief get an object from MCTP.Control with the provided uuid
      */
     Object getMCTPObject(const std::string& uuid);
@@ -188,7 +192,6 @@ class MctpDiscovery
 
     /** @brief Setup MCTP services */
     void setupMCTPServices();
-
 };
 
 } // namespace spdmd

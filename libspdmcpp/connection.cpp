@@ -446,17 +446,8 @@ RetStat ConnectionClass::handleRecv<PacketCapabilitiesResponse>()
     appendRecvToBuf(BufEnum::A);
 
     responderCapabilitiesFlags = resp.Flags;
-    if (!(resp.Flags & (ResponderCapabilitiesFlags::MEAS_CAP_10 |
-                        ResponderCapabilitiesFlags::MEAS_CAP_01)))
-    {
-        return RetStat::ERROR_MISSING_CAPABILITY_MEAS;
-    }
-    skipVerifySignature =
-        ((resp.Flags & ResponderCapabilitiesFlags::MEAS_CAP_01) ==
-         ResponderCapabilitiesFlags::MEAS_CAP_01);
-    skipCertificate = !(resp.Flags & ResponderCapabilitiesFlags::CERT_CAP);
 
-    if (skipCertificate && !skipVerifySignature)
+    if (skipCertificate() && !skipVerifySignature())
     {
         return RetStat::ERROR_MISSING_CAPABILITY_CERT;
     }
@@ -573,7 +564,7 @@ RetStat ConnectionClass::handleRecv<PacketAlgorithmsResponseVar>()
         SPDMCPP_CONNECTION_RS_ERROR_RETURN(RetStat::ERROR_INVALID_FLAG_SIZE);
     }
 
-    if (skipCertificate)
+    if (skipCertificate())
     {
         rs = tryChallengeIfSupported();
     }
@@ -855,6 +846,15 @@ RetStat ConnectionClass::tryGetMeasurements()
 {
     SPDMCPP_LOG_TRACE_FUNC(Log);
     SPDMCPP_ASSERT(MessageVersion != MessageVersionEnum::UNKNOWN);
+    if (skipMeasurements())
+    {
+        if (Log.logLevel >= spdmcpp::LogClass::Level::Notice)
+        {
+            Log.iprintln(
+                "Notice: Responder doesn't support Measurement function");
+        }
+        return RetStat::OK;
+    }
 
     DMTFMeasurements.clear();
 
@@ -884,7 +884,7 @@ RetStat ConnectionClass::tryGetMeasurements(uint8_t idx)
     PacketGetMeasurementsRequestVar request;
     request.Min.Header.MessageVersion = MessageVersion;
     request.Min.Header.Param1 = packetDecodeInfo.GetMeasurementsParam1 = 0x00;
-    if (MeasurementIndices.none() && !skipVerifySignature)
+    if (MeasurementIndices.none() && !skipVerifySignature())
     {
         // means this is the last getMeasurements, so we set the nonce and
         // request a signature and if skip is not set
@@ -956,10 +956,10 @@ RetStat ConnectionClass::handleRecv<PacketMeasurementsResponseVar>()
                             packetDecodeInfo.SignatureSize);*/
 
         const auto measSize = ResponseBuffer.size() - ResponseBufferSPDMOffset
-            - (skipVerifySignature?0:packetDecodeInfo.SignatureSize);
+            - (skipVerifySignature()?0:packetDecodeInfo.SignatureSize);
         appendToBuf(BufEnum::L, &ResponseBuffer[ResponseBufferSPDMOffset], measSize);
 
-        if (skipVerifySignature)
+        if (skipVerifySignature())
         {
             if (Log.logLevel >= spdmcpp::LogClass::Level::Informational)
             {
