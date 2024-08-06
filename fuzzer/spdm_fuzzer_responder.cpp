@@ -696,13 +696,13 @@ bool FuzzingResponder::fuzzResponseMessageAlgorithms(
         return false; // Fuzing this message is disabled, don't read
                       // instructions
     }
+
     bool result = false;
     uint8_t randByte{};
 
     auto fuzzData = getFuzzingData(randByte);
     const bool doAlter =
         (fuzzData && config.fuseThrRespMessages.algorithms <= randByte);
-
     const bool doAlterData = (doAlter && getFuzzingData(randByte) &&
                               config.alterDataThr <= randByte);
 
@@ -712,50 +712,23 @@ bool FuzzingResponder::fuzzResponseMessageAlgorithms(
     {
         result = true;
         getFuzzingData(msg.Min.Reserved0);
-    }
-    else
-    {
-        dropFuzzingData(sizeof(msg.Min.Reserved0));
-    }
-    if (doAlterData)
-    {
-        result = true;
         getFuzzingData(msg.Min.Reserved1);
-    }
-    else
-    {
-        dropFuzzingData(sizeof(msg.Min.Reserved1));
-    }
-    if (doAlterData)
-    {
-        result = true;
         getFuzzingData(msg.Min.Reserved2);
-    }
-    else
-    {
-        dropFuzzingData(sizeof(msg.Min.Reserved2));
-    }
-    if (doAlterData)
-    {
-        result = true;
         getFuzzingData(msg.Min.Reserved3);
-    }
-    else
-    {
-        dropFuzzingData(sizeof(msg.Min.Reserved3));
-    }
-    if (doAlterData)
-    {
-        result = true;
         getFuzzingData(msg.Min.Reserved4);
     }
     else
     {
+        dropFuzzingData(sizeof(msg.Min.Reserved0));
+        dropFuzzingData(sizeof(msg.Min.Reserved1));
+        dropFuzzingData(sizeof(msg.Min.Reserved2));
+        dropFuzzingData(sizeof(msg.Min.Reserved3));
         dropFuzzingData(sizeof(msg.Min.Reserved4));
     }
 
     unsigned char vectSize{};
     static constexpr auto vecMax = 16U;
+
     if (doAlterData)
     {
         result = true;
@@ -766,6 +739,7 @@ bool FuzzingResponder::fuzzResponseMessageAlgorithms(
     {
         dropFuzzingData(sizeof(vectSize));
     }
+
     msg.PacketReqAlgVector.resize(vectSize);
     for (auto& alg : msg.PacketReqAlgVector)
     {
@@ -781,8 +755,10 @@ bool FuzzingResponder::fuzzResponseMessageAlgorithms(
         {
             dropFuzzingData(sizeof(randBVal));
         }
+
         unsigned char nAlgCnt{};
         static const auto maxNAlg = alg.AlgSupported.max_size();
+
         if (doAlterData)
         {
             result = true;
@@ -793,18 +769,11 @@ bool FuzzingResponder::fuzzResponseMessageAlgorithms(
         {
             dropFuzzingData(sizeof(nAlgCnt));
         }
+
         alg.setFixedAlgCount(nAlgCnt);
         for (int na = 0; na < nAlgCnt; ++na)
         {
-            if (doAlterData)
-            {
-                result = true;
-                getFuzzingData(alg.AlgSupported[na]);
-            }
-            else
-            {
-                dropFuzzingData(sizeof(alg.AlgSupported[na]));
-            }
+            getFuzzingData(alg.AlgSupported[na]);
         }
     }
     return result;

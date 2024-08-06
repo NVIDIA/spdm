@@ -59,6 +59,7 @@ using namespace spdmcpp;
 
 void print(const std::vector<uint8_t>& buf)
 {
+    std::ios_base::fmtflags f(std::cerr.flags());
     for (size_t i = 0; i < buf.size(); ++i)
     {
         if (i)
@@ -71,6 +72,7 @@ void print(const std::vector<uint8_t>& buf)
         }
         std::cerr << std::hex << (int)buf[i];
     }
+    std::cerr.flags(f);
 }
 
 template <typename T>
