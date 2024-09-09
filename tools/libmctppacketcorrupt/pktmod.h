@@ -57,3 +57,6 @@ int corrupt_pkt_mod_capabilities_param_reserved(char* buf,
 
 // pkt corrupt algo reserved
 int corrupt_pkt_mod_algo_param_reserved(char* buf, size_t len) EXPORT_HIDDEN;
+
+// Corrupt mode measurement data
+int corrupt_pkt_meas_data(char* buf, size_t len) EXPORT_HIDDEN;

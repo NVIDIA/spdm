@@ -91,6 +91,10 @@ static corrupt_mode modestr_to_enum(const char* str)
     {
         return corrupt_mode_algo_fields;
     }
+    else if (!strcasecmp(str, "measdata"))
+    {
+        return corrupt_mode_meas_data;
+    }
     return corrupt_mode_invalid;
 }
 
@@ -249,10 +253,27 @@ void userio_print_help(void)
     fprintf(
         stderr,
         "\talgofields:\tChange param1, param2, reserved in getAlgorithms\n");
+    fprintf(stderr, "\tmeasdata:\tRandomly corrupt measurements data\n");
     fprintf(stderr, "%s:\tMCTP Packet corrupt probability n/t\n", CFGENV_LVL);
     fprintf(stderr, "\tn:\tNumber of corrupted packet in the sequence\n");
     fprintf(stderr, "\tt:\tSequence length\n");
     fprintf(stderr, "%s:\tMCTP Packet corrupt nums a,b,..%%n\n", CFGENV_LVL);
     fprintf(stderr, "\ta,b,...:\tNumber of corrupted packet in the sequence\n");
     fprintf(stderr, "\tt:\tSequence length\n");
+    fprintf(stderr, "%s:\tComma-separated list of EIDs to drop\n",
+            "MCTP_CORRUPT_DROP_EIDS");
+    fprintf(stderr, "\tExample: 1,2,3 drops packets with EIDs 1, 2, and 3\n");
+    fprintf(
+        stderr,
+        "\tUse ! for negation. Example: !1,2,3 allows EIDs 1, 2, and 3, and drops others\n");
+    fprintf(stderr, "%s:\tComma-separated list of command types to drop\n",
+            "MCTP_CORRUPT_TYPES");
+    fprintf(stderr,
+            "\tExample: 1,2,3 drops packets with command types 1, 2, and 3\n");
+    fprintf(
+        stderr,
+        "\tUse ! for negation. Example: !1,2,3 allows types 1, 2, and 3, and drops others\n");
+    fprintf(
+        stderr,
+        "\nNote: Packet dropping only occurs if the file /tmp/corrupt_drop_enable exists.\n");
 }

@@ -24,6 +24,7 @@
 
 //! Initialize corrupt library
 int corrupt_init(void) EXPORT_HIDDEN;
+
 //! Deinitialize corrupt library
 int corrupt_deinit(void) EXPORT_HIDDEN;
 
@@ -34,3 +35,11 @@ int corrupt_deinit(void) EXPORT_HIDDEN;
  */
 int corrupt_recv_packet(char* buf, size_t buf_size,
                         size_t recv_size) EXPORT_HIDDEN;
+
+/**
+ * Check if particular received packet should be droppend or not
+ * @param[in] eid Input eid
+ * @param[in] type Message type code
+ * @param[out] true if should be dropped , otherwise false
+ */
+bool corrupt_pkt_should_be_dropped(int eid, int type) EXPORT_HIDDEN;

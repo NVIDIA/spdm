@@ -42,6 +42,21 @@
     } while (false)
 
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+#define SPDMCPP_CONNECTION_RS_ERROR_RETURN_WITH_VERSION(rs)                    \
+    do                                                                         \
+    {                                                                          \
+        if (isError(rs))                                                       \
+        {                                                                      \
+            SPDMCPP_LOG_TRACE(Log, (rs));                                      \
+            SPDMCPP_LOG_TRACE(Log, m_eid);                                     \
+            SPDMCPP_LOG_TRACE(Log, SendBuffer);                                \
+            SPDMCPP_LOG_TRACE(Log, ResponseBuffer);                            \
+            stateEnabled = false;                                              \
+            return tryGetVersion();                                            \
+        }                                                                      \
+    } while (false)
+
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define SPDMCPP_CONNECTION_RS_ERROR_LOG(print_send_buf)                        \
     do                                                                         \
     {                                                                          \
@@ -105,6 +120,7 @@ RetStat ConnectionClass::refreshMeasurementsInternal()
             return RetStat::ERROR_INDICES_INVALID_SIZE;
         }
     }
+    stateEnabled = true;
     auto rs = tryGetVersion();
     SPDMCPP_LOG_TRACE_RS(Log, rs);
     return rs;
@@ -298,10 +314,12 @@ RetStat ConnectionClass::tryGetVersion()
 {
     SPDMCPP_LOG_TRACE_FUNC(Log);
     // SPDMCPP_ASSERT(MessageVersion == MessageVersionEnum::UNKNOWN);
-
-    for (auto& b : Bufs)
+    if (stateEnabled)
     {
-        b.clear();
+        for (auto& b : Bufs)
+        {
+            b.clear();
+        }
     }
 
     PacketGetVersionRequest spdmRequest;
@@ -313,6 +331,11 @@ RetStat ConnectionClass::tryGetVersion()
 template <>
 RetStat ConnectionClass::handleRecv<PacketVersionResponseVar>()
 {
+    if (!stateEnabled)
+    {
+        return RetStat::OK;
+    }
+
     PacketVersionResponseVar resp;
     auto rs = interpretResponse(resp);
     SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
@@ -342,14 +365,13 @@ RetStat ConnectionClass::handleRecv<PacketVersionResponseVar>()
     appendRecvToBuf(BufEnum::A);
 
     rs = chooseVersion();
-    SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+    SPDMCPP_CONNECTION_RS_ERROR_RETURN_WITH_VERSION(rs);
 
     if (Log.logLevel >= spdmcpp::LogClass::Level::Informational)
     {
         Log.iprint("chosen MessageVersion: ");
         Log.println(MessageVersion);
     }
-
     rs = tryGetCapabilities();
     SPDMCPP_LOG_TRACE_RS(Log, rs);
     return rs;
@@ -425,17 +447,17 @@ RetStat ConnectionClass::handleRecv<PacketCapabilitiesResponse>()
 {
     PacketCapabilitiesResponse resp;
     auto rs = interpretResponse(resp);
-    SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+    SPDMCPP_CONNECTION_RS_ERROR_RETURN_WITH_VERSION(rs);
 
     if (resp.Header.Param1 != 0 || resp.Header.Param2 != 0)
     {
         rs = RetStat::ERROR_INVALID_PARAMETER;
-        SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+        SPDMCPP_CONNECTION_RS_ERROR_RETURN_WITH_VERSION(rs);
     }
     if (resp.Reserved0 != 0 || resp.Reserved1 != 0)
     {
         rs = RetStat::ERROR_INVALID_RESERVED;
-        SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+        SPDMCPP_CONNECTION_RS_ERROR_RETURN_WITH_VERSION(rs);
     }
 
     markInfo(ConnectionInfoEnum::CAPABILITIES);
@@ -445,7 +467,8 @@ RetStat ConnectionClass::handleRecv<PacketCapabilitiesResponse>()
 
     if (skipCertificate() && !skipVerifySignature())
     {
-        return RetStat::ERROR_MISSING_CAPABILITY_CERT;
+        rs = RetStat::ERROR_MISSING_CAPABILITY_CERT;
+        SPDMCPP_CONNECTION_RS_ERROR_RETURN_WITH_VERSION(rs);
     }
 
     Timings.setCTExponent(resp.CTExponent);
@@ -504,37 +527,37 @@ RetStat ConnectionClass::handleRecv<PacketAlgorithmsResponseVar>()
     // member field because we need information from it for later operations
     PacketAlgorithmsResponseVar& resp = Algorithms;
     auto rs = interpretResponse(resp);
-    SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+    SPDMCPP_CONNECTION_RS_ERROR_RETURN_WITH_VERSION(rs);
 
     if (resp.Min.Header.Param2 != 0)
     {
         rs = RetStat::ERROR_INVALID_PARAMETER;
-        SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+        SPDMCPP_CONNECTION_RS_ERROR_RETURN_WITH_VERSION(rs);
     }
     if (resp.Min.Reserved0 != 0 || resp.Min.Reserved1 != 0 ||
         resp.Min.Reserved2 != 0 || resp.Min.Reserved3 != 0)
     {
         rs = RetStat::ERROR_INVALID_RESERVED;
-        SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+        SPDMCPP_CONNECTION_RS_ERROR_RETURN_WITH_VERSION(rs);
     }
     if (std::popcount(
             static_cast<std::underlying_type_t<MeasurementHashAlgoFlags>>(
                 resp.Min.MeasurementHashAlgo)) > 1)
     {
         rs = RetStat::ERROR_WRONG_ALGO_BITS;
-        SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+        SPDMCPP_CONNECTION_RS_ERROR_RETURN_WITH_VERSION(rs);
     }
     if (std::popcount(static_cast<std::underlying_type_t<BaseAsymAlgoFlags>>(
             resp.Min.BaseAsymAlgo)) > 1)
     {
         rs = RetStat::ERROR_WRONG_ALGO_BITS;
-        SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+        SPDMCPP_CONNECTION_RS_ERROR_RETURN_WITH_VERSION(rs);
     }
     if (std::popcount(static_cast<std::underlying_type_t<BaseHashAlgoFlags>>(
             resp.Min.BaseHashAlgo)) > 1)
     {
         rs = RetStat::ERROR_WRONG_ALGO_BITS;
-        SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+        SPDMCPP_CONNECTION_RS_ERROR_RETURN_WITH_VERSION(rs);
     }
 
     markInfo(ConnectionInfoEnum::ALGORITHMS);
@@ -548,7 +571,8 @@ RetStat ConnectionClass::handleRecv<PacketAlgorithmsResponseVar>()
     }
     else
     {
-        SPDMCPP_CONNECTION_RS_ERROR_RETURN(RetStat::ERROR_INVALID_FLAG_SIZE);
+        SPDMCPP_CONNECTION_RS_ERROR_RETURN_WITH_VERSION(
+            RetStat::ERROR_INVALID_FLAG_SIZE);
     }
     if (auto ssize = getSignatureSize(resp.Min.BaseAsymAlgo);
         ssize != invalidFlagSize)
@@ -557,7 +581,8 @@ RetStat ConnectionClass::handleRecv<PacketAlgorithmsResponseVar>()
     }
     else
     {
-        SPDMCPP_CONNECTION_RS_ERROR_RETURN(RetStat::ERROR_INVALID_FLAG_SIZE);
+        SPDMCPP_CONNECTION_RS_ERROR_RETURN_WITH_VERSION(
+            RetStat::ERROR_INVALID_FLAG_SIZE);
     }
 
     if (skipCertificate())
@@ -591,11 +616,11 @@ RetStat ConnectionClass::handleRecv<PacketDigestsResponseVar>()
 {
     PacketDigestsResponseVar resp;
     auto rs = interpretResponse(resp, packetDecodeInfo);
-    SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+    SPDMCPP_CONNECTION_RS_ERROR_RETURN_WITH_VERSION(rs);
     if (resp.Min.Header.Param1 != 0)
     {
         rs = RetStat::ERROR_INVALID_PARAMETER;
-        SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+        SPDMCPP_CONNECTION_RS_ERROR_RETURN_WITH_VERSION(rs);
     }
     bool skipCert = false;
     for (SlotIdx i = 0; i < slotNum; ++i)
@@ -671,7 +696,7 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
 {
     PacketCertificateResponseVar resp;
     auto rs = interpretResponse(resp);
-    SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+    SPDMCPP_CONNECTION_RS_ERROR_RETURN_WITH_VERSION(rs);
 
     appendRecvToBuf(BufEnum::B);
 
@@ -681,7 +706,7 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
     if (resp.Min.PortionLength > getResponseBufferRef().size())
     {
         rs = RetStat::ERROR_CERTIFICATE_CHAIN_SIZE_INVALID;
-        SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+        SPDMCPP_CONNECTION_RS_ERROR_RETURN_WITH_VERSION(rs);
     }
 
     if (cert.empty())
@@ -705,18 +730,25 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
     rs = parseCertChain(slot, cert);
 
     static constexpr auto numCertRetries = 3U;
-    if (isError(rs) && retryCertCount < numCertRetries)
+    if (isError(rs))
     {
-        rs = tryGetCertificate(idx);
-        SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
-        ++retryCertCount;
-        if (Log.logLevel >= LogClass::Level::Error)
+        if (retryCertCount < numCertRetries)
         {
-            Log.print("Try retry certificate ");
-            Log.print(retryCertCount);
-            Log.print("/");
-            Log.print(numCertRetries);
-            Log.println("...");
+            rs = tryGetCertificate(idx);
+            SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+            ++retryCertCount;
+            if (Log.logLevel >= LogClass::Level::Error)
+            {
+                Log.print("Try retry certificate ");
+                Log.print(retryCertCount);
+                Log.print("/");
+                Log.print(numCertRetries);
+                Log.println("...");
+            }
+        }
+        else
+        {
+            SPDMCPP_CONNECTION_RS_ERROR_RETURN_WITH_VERSION(rs);
         }
     }
     else
@@ -729,7 +761,7 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
             }
         }
         // rs = verifyCertificateChain(slot);
-        SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+        // SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
         slot.markInfo(SlotInfoEnum::CERTIFICATES);
         rs = tryChallengeIfSupported();
     }
@@ -745,7 +777,7 @@ RetStat ConnectionClass::tryGetCertificate(SlotIdx idx)
 
     if (idx >= slotNum)
     {
-        return RetStat::ERROR_UNKNOWN;
+        SPDMCPP_CONNECTION_RS_ERROR_RETURN_WITH_VERSION(RetStat::ERROR_UNKNOWN);
     }
     std::vector<uint8_t>& cert = Slots[idx].Certificates;
     cert.clear();
@@ -787,7 +819,7 @@ RetStat ConnectionClass::handleRecv<PacketChallengeAuthResponseVar>()
 {
     PacketChallengeAuthResponseVar resp;
     auto rs = interpretResponse(resp, packetDecodeInfo);
-    SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+    SPDMCPP_CONNECTION_RS_ERROR_RETURN_WITH_VERSION(rs);
 
     appendToBuf(BufEnum::C, &ResponseBuffer[ResponseBufferSPDMOffset],
                 ResponseBuffer.size() - ResponseBufferSPDMOffset -
@@ -851,7 +883,8 @@ RetStat ConnectionClass::tryGetMeasurements()
             Log.iprintln(
                 "Notice: Responder doesn't support Measurement function");
         }
-        return RetStat::OK;
+        stateEnabled = false;
+        return tryGetVersion();
     }
 
     DMTFMeasurements.clear();
@@ -914,7 +947,7 @@ RetStat ConnectionClass::handleRecv<PacketMeasurementsResponseVar>()
     SPDMCPP_LOG_TRACE_FUNC(Log);
     PacketMeasurementsResponseVar resp;
     auto rs = interpretResponse(resp, packetDecodeInfo);
-    SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+    SPDMCPP_CONNECTION_RS_ERROR_RETURN_WITH_VERSION(rs);
 
     // parse and store DMTF Measurements
     for (const auto& block : resp.MeasurementBlockVector)
@@ -935,7 +968,7 @@ RetStat ConnectionClass::handleRecv<PacketMeasurementsResponseVar>()
                 rs =
                     packetDecodeInternal(Log, DMTFMeasurements[block.Min.Index],
                                          block.MeasurementVector, off);
-                SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+                SPDMCPP_CONNECTION_RS_ERROR_RETURN_WITH_VERSION(rs);
                 if (off != block.MeasurementVector.size())
                 {
                     if (Log.logLevel >= spdmcpp::LogClass::Level::Error)
@@ -966,7 +999,8 @@ RetStat ConnectionClass::handleRecv<PacketMeasurementsResponseVar>()
                 Log.iprintln("measurements SIGNATURE verify SKIPPED!");
             }
             markInfo(ConnectionInfoEnum::MEASUREMENTS);
-            return RetStat::OK;
+            stateEnabled = false;
+            return tryGetVersion();
         }
 
         { // store measurement signature
@@ -997,23 +1031,22 @@ RetStat ConnectionClass::handleRecv<PacketMeasurementsResponseVar>()
                 Log.iprintln("measurements SIGNATURE verify PASSED!");
             }
             markInfo(ConnectionInfoEnum::MEASUREMENTS);
+            stateEnabled = false;
+            return tryGetVersion();
         }
-        else
-        {
-            mbedtlsPrintErrorLine(Log, "verifySignature()", ret);
-            return RetStat::ERROR_MEASUREMENT_SIGNATURE_VERIFIY_FAILED;
-        }
-    }
-    else
-    {
-        appendRecvToBuf(BufEnum::L);
 
-        SPDMCPP_ASSERT(MeasurementIndices.any());
-        uint8_t idx = getFirstMeasurementIndex();
-        MeasurementIndices.reset(idx);
-        return tryGetMeasurements(idx);
+        mbedtlsPrintErrorLine(Log, "verifySignature()", ret);
+        Log.iprintln("measurement SIGNATURE verify Failed!");
+        stateEnabled = false;
+        return tryGetVersion();
     }
-    return rs;
+
+    appendRecvToBuf(BufEnum::L);
+
+    SPDMCPP_ASSERT(MeasurementIndices.any());
+    uint8_t idx = getFirstMeasurementIndex();
+    MeasurementIndices.reset(idx);
+    return tryGetMeasurements(idx);
 }
 
 RetStat ConnectionClass::handleRecv(EventReceiveClass& event)
@@ -1182,8 +1215,9 @@ RetStat ConnectionClass::handleTimeoutOrRetry(EventTimeoutClass&)
         SPDMCPP_LOG_TRACE_RS(Log, rs);
         return rs;
     }
-    WaitingForResponse = RequestResponseEnum::INVALID;
 
+    stateEnabled = false;
+    WaitingForResponse = RequestResponseEnum::INVALID;
     return RetStat::OK;
 }
 

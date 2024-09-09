@@ -144,6 +144,7 @@ class ConnectionClass : public NonCopyable
   public:
     /** Type alias to distinguish Certificate Slot Indices */
     using SlotIdx = uint8_t;
+    bool stateEnabled = true;
 
     /** Constant to define the maximum possible number of slots defined by
      * DSP0274_1.1.1 page 56 */
@@ -423,6 +424,7 @@ class ConnectionClass : public NonCopyable
 
   protected:
     [[nodiscard]] RetStat tryGetVersion();
+
     [[nodiscard]] RetStat tryGetCapabilities();
     [[nodiscard]] RetStat tryNegotiateAlgorithms();
     [[nodiscard]] RetStat tryGetDigest();
@@ -595,6 +597,7 @@ class ConnectionClass : public NonCopyable
      * timeout if it isn't timeoutMsInfinite
      *  @param[in] timeout - The response timeout
      *  @param[in] retry - The number of times the request should be
+     * automatically retried if a response was not received
      */
     template <typename T>
     RetStat setupResponseWait(timeout_ms_t timeout = timeoutMsInfinite,
@@ -672,7 +675,8 @@ class ConnectionClass : public NonCopyable
 
     /** @brief Calculates the given hashtype of the given storage buffer
      */
-    void hashBuf(std::vector<uint8_t>& hash, HashEnum hashtype, BufEnum bufidx)
+    void hashBuf(std::vector<uint8_t>& hash, HashEnum hashtype,
+                 BufEnum bufidx) const
     {
         HashClass::compute(hash, hashtype, refBuf(bufidx));
     }

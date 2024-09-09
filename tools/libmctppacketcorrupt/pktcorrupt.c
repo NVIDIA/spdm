@@ -24,6 +24,9 @@
 #include "userio.h"
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
 
 // Library configuration
 static corrupt_context app_context;
@@ -88,6 +91,10 @@ static bool is_packet_should_be_modifed(const corrupt_context* ctx,
         return false;
     }
     if (ctx->cfg.mode == corrupt_mode_algo_fields && mresp != mctp_resp_algo)
+    {
+        return false;
+    }
+    if (ctx->cfg.mode == corrupt_mode_meas_data && mresp != mctp_resp_meas)
     {
         return false;
     }
@@ -184,6 +191,9 @@ static int packet_modify_buffer(const corrupt_context* ctx, char* buf,
         case corrupt_mode_algo_fields:
             *modified = true;
             return corrupt_pkt_mod_algo_param_reserved(buf, recv_size);
+        case corrupt_mode_meas_data:
+            *modified = true;
+            return corrupt_pkt_meas_data(buf, recv_size);
         default:
             return recv_size;
     }
@@ -249,4 +259,67 @@ int corrupt_recv_packet(char* buf, size_t buf_size, size_t recv_size)
         return err;
     }
     return ret_val;
+}
+
+static bool is_in_list(const char* list, int num, bool negate)
+{
+    char* list_copy = strdup(list);
+    char* token = strtok(list_copy, ",");
+
+    while (token != NULL)
+    {
+        int token_num = atoi(token);
+        if (token_num == num)
+        {
+            free(list_copy);
+            return !negate;
+        }
+        token = strtok(NULL, ",");
+    }
+
+    free(list_copy);
+    return negate;
+}
+
+// Packet drop or not detection
+bool corrupt_pkt_should_be_dropped(int eid, int type)
+{
+    // Check if the /tmp/corrupt_drop_enable file exists
+    struct stat buffer;
+    if (stat("/tmp/corrupt_drop_enable", &buffer) != 0)
+    {
+        return false;
+    }
+
+    // Check MCTP_CORRUPT_DROP_EIDS environment variable
+    const char* eid_list = getenv("MCTP_CORRUPT_DROP_EIDS");
+    if (eid_list != NULL && strlen(eid_list) > 0)
+    {
+        bool negate = (eid_list[0] == '!');
+        if (negate)
+            eid_list++; // Skip '!' character if present
+
+        if (is_in_list(eid_list, eid, negate))
+        {
+            printf("Packet dropped due to EID %d\n", eid);
+            return true;
+        }
+    }
+
+    // Check MCTP_CORRUPT_TYPES environment variable
+    const char* type_list = getenv("MCTP_CORRUPT_TYPES");
+    if (type_list != NULL && strlen(type_list) > 0)
+    {
+        bool negate = (type_list[0] == '!');
+        if (negate)
+            type_list++; // Skip '!' character if present
+
+        if (is_in_list(type_list, type, negate))
+        {
+            printf("Packet dropped due to type %d\n", type);
+            return true;
+        }
+    }
+
+    return false;
 }

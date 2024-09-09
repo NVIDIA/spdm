@@ -261,3 +261,21 @@ int corrupt_pkt_mod_unsup_capab(char* buf, size_t len)
     *u32wr = rand_len;
     return len;
 }
+
+// Corrupt mode measurement data
+int corrupt_pkt_meas_data(char* buf, size_t len)
+{
+    u32 rand_val;
+    int error = random_value(&rand_val);
+    if (error)
+    {
+        return error;
+    }
+    if (len < mctp_offs_mresp_record)
+    {
+        return error_buf_offs;
+    }
+    u8* u8wr = (u8*)(buf + mctp_offs_mresp_record);
+    *u8wr = rand_val;
+    return len;
+}

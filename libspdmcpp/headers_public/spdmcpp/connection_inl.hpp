@@ -134,8 +134,12 @@ RetStat ConnectionClass::setupResponseWait(timeout_ms_t timeout, uint16_t retry)
         {
             return rs;
         }
-        SendTimeout = timeout;
-        SendRetry = retry;
+
+        if (stateEnabled)
+        {
+            SendTimeout = timeout;
+            SendRetry = retry;
+        }
     }
     return RetStat::OK;
 }

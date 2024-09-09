@@ -28,6 +28,7 @@ enum mctp_offsets
     mctp_offs_code = 4,
     mctp_offs_arg1 = 5,
     mctp_offs_arg2 = 6,
+    mctp_offs_mresp_record = 11,
 };
 
 enum mctp_type
@@ -41,5 +42,6 @@ enum mctp_resp_code
     mctp_resp_cert = 0x02,
     mctp_resp_version = 0x04,
     mctp_resp_capab = 0x61,
-    mctp_resp_algo = 0x63
+    mctp_resp_algo = 0x63,
+    mctp_resp_meas = 0x60,
 };
