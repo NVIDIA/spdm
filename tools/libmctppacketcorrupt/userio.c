@@ -95,6 +95,10 @@ static corrupt_mode modestr_to_enum(const char* str)
     {
         return corrupt_mode_meas_data;
     }
+    else if (!strcasecmp(str, "errorresp"))
+    {
+        return corrupt_mode_error_resp;
+    }
     return corrupt_mode_invalid;
 }
 
@@ -229,6 +233,7 @@ void userio_print_help(void)
     fprintf(stderr, "\tmsglen:\t\tChange message length of the packet\n");
     fprintf(stderr, "\tzerolen:\tSet packet message len to zero\n");
     fprintf(stderr, "\tversion:\tChange message version in the packets\n");
+    fprintf(stderr, "\terrorresp:\tResponse with error code instad of normal response\n");
     fprintf(stderr,
             "\tcertlen:\tChange certificate len in certificate reponse\n");
     fprintf(

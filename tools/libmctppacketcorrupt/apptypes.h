@@ -65,6 +65,7 @@ typedef enum corrupt_mode
     corrupt_mode_cert_fields,    //! Corrupt mode cert fields
     corrupt_mode_algo_fields,    //! Corrupt mode algorithm fields
     corrupt_mode_meas_data,      //! Measurements data corrupted
+    corrupt_mode_error_resp,     //! Error response in the corrupted packet
 } corrupt_mode;
 
 // Corrupt config structure

@@ -60,3 +60,6 @@ int corrupt_pkt_mod_algo_param_reserved(char* buf, size_t len) EXPORT_HIDDEN;
 
 // Corrupt mode measurement data
 int corrupt_pkt_meas_data(char* buf, size_t len) EXPORT_HIDDEN;
+
+// Return response error instead of the oryginal packert
+int corrupt_pkt_mod_error_response(char* buf, size_t len) EXPORT_HIDDEN;

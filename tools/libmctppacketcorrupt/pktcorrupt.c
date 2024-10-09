@@ -194,6 +194,9 @@ static int packet_modify_buffer(const corrupt_context* ctx, char* buf,
         case corrupt_mode_meas_data:
             *modified = true;
             return corrupt_pkt_meas_data(buf, recv_size);
+        case corrupt_mode_error_resp:
+            *modified = true;
+            return corrupt_pkt_mod_error_response(buf, recv_size);
         default:
             return recv_size;
     }

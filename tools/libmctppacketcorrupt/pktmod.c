@@ -23,6 +23,7 @@
 #include "random.h"
 
 #include <stdio.h>
+#include <string.h>
 
 // Corrupted packet response code
 int corrupt_pkt_mod_cmd(char* buf, size_t len)
@@ -278,4 +279,14 @@ int corrupt_pkt_meas_data(char* buf, size_t len)
     u8* u8wr = (u8*)(buf + mctp_offs_mresp_record);
     *u8wr = rand_val;
     return len;
+}
+
+
+// Return response error instead of the oryginal packert
+int corrupt_pkt_mod_error_response(char* buf, size_t len)
+{
+    (void)len;
+    static const uint8_t error_resp[] = { 0x11, 0x7F, 0x03, 0x00 };
+    memcpy(&buf[mctp_offs_vers], error_resp, sizeof(error_resp));
+    return mctp_offs_vers + sizeof(error_resp);
 }
