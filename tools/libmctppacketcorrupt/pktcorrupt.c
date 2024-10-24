@@ -21,6 +21,7 @@
 #include "mctp.h"
 #include "pktmod.h"
 #include "random.h"
+#include "response_if_ready.h"
 #include "userio.h"
 
 #include <stdio.h>
@@ -145,7 +146,7 @@ static int packet_num_update(corrupt_context* ctx)
 }
 
 // Modify buffer context per type
-static int packet_modify_buffer(const corrupt_context* ctx, char* buf,
+static int packet_modify_buffer(corrupt_context* ctx, char* buf,
                                 size_t buf_size, size_t recv_size,
                                 bool* modified)
 {
@@ -197,6 +198,10 @@ static int packet_modify_buffer(const corrupt_context* ctx, char* buf,
         case corrupt_mode_error_resp:
             *modified = true;
             return corrupt_pkt_mod_error_response(buf, recv_size);
+        case corrupt_mode_error_resp_if_ready:
+            *modified = true;
+            return corrupt_pkt_mod_error_response_not_ready(ctx, buf,
+                                                            recv_size);
         default:
             return recv_size;
     }
@@ -251,6 +256,8 @@ int corrupt_recv_packet(char* buf, size_t buf_size, size_t recv_size)
                                        &modified);
         if (ret_val < 0)
         {
+            fprintf(stderr, "## Packet modify buffer failed with ec: %i\n",
+                    ret_val);
             return ret_val;
         }
     }
@@ -259,9 +266,28 @@ int corrupt_recv_packet(char* buf, size_t buf_size, size_t recv_size)
     const int err = packet_num_update(&app_context);
     if (err < 0)
     {
+        fprintf(stderr, "## Packet num update failed with ec: %i\n", ret_val);
         return err;
     }
     return ret_val;
+}
+
+// Receive fake packet from internal buffer
+int corrupt_fake_recv_packet(int sockfd, char* buf, size_t buf_size)
+{
+    return corrupt_pkt_mod_error_resp_fake_recv(sockfd, &app_context, buf,
+                                                buf_size);
+}
+
+// Core function for handle sending packet skip response if ready
+int corrupt_send_packet(int sockfd, const char* buf, size_t buf_size)
+{
+    if ((unsigned char)buf[mctp_offs_code] == mctp_resp_respond_if_ready)
+    {
+        return corrupt_pkt_mod_error_response_is_ready(sockfd, &app_context,
+                                                       buf, buf_size);
+    }
+    return 0;
 }
 
 static bool is_in_list(const char* list, int num, bool negate)
@@ -325,4 +351,10 @@ bool corrupt_pkt_should_be_dropped(int eid, int type)
     }
 
     return false;
+}
+
+//  If stored fake FD has a new data
+int corrupt_fake_fd_has_data(void)
+{
+    return app_context.saved_response_if_rdy_fd;
 }

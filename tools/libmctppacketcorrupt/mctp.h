@@ -44,4 +44,6 @@ enum mctp_resp_code
     mctp_resp_capab = 0x61,
     mctp_resp_algo = 0x63,
     mctp_resp_meas = 0x60,
+    mctp_resp_error = 0x7F,
+    mctp_resp_respond_if_ready = 0xFF,
 };

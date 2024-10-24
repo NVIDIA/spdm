@@ -19,7 +19,11 @@
 #include "config.h"
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
+
+// Invalid value definition
+#define INVALID_VALUE -1
 
 // Rust types
 typedef uint8_t u8;
@@ -43,29 +47,31 @@ enum error
     error_env_range = -4,
     error_invalid_size = -5,
     error_buf_offs = -6,
+    error_buf_multi_rdy_not_supported = -7,
 };
 
 // Working mode
 typedef enum corrupt_mode
 {
-    corrupt_mode_invalid,        //! Configuration is invalid
-    corrupt_mode_bypass,         //! Bypass do not modify packets
-    corrupt_mode_cmds,           //! Wrong command
-    corrupt_mode_reserved,       //! Reserved fields non empty
-    corrupt_mode_msg_len,        //! Messsage length is invalid
-    corrupt_mode_msg_zero,       //! Corrupt mode msg zero length
-    corrupt_mode_version,        //! Message version is invald
-    corrupt_mode_cert_len,       //! Certificate length is invalid
-    corrupt_mode_cert_data,      //! Certificate data modified
-    corrupt_mode_unsup_algo,     //! Unsupported algo
-    corrupt_mode_unsup_capab,    //! Unsupported capabilities
-    corrupt_mode_version_fields, //! Corrupt mode version fields
-    corrupt_mode_capab_fields,   //! Corrupt mode capabilities fields
-    corrupt_mode_digest_fields,  //! Corrupt mode digest fields
-    corrupt_mode_cert_fields,    //! Corrupt mode cert fields
-    corrupt_mode_algo_fields,    //! Corrupt mode algorithm fields
-    corrupt_mode_meas_data,      //! Measurements data corrupted
-    corrupt_mode_error_resp,     //! Error response in the corrupted packet
+    corrupt_mode_invalid,             //! Configuration is invalid
+    corrupt_mode_bypass,              //! Bypass do not modify packets
+    corrupt_mode_cmds,                //! Wrong command
+    corrupt_mode_reserved,            //! Reserved fields non empty
+    corrupt_mode_msg_len,             //! Messsage length is invalid
+    corrupt_mode_msg_zero,            //! Corrupt mode msg zero length
+    corrupt_mode_version,             //! Message version is invald
+    corrupt_mode_cert_len,            //! Certificate length is invalid
+    corrupt_mode_cert_data,           //! Certificate data modified
+    corrupt_mode_unsup_algo,          //! Unsupported algo
+    corrupt_mode_unsup_capab,         //! Unsupported capabilities
+    corrupt_mode_version_fields,      //! Corrupt mode version fields
+    corrupt_mode_capab_fields,        //! Corrupt mode capabilities fields
+    corrupt_mode_digest_fields,       //! Corrupt mode digest fields
+    corrupt_mode_cert_fields,         //! Corrupt mode cert fields
+    corrupt_mode_algo_fields,         //! Corrupt mode algorithm fields
+    corrupt_mode_meas_data,           //! Measurements data corrupted
+    corrupt_mode_error_resp,          //! Error response in the corrupted packet
+    corrupt_mode_error_resp_if_ready, //! Delay packet using response if ready
 } corrupt_mode;
 
 // Corrupt config structure
@@ -88,6 +94,12 @@ typedef struct corrupt_context
     u16 pkt_mod_num[CONFIG_MAX_PKT_HISTORY];
     // Packet modifed number
     u32 pkt_counter;
+    // Saved response if ready (last proper packet)
+    char* saved_response_if_rdy_ptr;
+    // Saved response if ready size
+    size_t saved_response_if_rdy_len;
+    // Saved ptr response if ready
+    int saved_response_if_rdy_fd;
 } corrupt_context;
 
 // Hidden visibility

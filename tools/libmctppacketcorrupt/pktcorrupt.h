@@ -25,7 +25,6 @@
 //! Initialize corrupt library
 int corrupt_init(void) EXPORT_HIDDEN;
 
-
 //! Deinitialize corrupt library
 int corrupt_deinit(void) EXPORT_HIDDEN;
 
@@ -45,3 +44,29 @@ int corrupt_recv_packet(char* buf, size_t buf_size,
  */
 bool corrupt_pkt_should_be_dropped(int eid, int type) EXPORT_HIDDEN;
 
+/**
+ * Check if the send functions should be handled internally
+ * @note it is ussed to catch RESPOND_IF_READY packet and dont send it to
+ * responder
+ * @param[in] sockfd Calling socket responder for fill the pkt
+ * @param[in] buf Buffer from send syscall
+ * @param[in] buf_size Buffer size of oryginal packet
+ * @return if 0 oryginal send should be called otherwise not
+ */
+int corrupt_send_packet(int sockfd, const char* buf,
+                        size_t buf_size) EXPORT_HIDDEN;
+
+/**
+ * Return file descriptor if fake data is available
+ * @return if positive file descriptor
+ */
+int corrupt_fake_fd_has_data(void) EXPORT_HIDDEN;
+
+/**
+ * @param[in] sockfd Input socket for receive data
+ * @param[in] buf Receive buffer
+ * @param[in] buf_Size Received buffer size
+ * @return Received data if 0 if go to the normal recv
+ */
+int corrupt_fake_recv_packet(int sockfd, char* buf,
+                             size_t buf_size) EXPORT_HIDDEN;

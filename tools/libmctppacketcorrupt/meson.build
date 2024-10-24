@@ -5,6 +5,7 @@ source_files = [
   'pktcorrupt.c',
   'random.c',
   'pktmod.c',
+  'response_if_ready.c',
   'userio.c',
 ]
 version_file = 'version.txt'

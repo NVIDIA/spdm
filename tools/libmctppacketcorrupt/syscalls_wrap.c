@@ -38,19 +38,27 @@ typedef ssize_t (*real_recv_t)(int sockfd, void* buf, size_t len, int flags);
 
 typedef int (*real_epoll_wait_t)(int epfd, struct epoll_event* events,
                                  int maxevents, int timeout);
+typedef ssize_t (*real_send_t)(int socket, const void* buffer, size_t length,
+                               int flags);
+
+typedef int (*real_epoll_ctl_t)(int epfd, int op, int fd,
+                                struct epoll_event* event);
 
 /* Global read function wrappers */
 static real_close_t real_close = NULL;
 static real_connect_t real_connect = NULL;
 static real_recv_t real_recv = NULL;
 static real_epoll_wait_t real_epoll_wait = NULL;
+static real_send_t real_send = NULL;
+static real_epoll_ctl_t real_epoll_ctl = NULL;
 
 static const char* mctp_pcie_sock = "\0mctp-pcie-mux";
 static const char* mctp_spi_sock = "\0mctp-spi-mux";
 
-#define EMPTY_FD -1
-static int mctp_pcie_fd = EMPTY_FD;
-static int mctp_spi_fd = EMPTY_FD;
+static int mctp_pcie_fd = INVALID_VALUE;
+static int mctp_spi_fd = INVALID_VALUE;
+static epoll_data_t mctp_pcie_epoll_data;
+static epoll_data_t mctp_spi_epoll_data;
 
 /* IOSYS connect wrapper */
 int _iosys_connect(int __fd, const struct sockaddr* __addr, socklen_t __len)
@@ -103,6 +111,7 @@ __asm__(".symver _iosys_connect,connect@GLIBC_2.4");
 /* IOSYS read wrapper */
 ssize_t _iosys_recv(int sockfd, void* buf, size_t len, int flags)
 {
+    int real_ret;
     if (!real_recv)
     {
         real_recv = (real_recv_t)(uintptr_t)dlsym(RTLD_NEXT, "recv");
@@ -110,6 +119,41 @@ ssize_t _iosys_recv(int sockfd, void* buf, size_t len, int flags)
     if (!real_recv)
     {
         perror("## Recv: Unable to load symbol for real recv ##");
+        return -1;
+    }
+    real_ret = corrupt_fake_recv_packet(sockfd, buf, len);
+    if (real_ret > 0)
+    {
+        return real_ret;
+    }
+    bool mctp_match = false;
+    if (sockfd == mctp_pcie_fd)
+    {
+        mctp_match = true;
+    }
+    if (sockfd == mctp_spi_fd)
+    {
+        mctp_match = true;
+    }
+    real_ret = real_recv(sockfd, buf, len, flags);
+    if (real_ret > 0 && mctp_match)
+    {
+        real_ret = corrupt_recv_packet(buf, len, real_ret);
+    }
+    return real_ret;
+}
+__asm__(".symver _iosys_recv,recv@GLIBC_2.4");
+
+/* IOSYS send wrapper */
+ssize_t _iosys_send(int sockfd, const void* buffer, size_t length, int flags)
+{
+    if (!real_send)
+    {
+        real_send = (real_send_t)(uintptr_t)dlsym(RTLD_NEXT, "send");
+    }
+    if (!real_send)
+    {
+        perror("## Send: Unable to load symbol for real send ##");
         return -1;
     }
     bool mctp_match = false;
@@ -121,14 +165,18 @@ ssize_t _iosys_recv(int sockfd, void* buf, size_t len, int flags)
     {
         mctp_match = true;
     }
-    int real_ret = real_recv(sockfd, buf, len, flags);
-    if (real_ret > 0 && mctp_match)
+    if (mctp_match)
     {
-        real_ret = corrupt_recv_packet(buf, len, real_ret);
+        int ret = corrupt_send_packet(sockfd, buffer, length);
+        if (ret == 0)
+        {
+            return real_send(sockfd, buffer, length, flags);
+        }
+        return ret;
     }
-    return real_ret;
+    return real_send(sockfd, buffer, length, flags);
 }
-__asm__(".symver _iosys_recv,recv@GLIBC_2.4");
+__asm__(".symver _iosys_send,send@GLIBC_2.4");
 
 /* IOSYS close wrapper */
 int _iosys_close(int __fd)
@@ -144,13 +192,13 @@ int _iosys_close(int __fd)
     }
     if (__fd == mctp_pcie_fd)
     {
-        mctp_pcie_fd = EMPTY_FD;
+        mctp_pcie_fd = INVALID_VALUE;
     }
     if (__fd == mctp_spi_fd)
     {
-        mctp_spi_fd = EMPTY_FD;
+        mctp_spi_fd = INVALID_VALUE;
     }
-    if (mctp_pcie_fd == EMPTY_FD && mctp_spi_fd == EMPTY_FD)
+    if (mctp_pcie_fd == INVALID_VALUE && mctp_spi_fd == INVALID_VALUE)
     {
         corrupt_deinit();
     }
@@ -196,12 +244,31 @@ static bool process_epoll_fd_data(int fd)
 int _iosys_epoll_wait(int epfd, struct epoll_event* events, int maxevents,
                       int timeout)
 {
+    int nev;
     if (!real_epoll_wait)
     {
         real_epoll_wait =
             (real_epoll_wait_t)(uintptr_t)dlsym(RTLD_NEXT, "epoll_wait");
     }
-    int nev;
+    const int fake_fd = corrupt_fake_fd_has_data();
+    if (fake_fd > 0)
+    {
+        epoll_data_t* edp = NULL;
+        if (fake_fd == mctp_pcie_fd)
+        {
+            edp = &mctp_pcie_epoll_data;
+        }
+        else if (fake_fd == mctp_spi_fd)
+        {
+            edp = &mctp_spi_epoll_data;
+        }
+        if (edp)
+        {
+            events[0].events = EPOLLIN;
+            events[0].data = *edp;
+            return 1;
+        }
+    }
     for (;;)
     {
         nev = real_epoll_wait(epfd, events, maxevents, timeout);
@@ -223,3 +290,40 @@ int _iosys_epoll_wait(int epfd, struct epoll_event* events, int maxevents,
     return nev;
 }
 __asm__(".symver _iosys_epoll_wait,epoll_wait@GLIBC_2.4");
+
+int _iosys_epoll_ctl(int epfd, int op, int fd, struct epoll_event* event)
+{
+    if (!real_epoll_ctl)
+    {
+        real_epoll_ctl =
+            (real_epoll_ctl_t)(uintptr_t)dlsym(RTLD_NEXT, "epoll_ctl");
+    }
+    int ret = real_epoll_ctl(epfd, op, fd, event);
+    if (!ret)
+    {
+        if (fd == mctp_pcie_fd)
+        {
+            if (op == EPOLL_CTL_ADD)
+            {
+                mctp_pcie_epoll_data = event->data;
+            }
+            else if (op == EPOLL_CTL_DEL)
+            {
+                mctp_pcie_epoll_data.fd = INVALID_VALUE;
+            }
+        }
+        if (fd == mctp_spi_fd)
+        {
+            if (op == EPOLL_CTL_ADD)
+            {
+                mctp_spi_epoll_data = event->data;
+            }
+            else if (op == EPOLL_CTL_DEL)
+            {
+                mctp_spi_epoll_data.fd = INVALID_VALUE;
+            }
+        }
+    }
+    return ret;
+}
+__asm__(".symver _iosys_epoll_ctl,epoll_ctl@GLIBC_2.4");

@@ -99,6 +99,10 @@ static corrupt_mode modestr_to_enum(const char* str)
     {
         return corrupt_mode_error_resp;
     }
+    else if (!strcasecmp(str, "respifready"))
+    {
+        return corrupt_mode_error_resp_if_ready;
+    }
     return corrupt_mode_invalid;
 }
 
@@ -217,6 +221,8 @@ const char* userio_error_to_str(enum error err)
             return "error_invalid_size";
         case error_buf_offs:
             return "error_buf_offs";
+        case error_buf_multi_rdy_not_supported:
+            return "error_buf_multi_rdy_not_supported";
     }
     return "error_unknown";
 }
@@ -233,7 +239,11 @@ void userio_print_help(void)
     fprintf(stderr, "\tmsglen:\t\tChange message length of the packet\n");
     fprintf(stderr, "\tzerolen:\tSet packet message len to zero\n");
     fprintf(stderr, "\tversion:\tChange message version in the packets\n");
-    fprintf(stderr, "\terrorresp:\tResponse with error code instad of normal response\n");
+    fprintf(
+        stderr,
+        "\terrorresp:\tResponse with error code instad of normal response\n");
+    fprintf(stderr,
+            "\trespifready:\tDelay response using response if ready feature\n");
     fprintf(stderr,
             "\tcertlen:\tChange certificate len in certificate reponse\n");
     fprintf(

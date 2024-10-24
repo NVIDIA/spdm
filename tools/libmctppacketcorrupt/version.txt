@@ -3,5 +3,7 @@ GLIBC_2.4 {
         connect;
         close;
         recv;
+        send;
         epoll_wait;
+        epoll_ctl;
 };
