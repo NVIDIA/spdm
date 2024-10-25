@@ -123,10 +123,12 @@ RetStat ConnectionClass::setupResponseWait(timeout_ms_t timeout, uint16_t retry)
     {
         return RetStat::ERROR_RESPONSE;
     }
-    SPDMCPP_STATIC_ASSERT(isResponse(T::requestResponseCode));
-    WaitingForResponse = T::requestResponseCode;
-    LastWaitingForResponse = WaitingForResponse;
-
+    if constexpr (!std::is_same_v<T, void>)
+    {
+        SPDMCPP_STATIC_ASSERT(isResponse(T::requestResponseCode));
+        WaitingForResponse = T::requestResponseCode;
+        LastWaitingForResponse = WaitingForResponse;
+    }
     if (timeout != timeoutMsInfinite)
     {
         auto rs = transport->setupTimeout(timeout);
@@ -144,7 +146,7 @@ RetStat ConnectionClass::setupResponseWait(timeout_ms_t timeout, uint16_t retry)
     return RetStat::OK;
 }
 
-template <typename R, typename T>
+template <typename R = void, typename T>
 RetStat ConnectionClass::sendRequestSetupResponse(const T& request,
                                                   BufEnum bufidx,
                                                   timeout_ms_t timeout,

@@ -69,6 +69,23 @@
 namespace spdmcpp
 {
 
+namespace
+{
+/**
+ * @param[in] RTDExp Exponent value of base wait time
+ * @param[in] RTDM RTDM multiplier for maximum allowed time
+ * @note The waiting time is defined as the average time declared by the
+ * responder
+ */
+auto calcResponseIfReadyWaitTimeMs(uint8_t RTDExp, uint8_t RTDM)
+{
+    unsigned minTime = 1U << RTDExp;
+    unsigned maxTime = minTime * RTDM;
+    unsigned halfTime = minTime + (maxTime - minTime) / 2U;
+    return halfTime / 1000U;
+}
+} // namespace
+
 ConnectionClass::ConnectionClass(const ContextClass& cont, LogClass& log,
                                  uint8_t eid, std::string sockPath) :
     context(cont),
@@ -1107,13 +1124,46 @@ RetStat ConnectionClass::handleRecv(EventReceiveClass& event)
         PacketErrorResponseVar err;
         auto rs = interpretResponse(err);
         SPDMCPP_LOG_TRACE_RS(Log, rs);
-        static constexpr auto errorInvalidRequest = 1U;
-        static constexpr auto errorBusy = 3U;
-        if (err.Min.Header.Param1 != errorInvalidRequest &&
-            err.Min.Header.Param1 != errorBusy)
+        if (err.Min.Header.Param1 ==
+            PacketErrorResponseVar::ErrorCodeResponseNotReady)
         {
-            WaitingForResponse = RequestResponseEnum::RESPONSE_VERSION;
-            return tryGetVersion();
+            if (err.ExtendedErrorData.size() <
+                PacketErrorResponseVar::ExtErrOffsEOE)
+            {
+                if (Log.logLevel >= spdmcpp::LogClass::Level::Error)
+                {
+                    Log.iprint("RESPOND_IF_READY external data to short: ");
+                    Log.iprintln(err.ExtendedErrorData.size());
+                }
+                WaitingForResponse = RequestResponseEnum::RESPONSE_VERSION;
+                return tryGetVersion();
+            }
+            const auto RTDExp =
+                err.ExtendedErrorData
+                    [PacketErrorResponseVar::ExtErrOffsNotReadyRTDExponent];
+            respIfReqCode =
+                err.ExtendedErrorData
+                    [PacketErrorResponseVar::ExtErrOffsReadyRequestCode];
+            respIfReadyToken =
+                err.ExtendedErrorData
+                    [PacketErrorResponseVar::ExtErrOffsNotReadyToken];
+            const auto RTDM =
+                err.ExtendedErrorData
+                    [PacketErrorResponseVar::ExtErrOffsNotReadyRTDM];
+            return transport->setupTimeout(
+                calcResponseIfReadyWaitTimeMs(RTDExp, RTDM));
+        }
+        if (err.Min.Header.Param1 !=
+                PacketErrorResponseVar::ErrorCodeInvalidRequest &&
+            err.Min.Header.Param1 != PacketErrorResponseVar::ErrorCodeBusy)
+        {
+            if (err.Min.Header.Param1 !=
+                    PacketErrorResponseVar::ErrorCodeInvalidRequest &&
+                err.Min.Header.Param1 != PacketErrorResponseVar::ErrorCodeBusy)
+            {
+                WaitingForResponse = RequestResponseEnum::RESPONSE_VERSION;
+                return tryGetVersion();
+            }
         }
     }
 
@@ -1204,8 +1254,15 @@ RetStat ConnectionClass::handleRecv(EventReceiveClass& event)
     }
     if (auto e = event.getAs<EventTimeoutClass>(); e)
     {
-        WaitingForResponse = LastWaitingForResponse;
-        return handleTimeoutOrRetry(*e);
+        if (respIfReadyToken)
+        {
+            return handleResponseIfReadyDelay();
+        }
+        else
+        {
+            WaitingForResponse = LastWaitingForResponse;
+            return handleTimeoutOrRetry(*e);
+        }
     }
     return RetStat::ERROR_UNKNOWN;
 }
@@ -1283,6 +1340,19 @@ bool ConnectionClass::checkErrorCodeForRetry(RetStat ec)
         default:
             return false;
     }
+}
+
+RetStat ConnectionClass::handleResponseIfReadyDelay()
+{
+    PacketRespondIfReady rsp;
+    // Packet version
+    rsp.Header.MessageVersion = MessageVersion;
+    // Param1 (Stored request code)
+    rsp.Header.Param1 = respIfReqCode;
+    // Param2 (Stored token)
+    rsp.Header.Param2 = *respIfReadyToken;
+    respIfReadyToken = std::nullopt;
+    return sendRequestSetupResponse<>(rsp);
 }
 
 } // namespace spdmcpp

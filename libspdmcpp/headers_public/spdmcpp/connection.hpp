@@ -34,6 +34,7 @@
 #include <limits>
 #include <map>
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace spdmcpp
@@ -422,6 +423,11 @@ class ConnectionClass : public NonCopyable
      */
     [[nodiscard]] RetStat handleEvent(EventClass& event);
 
+    /**
+     * @brief Callback for handling response if ready delay
+     */
+    [[nodiscard]] RetStat handleResponseIfReadyDelay();
+
   protected:
     [[nodiscard]] RetStat tryGetVersion();
 
@@ -599,6 +605,7 @@ class ConnectionClass : public NonCopyable
      *  @param[in] retry - The number of times the request should be
      * automatically retried if a response was not received
      */
+
     template <typename T>
     RetStat setupResponseWait(timeout_ms_t timeout = timeoutMsInfinite,
                               uint16_t retry = 4);
@@ -813,6 +820,12 @@ class ConnectionClass : public NonCopyable
 
     /// Retry packet count
     uint8_t retryPktCount{};
+
+    /// Response if ready token value
+    std::optional<uint8_t> respIfReadyToken;
+
+    /// Request code for retry if ready
+    uint8_t respIfReqCode;
 
     /// Return true if retry is needed
     static bool checkErrorCodeForRetry(RetStat ec);

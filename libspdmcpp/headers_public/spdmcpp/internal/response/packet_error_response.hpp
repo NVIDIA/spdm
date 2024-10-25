@@ -63,11 +63,16 @@ struct PacketErrorResponseVar
     static constexpr bool sizeIsConstant = false;
 
     PacketErrorResponseMin Min;
+    std::vector<uint8_t> ExtendedErrorData;
     // TODO handle custom data
 
     bool operator==(const PacketErrorResponseVar& other) const
     {
         if (Min != other.Min)
+        {
+            return false;
+        }
+        if (ExtendedErrorData != other.ExtendedErrorData)
         {
             return false;
         }
@@ -80,8 +85,23 @@ struct PacketErrorResponseVar
         {
             SPDMCPP_LOG_INDENT(log);
             SPDMCPP_LOG_printMl(log, Min);
+            SPDMCPP_LOG_iexprln(log, ExtendedErrorData);
         }
     }
+    enum ExtendedErrorNotReadyOffs : size_t
+    {
+        ExtErrOffsNotReadyRTDExponent = 0,
+        ExtErrOffsReadyRequestCode = 1,
+        ExtErrOffsNotReadyToken = 2,
+        ExtErrOffsNotReadyRTDM = 3,
+        ExtErrOffsEOE
+    };
+    enum ErrorCodes : uint8_t
+    {
+        ErrorCodeInvalidRequest = 0x01,
+        ErrorCodeBusy = 0x03,
+        ErrorCodeResponseNotReady = 0x42,
+    };
 };
 
 [[nodiscard]] inline RetStat
@@ -89,15 +109,33 @@ struct PacketErrorResponseVar
                          const std::vector<uint8_t>& buf, size_t& off)
 {
     auto rs = packetDecodeInternal(logg, p.Min, buf, off);
-    // TODO handle custom data
+    if (isError(rs))
+    {
+        return rs;
+    }
+    const auto extErrDataSize = buf.size() - off;
+    if (extErrDataSize > 0)
+    {
+        p.ExtendedErrorData.resize(extErrDataSize);
+        rs = packetDecodeBasic(logg, p.ExtendedErrorData, buf, off);
+    }
     return rs;
 }
+
 [[nodiscard]] inline RetStat
     packetEncodeInternal(const PacketErrorResponseVar& p,
                          std::vector<uint8_t>& buf, size_t& off)
 {
     // TODO handle custom data
     auto rs = packetEncodeInternal(p.Min, buf, off);
+    if (isError(rs))
+    {
+        return rs;
+    }
+    if (!p.ExtendedErrorData.empty())
+    {
+        packetEncodeBasic(p.ExtendedErrorData, buf, off);
+    }
     return rs;
 }
 

@@ -125,6 +125,7 @@ struct PacketDecodeInfo
 #include "internal/request/packet_get_measurements_request.hpp"
 #include "internal/request/packet_get_version_request.hpp"
 #include "internal/request/packet_negotiate_algorithms_request.hpp"
+#include "internal/request/packet_respond_if_ready.hpp"
 
 // separator for lang-format ordering
 
