@@ -20,6 +20,8 @@
 #include "spdmcpp/common.hpp"
 #include "spdmd_app_context.hpp"
 
+#include <systemd/sd-daemon.h>
+
 #include <algorithm>
 #include <map>
 #include <string>
@@ -166,6 +168,7 @@ void MctpDiscovery::setupMCTPServices()
         }
         for (const auto& [objectPath, interfaces] : objects)
         {
+            sd_notify(0, "WATCHDOG=1");
             mctpNewObjectSignal(objectPath, interfaces);
         }
     }

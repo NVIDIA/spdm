@@ -6,7 +6,7 @@ After=pldmd.service
 [Service]
 Restart=always
 Type=dbus
-WatchdogSec=15s
+WatchdogSec=25s
 BusName=xyz.openbmc_project.SPDM
 ExecStart=/usr/bin/spdmd
 
