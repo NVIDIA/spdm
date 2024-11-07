@@ -121,6 +121,7 @@ RetStat ConnectionClass::refreshMeasurementsInternal()
         }
     }
     stateEnabled = true;
+    retryPktCount = 0;
     auto rs = tryGetVersion();
     SPDMCPP_LOG_TRACE_RS(Log, rs);
     return rs;
@@ -130,6 +131,7 @@ void ConnectionClass::resetConnection()
 {
     clearTimeout();
 
+    retryPktCount = 0;
     GotInfo = 0;
     CertificateSlotIdx = slotNum;
     MessageVersion = MessageVersionEnum::UNKNOWN;
@@ -1105,9 +1107,14 @@ RetStat ConnectionClass::handleRecv(EventReceiveClass& event)
         PacketErrorResponseVar err;
         auto rs = interpretResponse(err);
         SPDMCPP_LOG_TRACE_RS(Log, rs);
-
-        WaitingForResponse = RequestResponseEnum::RESPONSE_VERSION;
-        return tryGetVersion();
+        static constexpr auto errorInvalidRequest = 1U;
+        static constexpr auto errorBusy = 3U;
+        if (err.Min.Header.Param1 != errorInvalidRequest &&
+            err.Min.Header.Param1 != errorBusy)
+        {
+            WaitingForResponse = RequestResponseEnum::RESPONSE_VERSION;
+            return tryGetVersion();
+        }
     }
 
     // if we're not expecting this response return an error
@@ -1236,7 +1243,15 @@ void ConnectionClass::clearTimeout()
 RetStat ConnectionClass::retryTimeout(RetStat lastError, timeout_ms_t timeout,
                                       uint16_t retry)
 {
+    static constexpr auto numResponderRetries = 3U;
     SPDMCPP_LOG_TRACE_FUNC(getLog());
+    if (++retryPktCount >= numResponderRetries)
+    {
+        retryPktCount = 0;
+        WaitingForResponse = RequestResponseEnum::INVALID;
+        SPDMCPP_LOG_TRACE_RS(getLog(), lastError);
+        return lastError;
+    }
     WaitingForResponse = LastWaitingForResponse;
     lastRetryError = lastError;
     SendRetry = retry;

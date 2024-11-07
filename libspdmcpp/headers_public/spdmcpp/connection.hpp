@@ -811,6 +811,9 @@ class ConnectionClass : public NonCopyable
     /// Try retry certificate count
     uint8_t retryCertCount{};
 
+    /// Retry packet count
+    uint8_t retryPktCount{};
+
     /// Return true if retry is needed
     static bool checkErrorCodeForRetry(RetStat ec);
 
