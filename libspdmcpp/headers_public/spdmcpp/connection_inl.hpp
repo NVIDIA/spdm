@@ -119,12 +119,12 @@ RetStat ConnectionClass::setupResponseWait(timeout_ms_t timeout, uint16_t retry)
         Log.println("):");
     }
     // SPDMCPP_ASSERT(WaitingForResponse == RequestResponseEnum::INVALID);
-    if (WaitingForResponse != RequestResponseEnum::INVALID)
-    {
-        return RetStat::ERROR_RESPONSE;
-    }
     if constexpr (!std::is_same_v<T, void>)
     {
+        if (WaitingForResponse != RequestResponseEnum::INVALID)
+        {
+            return RetStat::ERROR_RESPONSE;
+        }
         SPDMCPP_STATIC_ASSERT(isResponse(T::requestResponseCode));
         WaitingForResponse = T::requestResponseCode;
         LastWaitingForResponse = WaitingForResponse;
