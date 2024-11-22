@@ -1153,18 +1153,6 @@ RetStat ConnectionClass::handleRecv(EventReceiveClass& event)
             return transport->setupTimeout(
                 calcResponseIfReadyWaitTimeMs(RTDExp, RTDM));
         }
-        if (err.Min.Header.Param1 !=
-                PacketErrorResponseVar::ErrorCodeInvalidRequest &&
-            err.Min.Header.Param1 != PacketErrorResponseVar::ErrorCodeBusy)
-        {
-            if (err.Min.Header.Param1 !=
-                    PacketErrorResponseVar::ErrorCodeInvalidRequest &&
-                err.Min.Header.Param1 != PacketErrorResponseVar::ErrorCodeBusy)
-            {
-                WaitingForResponse = RequestResponseEnum::RESPONSE_VERSION;
-                return tryGetVersion();
-            }
-        }
     }
 
     // if we're not expecting this response return an error
