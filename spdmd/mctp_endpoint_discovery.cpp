@@ -95,12 +95,11 @@ bool MctpDiscovery::checkMctpServicesReady()
 {
     try
     {
-        static constexpr auto call_timeout = 1'000'000U;
         auto method = bus.new_method_call(
             configurableStateManagerService, configurableStateManagerMctpPath,
             "org.freedesktop.DBus.Properties", "Get");
         method.append(csmFeatureReadyStateIntfName, "State");
-        auto reply = bus.call(method, call_timeout);
+        auto reply = bus.call(method);
         std::variant<std::string> state;
         reply.read(state);
         return std::get<std::string>(state) == csmFeatureReadyStateEnabled;
@@ -108,7 +107,7 @@ bool MctpDiscovery::checkMctpServicesReady()
     catch (const std::exception& e)
     {
         auto& log = spdmApp.getLog();
-        if (log.logLevel >= LogClass::Level::Debug)
+        if (log.logLevel >= LogClass::Level::Error)
         {
             using namespace std::string_literals;
             log.iprintln("Warning: Discovery->checkMctpServicesReady "s +
