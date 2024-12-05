@@ -270,16 +270,15 @@ spdmcpp::RetStat Responder::handleEventForRefresh(spdmcpp::EventClass& ev)
     ConnectionClass::SlotIdx slotidx =
         connection.getCurrentCertificateSlotIdx();
 
+    /**
+    This if else statement must be executed in a strictly consecutive (reverse)
+    order to the SPDM protocol
+    */
     if (!connection.isWaitingForResponse())
     {
         syncSlotsInfo();
         updateLastUpdateTime();
         status(SPDMStatus::Success);
-    }
-    else if (connection.hasInfo(ConnectionInfoEnum::CAPABILITIES))
-    {
-        updateCapabilities();
-        status(SPDMStatus::GettingCertificates);
     }
     else if (connection.slotHasInfo(slotidx, SlotInfoEnum::CERTIFICATES))
     {
@@ -289,6 +288,11 @@ spdmcpp::RetStat Responder::handleEventForRefresh(spdmcpp::EventClass& ev)
     else if (connection.hasInfo(ConnectionInfoEnum::ALGORITHMS))
     {
         updateAlgorithmsInfo();
+        status(SPDMStatus::GettingCertificates);
+    }
+    else if (connection.hasInfo(ConnectionInfoEnum::CAPABILITIES))
+    {
+        updateCapabilities();
         status(SPDMStatus::GettingCertificates);
     }
     else if (connection.hasInfo(ConnectionInfoEnum::CHOOSEN_VERSION))

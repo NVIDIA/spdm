@@ -120,6 +120,11 @@ struct PacketReqAlgStruct
         }
     }
 
+    bool isSupported() const noexcept
+    {
+        return AlgType == AlgTypeEnum::ReqBaseAsymAlg;
+    }
+
     bool operator==(const PacketReqAlgStruct& other) const
     {
         // TODO should only compare the valid portion of AlgSupported,

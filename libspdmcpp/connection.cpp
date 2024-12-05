@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <bit>
 #include <fstream>
+#include <functional>
 #include <ranges>
 #include <type_traits>
 
@@ -582,6 +583,15 @@ RetStat ConnectionClass::handleRecv<PacketAlgorithmsResponseVar>()
     markInfo(ConnectionInfoEnum::ALGORITHMS);
 
     appendRecvToBuf(BufEnum::A);
+
+    if (resp.PacketReqAlgVector.size() > 0 &&
+        std::all_of(resp.PacketReqAlgVector.begin(),
+                    resp.PacketReqAlgVector.end(),
+                    std::not_fn(std::mem_fn(&PacketReqAlgStruct::isSupported))))
+    {
+        rs = RetStat::ERROR_UNSUPPORTED_ALGO;
+        SPDMCPP_CONNECTION_RS_ERROR_RETURN_WITH_VERSION(rs);
+    }
 
     if (auto hsize = getHashSize(resp.Min.BaseHashAlgo);
         hsize != invalidFlagSize)
