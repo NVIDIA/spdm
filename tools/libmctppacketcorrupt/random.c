@@ -50,4 +50,3 @@ int random_value(u32* val)
 //! Deinitialize random gen
 void random_deinit(void)
 {}
-

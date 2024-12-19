@@ -21,7 +21,6 @@
 #include "flag.hpp"
 #include "log.hpp"
 
-#include <mbedtls/config.h>
 #include <mbedtls/ecdh.h>
 #include <mbedtls/ecdsa.h>
 #include <mbedtls/error.h>

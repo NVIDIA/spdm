@@ -239,8 +239,8 @@ auto EnumerateEndpoints::getMCTPServices(sdbusplus::bus::bus& bus, int m_eid)
                     getPropertyValue(bus, interface.first, objectPath.first,
                                      "xyz.openbmc_project.MCTP.Endpoint",
                                      mctpEndpointIntfPropertyEid);
-                if (static_cast<size_t>(m_eid) == currEid &&
-                    currEid != invalid_eid)
+                if (m_eid == -1 || (static_cast<size_t>(m_eid) == currEid &&
+                                    currEid != invalid_eid))
                 {
                     devServices.emplace_back(objectPath.first, interface.first);
                     eidFound = true;
