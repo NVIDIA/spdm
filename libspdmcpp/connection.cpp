@@ -1067,6 +1067,12 @@ RetStat ConnectionClass::handleRecv<PacketMeasurementsResponseVar>()
         mbedtlsPrintErrorLine(Log, "verifySignature()", ret);
         Log.iprintln("measurement SIGNATURE verify Failed!");
         stateEnabled = false;
+        std::string cert;
+        if (getCertificatesPEM(cert, CertificateSlotIdx))
+        {
+            Log.iprint("Certificate chain: ");
+            Log.println(cert);
+        }
         return tryGetVersion();
     }
 
