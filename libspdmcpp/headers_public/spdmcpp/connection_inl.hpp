@@ -71,7 +71,7 @@ RetStat ConnectionClass::sendRequest(const T& packet, BufEnum bufidx)
         Log.iprint("buf = ");
         Log.println(buf);
     }
-
+    lastSendTimestamp = std::chrono::system_clock::now();
     rs = context.getIO(sockPath)->write(buf);
     return rs;
 }

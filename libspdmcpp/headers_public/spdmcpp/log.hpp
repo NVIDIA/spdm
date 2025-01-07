@@ -23,12 +23,14 @@
 #include "retstat.hpp"
 
 #include <array>
+#include <chrono>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <limits>
 #include <ostream>
 #include <span>
+#include <sstream>
 #include <vector>
 
 namespace spdmcpp
@@ -179,6 +181,23 @@ class LogClass
     void print(const std::vector<uint8_t>& vec)
     {
         print(std::span(vec));
+    }
+
+    void print(const std::chrono::time_point<std::chrono::system_clock> tp)
+    {
+        using namespace std::chrono;
+
+        auto& os = getOstream();
+        std::ios state(nullptr);
+        state.copyfmt(os);
+
+        auto in_time_t = system_clock::to_time_t(tp);
+        auto ms = duration_cast<milliseconds>(tp.time_since_epoch()) % 1000U;
+
+        os << std::put_time(std::localtime(&in_time_t), "%H:%M:%S") << '.'
+           << std::setw(3) << std::setfill('0') << ms.count();
+
+        os.copyfmt(state);
     }
 
     void endl()
