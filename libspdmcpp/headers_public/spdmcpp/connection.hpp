@@ -27,6 +27,7 @@
 
 #include <array>
 #include <bitset>
+#include <chrono>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -831,6 +832,9 @@ class ConnectionClass : public NonCopyable
 
     /// Request code for retry if ready
     uint8_t respIfReqCode;
+
+    /// Store the last timestamp
+    std::chrono::time_point<std::chrono::system_clock> lastSendTimestamp;
 
     /// Return true if retry is needed
     static bool checkErrorCodeForRetry(RetStat ec);

@@ -36,6 +36,7 @@
         {                                                                      \
             SPDMCPP_LOG_TRACE(Log, (rs));                                      \
             SPDMCPP_LOG_TRACE(Log, m_eid);                                     \
+            SPDMCPP_LOG_TRACE(Log, lastSendTimestamp)                          \
             SPDMCPP_LOG_TRACE(Log, SendBuffer);                                \
             SPDMCPP_LOG_TRACE(Log, ResponseBuffer);                            \
             return rs;                                                         \
@@ -50,6 +51,7 @@
         {                                                                      \
             SPDMCPP_LOG_TRACE(Log, (rs));                                      \
             SPDMCPP_LOG_TRACE(Log, m_eid);                                     \
+            SPDMCPP_LOG_TRACE(Log, lastSendTimestamp)                          \
             SPDMCPP_LOG_TRACE(Log, SendBuffer);                                \
             SPDMCPP_LOG_TRACE(Log, ResponseBuffer);                            \
             stateEnabled = false;                                              \
@@ -63,8 +65,20 @@
     {                                                                          \
         SPDMCPP_LOG_TRACE(Log, m_eid);                                         \
         if ((print_send_buf))                                                  \
+        {                                                                      \
+            SPDMCPP_LOG_TRACE(Log, lastSendTimestamp)                          \
             SPDMCPP_LOG_TRACE(Log, SendBuffer);                                \
+        }                                                                      \
         SPDMCPP_LOG_TRACE(Log, ResponseBuffer);                                \
+    } while (false)
+
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+#define SPDMCPP_CONNECTION_RS_RETRY_LOG_SEND_BUF(print_send_buf)               \
+    do                                                                         \
+    {                                                                          \
+        SPDMCPP_LOG_TRACE(Log, m_eid);                                         \
+        SPDMCPP_LOG_TRACE(Log, lastSendTimestamp)                              \
+        SPDMCPP_LOG_TRACE(Log, SendBuffer);                                    \
     } while (false)
 
 namespace spdmcpp
@@ -85,6 +99,7 @@ auto calcResponseIfReadyWaitTimeMs(uint8_t RTDExp, uint8_t RTDM)
     unsigned halfTime = minTime + (maxTime - minTime) / 2U;
     return halfTime / 1000U;
 }
+
 } // namespace
 
 ConnectionClass::ConnectionClass(const ContextClass& cont, LogClass& log,
@@ -1329,6 +1344,8 @@ RetStat ConnectionClass::handleTimeoutOrRetry(EventTimeoutClass&)
     if (SendRetry)
     {
         --SendRetry;
+        lastSendTimestamp = std::chrono::system_clock::now();
+        SPDMCPP_CONNECTION_RS_RETRY_LOG_SEND_BUF();
         auto rs = context.getIO(sockPath)->write(SendBuffer);
         SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
         rs = transport->setupTimeout(SendTimeout);
