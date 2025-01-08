@@ -744,6 +744,15 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
     }
     { // store chunk data
         auto off = cert.end() - cert.begin();
+        size_t certBufSize = cert.capacity();
+        if (off > 0 && (static_cast<size_t>(off) + resp.Min.PortionLength +
+                        resp.Min.RemainderLength) != certBufSize)
+        {
+            Log.print("Unexpected response for Certificate Request Chunk."
+                      " Ignoring the response: ");
+            Log.println(resp.CertificateVector);
+            return RetStat::OK;
+        }
         cert.resize(off + resp.Min.PortionLength);
         std::copy(resp.CertificateVector.begin(), resp.CertificateVector.end(),
                   std::next(cert.begin(), off));
