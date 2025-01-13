@@ -103,9 +103,7 @@ bool MctpDiscovery::checkMctpServicesReady()
             configurableStateManagerService, configurableStateManagerMctpPath,
             "org.freedesktop.DBus.Properties", "Get");
         method.append(csmFeatureReadyStateIntfName, "State");
-        auto reply = bus.call(method);
-        std::variant<std::string> state;
-        reply.read(state);
+        auto state = sdbusCallWithRetry<std::variant<std::string>>(method);
         return std::get<std::string>(state) == csmFeatureReadyStateEnabled;
     }
     catch (const std::exception& e)
@@ -772,6 +770,57 @@ std::optional<spdmcpp::TransportMedium> MctpDiscovery::getInternalMediumType(
         }
     }
     return std::nullopt;
+}
+
+template <typename ReplyType>
+inline ReplyType MctpDiscovery::sdbusCallWithRetry(sdbusplus::message_t& method,
+                                                   unsigned int maxRetries)
+{
+    auto& log = spdmApp.getLog();
+    for (unsigned int attempt = 0; attempt < maxRetries; ++attempt)
+    {
+        try
+        {
+            auto callobj = bus.call(method);
+            ReplyType reply;
+            callobj.read(reply);
+            return reply;
+        }
+        catch (const sdbusplus::exception::SdBusError& e)
+        {
+            if (std::strstr(e.name(), "org.freedesktop.DBus.Error.Timeout"))
+            {
+                sd_notify(0, "WATCHDOG=1");
+                if (log.logLevel >= LogClass::Level::Notice)
+                {
+                    log.iprint("Timeout occurred on interface: ");
+                    log.iprint(method.get_interface());
+                    log.iprint(" path: ");
+                    log.iprint(method.get_path());
+                    log.iprint(" , attempt: ");
+                    log.iprintln(std::to_string(attempt + 1));
+                }
+            }
+            else
+            {
+                throw;
+            }
+        }
+        catch (const std::exception& e)
+        {
+            throw;
+        }
+    }
+
+    if (log.logLevel >= LogClass::Level::Error)
+    {
+        log.iprint(
+            "Failed to call D-Bus get property due to timeout on interface: ");
+        log.iprint(method.get_interface());
+        log.iprint(" path: ");
+        log.iprintln(method.get_path());
+    }
+    throw std::runtime_error("Exceeded maximum retries for D-Bus method call");
 }
 
 } // namespace spdmd

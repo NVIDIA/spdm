@@ -233,6 +233,11 @@ class MctpDiscovery
 
     /** @brief Setup MCTP services */
     void setupMCTPServices();
+
+    /** @brief Call SDBUS with watchdog refresh */
+    template <typename ReplyType>
+    ReplyType sdbusCallWithRetry(sdbusplus::message_t& method,
+                                 unsigned int maxRetries = 4);
 };
 
 } // namespace spdmd
