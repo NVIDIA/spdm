@@ -44,6 +44,10 @@ MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
                        sdbusplus::message::object_path objPath;
                        dbus::InterfaceMap interfaces;
                        msg.read(objPath, interfaces);
+                       if (!interfaces.contains(inventorySPDMResponderIntfName))
+                       {
+                           return;
+                       }
                        if (checkMctpServicesReady())
                        {
                            inventoryNewObjectSignal(objPath, interfaces);
