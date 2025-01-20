@@ -274,12 +274,10 @@ void SpdmdApp::setupMeasurementDelay()
         SPDMCPP_ASSERT(measureOnDiscoveryActive);
         return;
     }
-    auto timerCallback = [this](Timer& /*source*/, Timer::TimePoint /*time*/) {
-        measurementDelayCallback();
-    };
-    measurementDelayTimer = make_unique<Timer>(
-        event, SpdmdAppContext::Clock(event).now() + measureOnDiscoveryDelay,
-        std::chrono::seconds{1}, std::move(timerCallback));
+    auto timerCallback = [this](void) { measurementDelayCallback(); };
+    measurementDelayTimer =
+        std::make_unique<sdbusplus::Timer>(event.get(), timerCallback);
+    measurementDelayTimer->start(std::chrono::seconds(measureOnDiscoveryDelay));
 }
 
 void SpdmdApp::mctpCallback(uint32_t revents, spdmcpp::MctpIoClass& mctpIo)

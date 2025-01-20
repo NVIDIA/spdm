@@ -130,7 +130,7 @@ class SpdmdApp : public SpdmdAppContext
 
     /** @brief Timer for handling the measurement delay
      */
-    std::unique_ptr<Timer> measurementDelayTimer;
+    std::unique_ptr<sdbusplus::Timer> measurementDelayTimer;
 
     /** @brief Callback for the automatic measurement delay
      */
