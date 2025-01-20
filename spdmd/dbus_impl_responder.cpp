@@ -43,7 +43,7 @@ Responder::Responder(SpdmdAppContext& appCtx, const std::string& path,
     ResponderIntf(appCtx.bus, path.c_str(), action::defer_emit),
     appContext(appCtx), log(appCtx.getLog()),
     connection(appCtx.context, log, eid, std::move(socketPath)),
-    transport(eid, *this, transportMedium), inventoryPath(invPath),
+    transport(eid, *this, transportMedium, log), inventoryPath(invPath),
     transportMedium(transportMedium), eid(eid)
 {
     {
@@ -471,32 +471,31 @@ void Responder::updateLastUpdateTime()
 spdmcpp::RetStat MctpTransportClass::setupTimeout(spdmcpp::timeout_ms_t timeout)
 {
     sdeventplus::Event& event = responder.getEvent();
-
-    time = make_unique<SpdmdAppContext::Timer>(
-        event,
-        SpdmdAppContext::Clock(event).now() +
-            std::chrono::milliseconds{timeout},
-        std::chrono::milliseconds{1},
-        [this](SpdmdAppContext::Timer& /*source*/,
-               SpdmdAppContext::Timer::TimePoint /*time*/) {
-            timeoutCallback();
-        });
-
+    if (!timer)
+    {
+        timer = std::make_unique<sdbusplus::Timer>(
+            event.get(), [this](void) { timeoutCallback(); });
+    }
+    timer->start(std::chrono::milliseconds(timeout));
     return RetStat::OK;
 }
 
 void MctpTransportClass::timeoutCallback()
 {
-    time.reset(nullptr);
     spdmcpp::EventTimeoutClass ev(transportMedium);
     responder.handleEvent(ev);
 }
 
 bool MctpTransportClass::clearTimeout()
 {
-    if (time)
+    if (timer)
     {
-        time.reset(nullptr);
+        auto rc = timer->stop();
+        if (rc)
+        {
+            log.print("Failed to stop the instance ID expiry timer. RC=");
+            log.println(rc);
+        }
         return true;
     }
     return false;

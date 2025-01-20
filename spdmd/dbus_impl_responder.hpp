@@ -27,6 +27,7 @@
 
 #include <sdbusplus/bus.hpp>
 #include <sdbusplus/server/object.hpp>
+#include <sdbusplus/timer.hpp>
 #include <sdeventplus/event.hpp>
 #include <sdeventplus/source/io.hpp>
 #include <spdmcpp/connection.hpp>
@@ -65,9 +66,10 @@ class MctpTransportClass : public spdmcpp::MctpTransportClass
 {
   public:
     MctpTransportClass(uint8_t eid, Responder& resp,
-                       spdmcpp::TransportMedium medium) :
+                       spdmcpp::TransportMedium medium,
+                       spdmcpp::LogClass& logIn) :
         spdmcpp::MctpTransportClass(eid),
-        transportMedium(medium), responder(resp)
+        transportMedium(medium), responder(resp), log(logIn)
     {}
     ~MctpTransportClass() override = default;
 
@@ -83,8 +85,8 @@ class MctpTransportClass : public spdmcpp::MctpTransportClass
   protected:
     spdmcpp::TransportMedium transportMedium;
     Responder& responder;
-    std::unique_ptr<SpdmdAppContext::Timer> time;
-
+    std::unique_ptr<sdbusplus::Timer> timer;
+    spdmcpp::LogClass& log;
     void timeoutCallback();
 };
 
