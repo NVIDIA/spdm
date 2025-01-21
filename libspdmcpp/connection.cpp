@@ -1344,8 +1344,8 @@ RetStat ConnectionClass::handleTimeoutOrRetry(EventTimeoutClass&)
     if (SendRetry)
     {
         --SendRetry;
-        lastSendTimestamp = std::chrono::system_clock::now();
         SPDMCPP_CONNECTION_RS_RETRY_LOG_SEND_BUF();
+        lastSendTimestamp = std::chrono::system_clock::now();
         auto rs = context.getIO(sockPath)->write(SendBuffer);
         SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
         rs = transport->setupTimeout(SendTimeout);
