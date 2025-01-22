@@ -78,6 +78,7 @@ MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
             mctpNewObjectSignal(objPath, interfaces);
         });
 
+#ifdef CSM_SERVICE_ENABLED
     ccsmChange = std::make_unique<sdbusplus::bus::match_t>(
         spdmApp.getBus(),
         sdbusplus::bus::match::rules::propertiesChanged(
@@ -94,13 +95,15 @@ MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
                     inventorySignalQueue.pop_front();
                 }
             }
-#endif
+#endif // DISCOVERY_ONLY_FROM_MCTP_CONTROL
         });
+#endif // CSM_SERVICE_ENABLED
     setupMCTPServices();
 }
 
 bool MctpDiscovery::checkMctpServicesReady()
 {
+#ifdef CSM_SERVICE_ENABLED
     try
     {
         auto method = bus.new_method_call(
@@ -121,6 +124,8 @@ bool MctpDiscovery::checkMctpServicesReady()
         }
     }
     return false;
+#endif
+    return true;
 }
 
 void MctpDiscovery::setupMCTPServices()

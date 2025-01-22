@@ -24,3 +24,5 @@
 
 //NOLINTNEXTLINE cppcoreguidelines-macro-usage
 #mesondefine MCTP_IN_KERNEL
+
+#mesondefine CSM_SERVICE_ENABLED

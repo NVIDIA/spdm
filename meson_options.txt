@@ -15,3 +15,5 @@ option('use_default_dbus', type: 'feature', description: 'Use default DBus bus f
 option('use_fuzz', type: 'feature', description: 'Fuzz testing.', value: 'disabled')
 
 option('enable-in-kernel-mctp', type: 'feature', value: 'disabled', description: 'Use the in-kernel MCTP stack instead of the demux daemon')
+
+option('csm_service_enabled', type: 'feature', description: 'Skip check for ccsm service if the service is disabled. Disable this flag on platforms where ccsm is not supported/enabled', value: 'enabled')
