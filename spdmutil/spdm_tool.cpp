@@ -824,11 +824,13 @@ auto SpdmTool::run() -> bool
     bool ret{};
     do
     {
+#ifndef MCTP_IN_KERNEL
         ret = runEnumerate();
         if (!ret)
         {
             break;
         }
+#endif
         ret = runComm();
         if (!ret)
         {
