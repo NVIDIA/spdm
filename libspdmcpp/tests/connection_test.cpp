@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+#include "config.h"
+
 #include "test_helpers.hpp"
 
 #include <spdmcpp/common.hpp>
@@ -111,7 +113,11 @@ class ConnectionFixture
         logg(std::cout), IO(std::make_shared<FixtureIOClass>()),
         Connection(Context, logg, 0, "pcie")
     {
+#ifndef MCTP_IN_KERNEL
         Context.registerIo(IO, "pcie");
+#else
+        Context.registerIo(IO);
+#endif
         Connection.registerTransport(Trans);
     }
     ~ConnectionFixture()
@@ -119,7 +125,11 @@ class ConnectionFixture
         try
         {
             Connection.unregisterTransport(Trans);
+#ifndef MCTP_IN_KERNEL
             Context.unregisterIo("pcie");
+#else
+            Context.unregisterIo();
+#endif
         }
         catch (const std::exception& exc)
         {

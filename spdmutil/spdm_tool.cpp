@@ -718,6 +718,7 @@ auto SpdmTool::connectMctp() -> void
     {
         throw std::logic_error("Unable to get transport socket");
     }
+#ifndef MCTP_IN_KERNEL
     const auto& unixSock = respInfo.back().sockPath;
     if (!mctpIO.createSocket(unixSock))
     {
@@ -725,6 +726,13 @@ auto SpdmTool::connectMctp() -> void
         throw std::logic_error("Unable connect to MCTP socket "s +
                                unixSock.substr(1));
     }
+#else
+    if (!mctpIO.createSocket())
+    {
+        using namespace std::string_literals;
+        throw std::logic_error("Unable connect to MCTP socket ");
+    }
+#endif
 }
 // Recv data over MCTP with timeout
 auto SpdmTool::recvMctp(std::vector<uint8_t>& buf) -> spdmcpp::RetStat

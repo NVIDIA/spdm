@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include "config.h"
+
 #include "dbus_impl_responder.hpp"
 #include "spdmcpp/common.hpp"
 #include "spdmcpp/context.hpp"
@@ -69,6 +71,10 @@ class SpdmdApp : public SpdmdAppContext
      */
     void connectMCTP(const std::string& sockPath);
 
+    /** @brief Connect SPDM daemon to MCTP in kernel
+     */
+    void connectMCTP();
+
     /** @brief Sets up the automatic measurement delay according to commandline
      * parameters
      */
@@ -119,6 +125,8 @@ class SpdmdApp : public SpdmdAppContext
      * over MCTP */
     std::unordered_map<std::string, std::unique_ptr<sdeventplus::source::IO>>
         mctpEvents;
+
+    std::unique_ptr<sdeventplus::source::IO> af_mctp_event;
 
     /** @brief Array of all responder objects, managed by SPDM daemon */
     std::vector<std::unique_ptr<dbus_api::Responder>> responders;

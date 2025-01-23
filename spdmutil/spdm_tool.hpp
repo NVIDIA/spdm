@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include "config.h"
+
 #include "cmds.hpp"
 
 #include <nlohmann/json.hpp>

@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+#include "config.h"
+
 #include "mctp_endpoint_discovery.hpp"
 
 #include "spdmcpp/common.hpp"
@@ -250,7 +252,6 @@ void MctpDiscovery::mctpNewObjectSignal(
         }
         return;
     }
-
     size_t eid = getEid(interfaces);
     if (eid >= invalidEid)
     {
@@ -304,6 +305,7 @@ void MctpDiscovery::mctpNewObjectSignal(
         }
         return;
     }
+#ifndef MCTP_IN_KERNEL
     auto sockPath = getTransportSocket(interfaces);
     if (sockPath.empty())
     {
@@ -323,6 +325,9 @@ void MctpDiscovery::mctpNewObjectSignal(
         return;
     }
     tryConnectMCTP(sockPath);
+#else
+    auto sockPath = "";
+#endif
     dbus_api::ResponderArgs args{mctp_eid_t(eid), uuid,    mediumType,
                                  objPath,         invPath, sockPath};
     spdmApp.discoveryUpdateResponder(args);
@@ -374,6 +379,7 @@ void MctpDiscovery::inventoryNewObjectSignal(
         return;
     }
 
+#ifndef MCTP_IN_KERNEL
     const auto transpSock = getTransportSocket(mctp.interfaces);
     if (transpSock.empty())
     {
@@ -393,6 +399,9 @@ void MctpDiscovery::inventoryNewObjectSignal(
         return;
     }
     tryConnectMCTP(transpSock);
+#else
+    const auto transpSock = "";
+#endif
     dbus_api::ResponderArgs args{mctp_eid_t(eid), uuid,    mediumType,
                                  mctp.path,       objPath, transpSock};
     spdmApp.discoveryUpdateResponder(args);

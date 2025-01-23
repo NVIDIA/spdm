@@ -21,3 +21,6 @@
 
 //NOLINTNEXTLINE cppcoreguidelines-macro-usage
 #mesondefine USE_FUZZ
+
+//NOLINTNEXTLINE cppcoreguidelines-macro-usage
+#mesondefine MCTP_IN_KERNEL

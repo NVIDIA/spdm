@@ -14,7 +14,7 @@ install_headers(
 
 incdir_pub = include_directories( 'headers_public')
 
-incdir = include_directories( 'headers_public', 'headers')
+incdir = include_directories( 'headers_public', 'headers', '..')
 
 libspdmcpp_requester = library('spdmcpp_requester',
 	[

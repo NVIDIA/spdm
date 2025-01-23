@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+#include "config.h"
+
 #include "connection.hpp"
 
 #pragma once
@@ -72,7 +74,11 @@ RetStat ConnectionClass::sendRequest(const T& packet, BufEnum bufidx)
         Log.println(buf);
     }
     lastSendTimestamp = std::chrono::system_clock::now();
+#ifdef MCTP_IN_KERNEL
+    rs = context.getIO()->write(buf);
+#else
     rs = context.getIO(sockPath)->write(buf);
+#endif
     return rs;
 }
 
