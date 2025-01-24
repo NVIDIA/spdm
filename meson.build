@@ -26,6 +26,7 @@ conf_data.set('FETCH_SERIALNUMBER_FROM_RESPONDER', get_option('fetch_serialnumbe
 conf_data.set('DISCOVERY_ONLY_FROM_MCTP_CONTROL', get_option('discovery_only_from_mctp_control').enabled())
 conf_data.set('SPDM_JSON_CONF_FILE_NAME', get_option('conf_file_name'))
 conf_data.set('USE_DEFAULT_DBUS', get_option('use_default_dbus').enabled())
+conf_data.set('MCTP_IN_KERNEL', get_option('enable-in-kernel-mctp').enabled())
 
 conf_h_dep = declare_dependency(
     include_directories: include_directories('.'),

@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include "config.h"
+
 #include "assert.hpp"
 #include "common.hpp"
 
@@ -52,6 +54,15 @@ class ContextClass
 
     /** @brief Registers an IOClass for handling the communication channel
      * (typically socket)
+     *  @param[in] io - Object to be used for sending/reading messages.
+     */
+    void registerIo(const std::shared_ptr<IOClass>& io)
+    {
+        io_inkernel = io;
+    }
+
+    /** @brief Registers an IOClass for handling the communication channel
+     * (typically socket)
      *  @param[in] io - Object to be used for sending/reading messages,
      * ContextClass does not take ownership and will not deallocate the
      * object
@@ -64,6 +75,14 @@ class ContextClass
                 "registerIoPcie: wrong transport medium param");
         }
         ioContainer[path] = io;
+    }
+
+    /** @brief Unregisters the IOClass object, should be called before
+     * destroying io.
+     */
+    void unregisterIo()
+    {
+        io_inkernel.reset();
     }
 
     /** @brief Unregisters the IOClass object, should be called before
@@ -100,6 +119,19 @@ class ContextClass
         return SupportedVersions;
     }
 
+    /** @brief Returns the IOClass object for the in-kernel communication
+     *  @return shared_ptr to the IOClass object
+     */
+    std::shared_ptr<IOClass> getIO() const
+    {
+        return io_inkernel;
+    }
+
+    /** @brief Returns the IOClass object for the given path
+     *  @param[in] path - the path to the IOClass object
+     *  @return shared_ptr to the IOClass object
+     */
+
     std::shared_ptr<IOClass> getIO(const std::string& path) const
     {
         auto it = ioContainer.find(path);
@@ -123,6 +155,8 @@ class ContextClass
 
     /** @brief SPDM container with indentifiers */
     std::unordered_map<std::string, std::shared_ptr<IOClass>> ioContainer;
+
+    std::shared_ptr<IOClass> io_inkernel;
 };
 
 } // namespace spdmcpp

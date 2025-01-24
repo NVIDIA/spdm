@@ -97,7 +97,7 @@ class MctpDiscovery
         const dbus::InterfaceMap& interfaces);
 #endif
 
-    /** @brief Try calling spdmApp.ConnectMCTP() */
+    /** @brief Try calling spdmApp.ConnectMCTP() with user-space mctp stack. */
     void tryConnectMCTP(const std::string& sockPath);
 
     /** MCTP handle callback */

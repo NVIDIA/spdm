@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+#include "config.h"
+
 #include <spdmcpp/connection.hpp>
 #include <spdmcpp/connection_inl.hpp>
 #include <spdmcpp/context.hpp>
@@ -1346,7 +1348,11 @@ RetStat ConnectionClass::handleTimeoutOrRetry(EventTimeoutClass&)
         --SendRetry;
         SPDMCPP_CONNECTION_RS_RETRY_LOG_SEND_BUF();
         lastSendTimestamp = std::chrono::system_clock::now();
+#ifdef MCTP_IN_KERNEL
+        auto rs = context.getIO()->write(SendBuffer);
+#else
         auto rs = context.getIO(sockPath)->write(SendBuffer);
+#endif
         SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
         rs = transport->setupTimeout(SendTimeout);
         SPDMCPP_LOG_TRACE_RS(Log, rs);

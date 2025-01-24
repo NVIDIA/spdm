@@ -22,6 +22,8 @@
 
 #include <arpa/inet.h>
 #include <libmctp-externals.h>
+#include <linux/if_arp.h>
+#include <linux/mctp.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/un.h>
@@ -35,6 +37,7 @@
 #include <limits>
 #include <vector>
 
+#define MCTP_TYPE_SPDM 5
 namespace spdmcpp
 {
 // these are for use with the mctp-demux-daemon
@@ -203,12 +206,81 @@ class MctpIoClass : public IOClass
         }
     }
 
+    /**
+     * @brief Creates a socket for MCTP communication in in-kernel mode.
+     *
+     * This function creates a socket using the MCTP protocol and binds it to
+     * a specified address. If the socket creation or binding fails, it logs
+     * the error and returns false.
+     *
+     * @return true if the socket is successfully created and bound, false
+     * otherwise.
+     */
+
+    bool createSocket()
+    {
+        SPDMCPP_LOG_TRACE_FUNC(Log);
+
+        // NOLINTNEXTLINE cppcoreguidelines-avoid-c-arrays
+        struct sockaddr_mctp addr;
+
+        Socket = socket(AF_MCTP, SOCK_DGRAM, 0);
+        if (Socket < 0)
+        {
+            Log.iprint("socket() error: ");
+            Log.println(errno);
+            return false;
+        }
+
+        // NOLINTNEXTLINE cppcoreguidelines-pro-bounds-array-to-pointer-decay
+        memset(&addr, 0, sizeof(addr));
+        addr.smctp_family = AF_MCTP;
+        addr.smctp_network = MCTP_NET_ANY;
+        addr.smctp_addr.s_addr = MCTP_ADDR_ANY;
+        addr.smctp_type = MCTP_TYPE_SPDM;
+        addr.smctp_tag = MCTP_TAG_OWNER;
+
+        int rc = bind(Socket, (struct sockaddr*)&addr, sizeof(addr));
+        // NOLINTNEXTLINE cppcoreguidelines-pro-type-cstyle-cast
+        if (rc)
+        {
+            if (Log.logLevel >= LogClass::Level::Critical)
+            {
+                Log.iprint("bind to socket failed");
+            }
+            deleteSocket();
+            return false;
+        }
+        else
+        {
+            if (Log.logLevel >= spdmcpp::LogClass::Level::Informational)
+            {
+                Log.iprint("Binding success\n");
+            }
+        }
+        return true;
+    }
+
+    /**
+     * @brief Creates a UNIX domain socket and connects to the specified path.
+     *
+     * This function creates a UNIX domain socket and attempts to connect it to
+     * the specified path. If the socket creation or connection fails, it logs
+     * the error and returns false. If the connection is successful, it writes
+     * a message type to the socket.
+     *
+     * @param path The path to connect the UNIX domain socket to.
+     * @return true if the socket is successfully created and connected, false
+     * otherwise.
+     */
     bool createSocket(const std::string& path)
     {
         SPDMCPP_LOG_TRACE_FUNC(Log);
         Socket = socket(AF_UNIX, SOCK_SEQPACKET, 0);
         if (Socket == -1)
         {
+            Log.iprint("socket() error: ");
+            Log.println(errno);
             return false;
         }
 
@@ -258,6 +330,12 @@ class MctpIoClass : public IOClass
         }
         return true;
     }
+    /**
+     * @brief Closes the socket and resets the socket descriptor.
+     *
+     * This function closes the socket if it is open and resets the socket
+     * descriptor to -1.
+     */
     void deleteSocket()
     {
         close(Socket);
@@ -283,8 +361,118 @@ class MctpIoClass : public IOClass
     int Socket = -1;
 };
 
+#ifdef MCTP_IN_KERNEL
+/**
+ * @brief Sends data over the MCTP socket.
+ *
+ * This function sends the provided buffer over the MCTP socket to a specified
+ * address. It constructs the destination address using the MCTP protocol and
+ * sends the data using the `sendto` function. If an error occurs during
+ * sending, it logs the error and returns an error status.
+ *
+ * @param buf The buffer containing the data to be sent.
+ * @param timeout The timeout value for the operation (not used in this
+ * implementation).
+ * @return RetStat::OK if the data is sent successfully, RetStat::ERROR_UNKNOWN
+ * otherwise.
+ */
 inline RetStat MctpIoClass::write(const std::vector<uint8_t>& buf,
-                                  timeout_us_t /*timeout*/)
+                                  [[maybe_unused]] timeout_us_t /*timeout*/)
+{
+    struct sockaddr_mctp addr;
+    memset(&addr, 0, sizeof(addr));
+
+    addr.smctp_family = AF_MCTP;
+    addr.smctp_network = MCTP_NET_ANY;
+    addr.smctp_addr.s_addr = buf[1];
+    addr.smctp_tag = MCTP_TAG_OWNER;
+    addr.smctp_type = MCTP_TYPE_SPDM;
+
+    ssize_t rc =
+        sendto(Socket, buf.data() + 3, buf.size() - 3, 0,
+               reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr));
+    if (rc == -1)
+    {
+        if (Log.logLevel >= LogClass::Level::Critical)
+        {
+            Log.iprint("Send error:");
+            Log.println(errno);
+        }
+        return RetStat::ERROR_UNKNOWN;
+    }
+    return RetStat::OK;
+}
+
+/**
+ * @brief Reads data from the MCTP socket.
+ *
+ * This function reads data from the MCTP socket into the provided buffer. It
+ * first peeks the buffer length to determine the size of the incoming message,
+ * then resizes the buffer accordingly and reads the data. The function also
+ * constructs a header with specific MCTP address and message type information
+ * and prepends it to the buffer. If an error occurs during the read operation,
+ * it logs the error and returns an error status.
+ *
+ * @param buf The buffer to store the received data.
+ * @param timeout The timeout value for the operation (not used in this
+ * implementation).
+ * @return RetStat::OK if the data is read successfully, RetStat::ERROR_UNKNOWN
+ * otherwise.
+ */
+inline RetStat MctpIoClass::read(std::vector<uint8_t>& buf,
+                                 [[maybe_unused]] timeout_us_t /*timeout*/)
+{
+    SPDMCPP_LOG_TRACE_FUNC(Log);
+    struct sockaddr_mctp addr;
+    socklen_t addrlen = sizeof(addr);
+
+    memset(&addr, 0, sizeof(addr));
+
+    ssize_t bufLen = recv(Socket, NULL, 0, MSG_PEEK | MSG_TRUNC);
+    if (bufLen < 0)
+    {
+        Log.iprint("Error peeking buffer length: ");
+        Log.println(errno);
+        return RetStat::ERROR_UNKNOWN;
+    }
+    buf.resize(bufLen);
+    ssize_t ret = recvfrom(Socket, buf.data(), buf.size(), MSG_TRUNC,
+                           (struct sockaddr*)&addr, &addrlen);
+    std::vector<int> head = {1, addr.smctp_addr.s_addr,
+                             static_cast<int>(MCTPMessageTypeEnum::SPDM)};
+
+    buf.insert(buf.begin(), head.begin(), head.end());
+
+    if (ret == -1)
+    {
+        if (Log.logLevel >= LogClass::Level::Critical)
+        {
+            Log.iprint("Receive error: ");
+            Log.println(errno);
+        }
+        return RetStat::ERROR_UNKNOWN;
+    }
+    return RetStat::OK;
+}
+
+#else
+
+/**
+ * @brief Sends data over the MCTP socket.
+ *
+ * This function sends the provided buffer over the MCTP socket. It attempts to
+ * send the entire buffer in a loop, handling partial sends by continuing until
+ * all data is sent. If an error occurs during sending, it logs the error and
+ * returns an error status.
+ *
+ * @param buf The buffer containing the data to be sent.
+ * @param timeout The timeout value for the operation (not used in this
+ * implementation).
+ * @return RetStat::OK if the data is sent successfully, RetStat::ERROR_UNKNOWN
+ * otherwise.
+ */
+inline RetStat MctpIoClass::write(const std::vector<uint8_t>& buf,
+                                  [[maybe_unused]] timeout_us_t /*timeout*/)
 {
     SPDMCPP_LOG_TRACE_FUNC(Log);
     size_t sent = 0;
@@ -305,8 +493,23 @@ inline RetStat MctpIoClass::write(const std::vector<uint8_t>& buf,
     return RetStat::OK;
 }
 
+/**
+ * @brief Reads data from the MCTP socket.
+ *
+ * This function reads data from the MCTP socket into the provided buffer. It
+ * resizes the buffer to the maximum message size and attempts to read data from
+ * the socket. If an error occurs or no data is received, it logs the error and
+ * clears the buffer. The buffer is then resized to the actual amount of data
+ * received.
+ *
+ * @param buf The buffer to store the received data.
+ * @param timeout The timeout value for the operation (not used in this
+ * implementation).
+ * @return RetStat::OK if the data is read successfully, RetStat::ERROR_UNKNOWN
+ * otherwise.
+ */
 inline RetStat MctpIoClass::read(std::vector<uint8_t>& buf,
-                                 timeout_us_t /*timeout*/)
+                                 [[maybe_unused]] timeout_us_t /*timeout*/)
 {
     SPDMCPP_LOG_TRACE_FUNC(Log);
     buf.resize(mctpMaxMessageSize);
@@ -324,5 +527,6 @@ inline RetStat MctpIoClass::read(std::vector<uint8_t>& buf,
     buf.resize(result);
     return RetStat::OK;
 }
+#endif
 
 } // namespace spdmcpp

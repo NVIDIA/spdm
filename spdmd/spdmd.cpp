@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+#include "config.h"
+
 #include "mctp_endpoint_discovery.hpp"
 #include "spdmcpp/common.hpp"
 #include "spdmd_app.hpp"
@@ -123,6 +125,32 @@ void SpdmdApp::connectDBus()
 {
     SPDMCPP_LOG_TRACE_FUNC(getLog());
     bus.attach_event(event.get(), SD_EVENT_PRIORITY_NORMAL);
+}
+
+void SpdmdApp::connectMCTP()
+{
+    auto io = std::make_shared<spdmcpp::MctpIoClass>(getLog());
+    if (io->createSocket())
+    {
+        auto callback = [io, this](sdeventplus::source::IO& /*io*/, int /*fd*/,
+                                   uint32_t revents) {
+            mctpCallback(revents, *io);
+        };
+        af_mctp_event = std::make_unique<sdeventplus::source::IO>(
+            event, io->getSocket(), EPOLLIN, std::move(callback));
+        if (!af_mctp_event)
+        {
+            throw std::runtime_error("Couldn't bind to any MCTP endpoint");
+        }
+        context.registerIo(io);
+    }
+    else
+    {
+        if (getLog().logLevel >= spdmcpp::LogClass::Level::Warning)
+        {
+            getLog().iprintln("Unable to connect to socket");
+        }
+    }
 }
 
 void SpdmdApp::connectMCTP(const std::string& sockPath)
@@ -386,6 +414,10 @@ int main(int argc, char** argv)
         spdmApp.setupCli(argc, argv);
 
         spdmApp.connectDBus();
+
+#ifdef MCTP_IN_KERNEL
+        spdmApp.connectMCTP();
+#endif
 
         std::unique_ptr<MctpDiscovery> mctpDiscoveryHandler =
             std::make_unique<MctpDiscovery>(spdmApp);
