@@ -824,6 +824,9 @@ class ConnectionClass : public NonCopyable
     /// Retry packet count
     uint8_t retryPktCount{};
 
+    static constexpr auto maxGetVersionRetries = 3U;
+    uint8_t retryGetVersionCount{};
+
     /// Response if ready token value
     std::optional<uint8_t> respIfReadyToken;
 
