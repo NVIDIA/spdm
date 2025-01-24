@@ -155,6 +155,7 @@ RetStat ConnectionClass::refreshMeasurementsInternal()
     }
     stateEnabled = true;
     retryPktCount = 0;
+    retryGetVersionCount = 0;
     auto rs = tryGetVersion();
     SPDMCPP_LOG_TRACE_RS(Log, rs);
     return rs;
@@ -165,6 +166,7 @@ void ConnectionClass::resetConnection()
     clearTimeout();
 
     retryPktCount = 0;
+    retryGetVersionCount = 0;
     GotInfo = 0;
     CertificateSlotIdx = slotNum;
     MessageVersion = MessageVersionEnum::UNKNOWN;
@@ -368,6 +370,10 @@ RetStat ConnectionClass::handleRecv<PacketVersionResponseVar>()
 {
     if (!stateEnabled)
     {
+        if (retryGetVersionCount > maxGetVersionRetries)
+        {
+            return RetStat::ERROR_RESPONSE;
+        }
         return RetStat::OK;
     }
 
@@ -1192,6 +1198,43 @@ RetStat ConnectionClass::handleRecv(EventReceiveClass& event)
                     [PacketErrorResponseVar::ExtErrOffsNotReadyRTDM];
             return transport->setupTimeout(
                 calcResponseIfReadyWaitTimeMs(RTDExp, RTDM));
+        }
+        if (err.Min.Header.Param1 !=
+                PacketErrorResponseVar::ErrorCodeInvalidRequest &&
+            err.Min.Header.Param1 != PacketErrorResponseVar::ErrorCodeBusy)
+        {
+            retryGetVersionCount += 1;
+            if (retryGetVersionCount <= maxGetVersionRetries)
+            {
+                Log.print(
+                    "Responder Error. Restarting with getVersion. RetryCount=");
+                Log.print(retryGetVersionCount);
+                Log.print(" EID=");
+                Log.println(m_eid);
+                retryPktCount = 0;
+                stateEnabled = true;
+                WaitingForResponse = RequestResponseEnum::INVALID;
+                return tryGetVersion();
+            }
+            else if (retryGetVersionCount == maxGetVersionRetries + 1)
+            {
+                Log.print(
+                    "Responder Error. All retries exceeded. MaxGetVersionRetries=");
+                Log.print(maxGetVersionRetries);
+                Log.print(" EID=");
+                Log.println(m_eid);
+                stateEnabled = false;
+                WaitingForResponse = RequestResponseEnum::INVALID;
+                return tryGetVersion();
+            }
+            else
+            {
+                Log.print(
+                    "Responder Error. Continuous error responses for any requests.");
+                Log.print(" Anomalous behavior for EID=");
+                Log.println(m_eid);
+                return RetStat::ERROR_RESPONSE;
+            }
         }
     }
 
