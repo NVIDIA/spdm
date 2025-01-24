@@ -124,7 +124,9 @@ class TimingClass
     timeout_ms_t RTT = 6000; // round-trip transport implementation defined,
                              // TODO likely needs to be CLI configurable?!
                              // openbmc in qemu is extremely slow
-    static constexpr timeout_ms_t sT1 = 100;
+    static constexpr timeout_ms_t sT1 =
+        54000; // WAR with 60s T1, till spdm requester moves to async D-Bus
+               // calls.
 
     timeout_ms_t CT = 0;
 };
@@ -820,6 +822,9 @@ class ConnectionClass : public NonCopyable
 
     /// Retry packet count
     uint8_t retryPktCount{};
+
+    static constexpr auto maxGetVersionRetries = 3U;
+    uint8_t retryGetVersionCount{};
 
     /// Response if ready token value
     std::optional<uint8_t> respIfReadyToken;
