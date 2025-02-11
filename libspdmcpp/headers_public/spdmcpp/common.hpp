@@ -48,6 +48,7 @@ constexpr timeout_ms_t timeoutMsMaximum = timeoutMsInfinite - 1;
  */
 enum class TransportMedium : char
 {
+    None,
     PCIe,
     SPI,
     I2C,

@@ -482,7 +482,11 @@ spdmcpp::RetStat MctpTransportClass::setupTimeout(spdmcpp::timeout_ms_t timeout)
 
 void MctpTransportClass::timeoutCallback()
 {
+#ifdef MCTP_IN_KERNEL
+    spdmcpp::EventTimeoutClass ev{};
+#else
     spdmcpp::EventTimeoutClass ev(transportMedium);
+#endif
     responder.handleEvent(ev);
 }
 

@@ -32,8 +32,10 @@
 
 namespace spdmd
 {
-
-constexpr size_t invalidEid = 256;
+/* There is a difference between the data type in ctrl
+   daemon and code construct eid data type.
+ */
+constexpr std::variant<uint32_t, uint8_t> invalidEid = uint8_t(0xFF);
 
 MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
     bus(spdmApp.getBus()), spdmApp(spdmApp)
@@ -123,6 +125,7 @@ bool MctpDiscovery::checkMctpServicesReady()
 
 void MctpDiscovery::setupMCTPServices()
 {
+#ifndef MCTP_IN_KERNEL
     if (!checkMctpServicesReady())
     {
         auto& log = spdmApp.getLog();
@@ -132,6 +135,7 @@ void MctpDiscovery::setupMCTPServices()
         }
         return;
     }
+#endif
     auto svcNames = getMCTPServices();
     if (svcNames.empty())
     {
@@ -243,6 +247,7 @@ void MctpDiscovery::mctpNewObjectSignal(
 {
     spdmApp.getLog().iprintln("mctpNewObjectSignal: " + std::string(objPath));
     /** If MCTP service is not read yet ignore */
+#ifndef MCTP_IN_KERNEL
     if (!checkMctpServicesReady())
     {
         auto& log = spdmApp.getLog();
@@ -252,7 +257,24 @@ void MctpDiscovery::mctpNewObjectSignal(
         }
         return;
     }
-    size_t eid = getEid(interfaces);
+#endif
+    auto eid = getEid(interfaces);
+    std::string eidstrValue = "";
+    uint8_t eidValue1 = 0;
+    if (eid.has_value())
+    {
+        auto eidValue = eid.value();
+        if (std::holds_alternative<unsigned char>(eidValue))
+        {
+            eidstrValue = std::to_string(std::get<unsigned char>(eidValue));
+            eidValue1 = std::get<unsigned char>(eidValue);
+        }
+        else if (std::holds_alternative<unsigned int>(eidValue))
+        {
+            eidstrValue = std::to_string(std::get<unsigned int>(eidValue));
+            eidValue1 = std::get<unsigned int>(eidValue);
+        }
+    }
     if (eid >= invalidEid)
     {
         spdmApp.getLog().iprintln(
@@ -276,12 +298,12 @@ void MctpDiscovery::mctpNewObjectSignal(
     {
         static constexpr auto confName = "name";
         const auto eidName =
-            spdmApp.getPropertyByEid<const std::string>(eid, confName);
+            spdmApp.getPropertyByEid<const std::string>(eidValue1, confName);
         if (!eidName.has_value())
         {
             spdmApp.getLog().iprintln(
                 "SPDM mctpNewObjectSignal couldn't get inventory path for UUID'"s +
-                uuid + " EID " + std::to_string(eid));
+                uuid + " EID " + eidstrValue);
             return;
         }
         invPath = "/" + eidName.value();
@@ -295,7 +317,7 @@ void MctpDiscovery::mctpNewObjectSignal(
         {
             log.iprint("Unable to get medium type for");
             log.iprint(" EID = ");
-            log.iprint(eid);
+            log.iprint(eidstrValue);
             log.iprint(" UUID = ");
             log.iprint(uuid);
             log.iprint(" PATH = ");
@@ -314,7 +336,7 @@ void MctpDiscovery::mctpNewObjectSignal(
         {
             log.iprint("Unable to get transport socket for");
             log.iprint(" EID = ");
-            log.iprint(eid);
+            log.iprint(eidstrValue);
             log.iprint(" UUID = ");
             log.iprint(uuid);
             log.iprint(" PATH = ");
@@ -328,9 +350,32 @@ void MctpDiscovery::mctpNewObjectSignal(
 #else
     auto sockPath = "";
 #endif
-    dbus_api::ResponderArgs args{mctp_eid_t(eid), uuid,    mediumType,
-                                 objPath,         invPath, sockPath};
-    spdmApp.discoveryUpdateResponder(args);
+    dbus_api::ResponderArgs args{};
+    if (eid.has_value())
+    {
+        auto value = eid.value();
+
+        if (std::holds_alternative<unsigned char>(value))
+        {
+            args = dbus_api::ResponderArgs{std::get<unsigned char>(value),
+                                           uuid,
+                                           mediumType,
+                                           objPath,
+                                           invPath,
+                                           sockPath};
+        }
+        else if (std::holds_alternative<unsigned int>(value))
+        {
+            args = dbus_api::ResponderArgs{
+                static_cast<unsigned char>(std::get<unsigned int>(value)),
+                uuid,
+                mediumType,
+                objPath,
+                invPath,
+                sockPath};
+        }
+        spdmApp.discoveryUpdateResponder(args);
+    }
 }
 
 #ifndef DISCOVERY_ONLY_FROM_MCTP_CONTROL
@@ -338,6 +383,7 @@ void MctpDiscovery::inventoryNewObjectSignal(
     const sdbusplus::message::object_path& objPath,
     const dbus::InterfaceMap& interfaces)
 {
+    std::string eidstrValue = "";
     if (!interfaces.contains(inventorySPDMResponderIntfName))
     {
         return;
@@ -351,7 +397,20 @@ void MctpDiscovery::inventoryNewObjectSignal(
         return;
     }
     auto mctp = getMCTPObject(uuid);
-    size_t eid = getEid(mctp.interfaces);
+    EidType eid = getEid(mctp.interfaces);
+    if (eid.has_value())
+    {
+        auto eidValue = eid.value();
+
+        if (std::holds_alternative<unsigned char>(eidValue))
+        {
+            eidstrValue = std::to_string(std::get<unsigned char>(eidValue));
+        }
+        else if (std::holds_alternative<unsigned int>(eidValue))
+        {
+            eidstrValue = std::to_string(std::get<unsigned int>(eidValue));
+        }
+    }
     if (eid == invalidEid)
     {
         spdmApp.getLog().iprintln(
@@ -368,7 +427,7 @@ void MctpDiscovery::inventoryNewObjectSignal(
         {
             log.iprint("Unable to get medium type for");
             log.iprint(" EID = ");
-            log.iprint(eid);
+            log.iprint(eidstrValue);
             log.iprint(" UUID = ");
             log.iprint(uuid);
             log.iprint(" MCTPPATH = ");
@@ -388,7 +447,7 @@ void MctpDiscovery::inventoryNewObjectSignal(
         {
             log.iprint("Unable to get transport socket for");
             log.iprint(" EID = ");
-            log.iprint(eid);
+            log.iprint(eidstrValue);
             log.iprint(" UUID = ");
             log.iprint(uuid);
             log.iprint(" MCTPPATH = ");
@@ -402,13 +461,36 @@ void MctpDiscovery::inventoryNewObjectSignal(
 #else
     const auto transpSock = "";
 #endif
-    dbus_api::ResponderArgs args{mctp_eid_t(eid), uuid,    mediumType,
-                                 mctp.path,       objPath, transpSock};
-    spdmApp.discoveryUpdateResponder(args);
+    dbus_api::ResponderArgs args{};
+    if (eid.has_value())
+    {
+        auto eidvalue = eid.value();
+        if (std::holds_alternative<unsigned char>(eidvalue))
+        {
+            args = dbus_api::ResponderArgs{std::get<unsigned char>(eidvalue),
+                                           uuid,
+                                           mediumType,
+                                           mctp.path,
+                                           objPath,
+                                           transpSock};
+        }
+        else if (std::holds_alternative<unsigned int>(eidvalue))
+        {
+            args = dbus_api::ResponderArgs{
+                static_cast<unsigned char>(std::get<unsigned int>(eidvalue)),
+                uuid,
+                mediumType,
+                mctp.path,
+                objPath,
+                transpSock};
+        }
+        spdmApp.discoveryUpdateResponder(args);
+    }
 }
 #endif
 
-size_t MctpDiscovery::getEid(const dbus::InterfaceMap& interfaces)
+MctpDiscovery::EidType
+    MctpDiscovery::getEid(const dbus::InterfaceMap& interfaces)
 {
     SPDMCPP_LOG_TRACE_FUNC(spdmApp.getLog());
 
@@ -424,10 +506,10 @@ size_t MctpDiscovery::getEid(const dbus::InterfaceMap& interfaces)
     {
         spdmApp.getLog().println(e.what());
     }
-    return invalidEid;
+    return std::nullopt;
 }
 
-size_t
+MctpDiscovery::EidType
     MctpDiscovery::getEid(const std::map<std::string, dbus::Value>& properties)
 {
 
@@ -435,50 +517,75 @@ size_t
 
     if (!properties.contains(mctpEndpointIntfPropertyEid))
     {
-        return invalidEid;
+        return std::nullopt;
     }
     if (!properties.contains(mctpEndpointIntfPropertySupportedMessageTypes))
     {
-        return invalidEid;
+        return std::nullopt;
     }
 
-    size_t eid = invalidEid;
+    EidType eid = std::nullopt;
     /* Type of EID property depends on the system,
      *  so checking of all possible types is mandatory */
     try
     {
-        eid = std::get<uint32_t>(properties.at(mctpEndpointIntfPropertyEid));
+        if (auto uint32eid = std::get_if<unsigned int>(
+                &properties.at(mctpEndpointIntfPropertyEid)))
+        {
+            eid = *uint32eid;
+        }
+        else if (auto uint8eid = std::get_if<unsigned char>(
+                     &properties.at(mctpEndpointIntfPropertyEid)))
+        {
+            eid = *uint8eid;
+        }
     }
     catch (const std::bad_variant_access& e)
     {
-        try
-        {
-            eid = std::get<size_t>(properties.at(mctpEndpointIntfPropertyEid));
-        }
-        catch (const std::bad_variant_access& e1)
-        {
-            spdmApp.getLog().println(e1.what());
-        }
+        spdmApp.getLog().println(e.what());
     }
-    if (eid < invalidEid)
+
+    if (eid)
     {
-        try
+        if (std::holds_alternative<uint8_t>(*eid) &&
+            std::get<uint8_t>(*eid) < std::get<uint8_t>(invalidEid))
         {
-            auto types = std::get<std::vector<uint8_t>>(
-                properties.at(mctpEndpointIntfPropertySupportedMessageTypes));
-            if (std::find(types.begin(), types.end(), mctpTypeSPDM) !=
-                types.end())
+            try
             {
-                return eid;
+                auto types = std::get<std::vector<uint8_t>>(properties.at(
+                    mctpEndpointIntfPropertySupportedMessageTypes));
+                if (std::find(types.begin(), types.end(), mctpTypeSPDM) !=
+                    types.end())
+                {
+                    return eid;
+                }
+            }
+            catch (const std::exception& e)
+            {
+                spdmApp.getLog().print(e.what());
             }
         }
-        catch (const std::exception& e)
+        else if (std::holds_alternative<uint32_t>(*eid) &&
+                 std::get<uint32_t>(*eid) < std::get<uint32_t>(invalidEid))
         {
-            spdmApp.getLog().print(e.what());
+            try
+            {
+                auto types = std::get<std::vector<uint8_t>>(properties.at(
+                    mctpEndpointIntfPropertySupportedMessageTypes));
+                if (std::find(types.begin(), types.end(), mctpTypeSPDM) !=
+                    types.end())
+                {
+                    return eid;
+                }
+            }
+            catch (const std::exception& e)
+            {
+                spdmApp.getLog().print(e.what());
+            }
         }
     }
 
-    return invalidEid;
+    return std::nullopt;
 }
 
 std::string

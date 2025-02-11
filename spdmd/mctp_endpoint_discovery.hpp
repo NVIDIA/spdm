@@ -51,6 +51,11 @@ class MctpDiscovery
      */
     explicit MctpDiscovery(SpdmdApp& spdmApp);
 
+    /* The change is added to address the issue of mismatched data types between
+     * the control daemon and the code construct for the eid data type
+     */
+    using EidType = std::optional<std::variant<uint32_t, uint8_t>>;
+
   private:
     struct Object
     {
@@ -147,9 +152,12 @@ class MctpDiscovery
 
     static constexpr auto mctpBindingIntfPropertyBindType = "BindingType";
 
-    /** @brief MCTP discovery path */
+/** @brief MCTP discovery path */
+#ifdef MCTP_IN_KERNEL
+    static constexpr auto mctpPath = "/au/com/codeconstruct/mctp1";
+#else
     static constexpr auto mctpPath = "/xyz/openbmc_project/mctp";
-
+#endif
     /** @brief CCSM state manager service */
     static constexpr auto configurableStateManagerService =
         "xyz.openbmc_project.State.ConfigurableStateManager";
@@ -176,12 +184,12 @@ class MctpDiscovery
     /** @brief Get EID value from MCTP objects, which implement SPDM
      *  @returns EID or invalidEid (256) in case of error
      */
-    size_t getEid(const dbus::InterfaceMap& interfaces);
+    EidType getEid(const dbus::InterfaceMap& interfaces);
 
     /** @brief Get EID value from MCTP objects, which implement SPDM
      *  @returns EID or invalidEid (256) in case of error
      */
-    size_t getEid(const std::map<std::string, dbus::Value>& properties);
+    EidType getEid(const std::map<std::string, dbus::Value>& properties);
 
     /**
      * @brief Extracts transport medium value from the object's interfaces

@@ -189,6 +189,7 @@ bool SpdmdApp::needRecreateResponder(spdmcpp::TransportMedium currMedium,
     using tran = spdmcpp::TransportMedium;
     switch (currMedium)
     {
+        case tran::None:
         case tran::PCIe:
             return false;
         case tran::USB:
@@ -213,6 +214,7 @@ void SpdmdApp::discoveryUpdateResponder(const dbus_api::ResponderArgs& respArg)
         reportNotice("Create first responder UUID: " + respArg.uuid +
                      " EID: " + std::to_string(respArg.eid));
     }
+#ifndef MCTP_IN_KERNEL
     else
     {
         // Discovery found recreate if needed
@@ -240,6 +242,7 @@ void SpdmdApp::discoveryUpdateResponder(const dbus_api::ResponderArgs& respArg)
                          it->first);
         }
     }
+#endif
 }
 
 void SpdmdApp::createResponder(const dbus_api::ResponderArgs& args)
@@ -267,6 +270,11 @@ void SpdmdApp::createResponder(const dbus_api::ResponderArgs& args)
             path += std::to_string(args.eid);
         }
     }
+#ifdef MCTP_IN_KERNEL
+    responders[args.eid] = std::make_unique<dbus_api::Responder>(
+        *this, path, args.eid, args.mctpPath, args.inventoryPath,
+        TransportMedium::None, args.socketPath);
+#else
     if (args.medium.has_value())
     {
         responders[args.eid] = std::make_unique<dbus_api::Responder>(
@@ -282,6 +290,7 @@ void SpdmdApp::createResponder(const dbus_api::ResponderArgs& args)
                     "INVENTORYPATH = " + args.inventoryPath.str);
         return;
     }
+#endif
 
 #if FETCH_SERIALNUMBER_FROM_RESPONDER != 0
     responders[args.eid]->refreshSerialNumber();

@@ -72,10 +72,14 @@ struct EventReceiveClass : EventClass
 
 struct EventTimeoutClass : EventClass
 {
+#ifdef MCTP_IN_KERNEL
+    EventTimeoutClass() = default;
+#else
     EventTimeoutClass() = delete;
     explicit EventTimeoutClass(TransportMedium transportMedium) :
         transportMedium(transportMedium)
     {}
+#endif
     ~EventTimeoutClass() override = default;
 
     EventTimeoutClass(const EventTimeoutClass&) = delete;
