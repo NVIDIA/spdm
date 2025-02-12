@@ -19,10 +19,6 @@
 
 #include "xyz/openbmc_project/Common/error.hpp"
 
-#include <sdeventplus/event.hpp>
-#include <sdeventplus/source/io.hpp>
-#include <sdeventplus/source/time.hpp>
-
 #include <chrono>
 #include <iostream>
 
@@ -40,7 +36,7 @@ Responder::Responder(SpdmdAppContext& appCtx, const std::string& path,
                      const sdbusplus::message::object_path& invPath,
                      spdmcpp::TransportMedium transportMedium,
                      std::string socketPath) :
-    ResponderIntf(appCtx.bus, path.c_str(), action::defer_emit),
+    ResponderIntf(appCtx.getConn(), path.c_str(), action::defer_emit),
     appContext(appCtx), log(appCtx.getLog()),
     connection(appCtx.context, log, eid, std::move(socketPath)),
     transport(eid, *this, transportMedium, log), inventoryPath(invPath),
@@ -441,21 +437,12 @@ spdmcpp::RetStat
         {
             // if available and has the correct type:
             // 0x80 "Raw bit stream"
-            // 0x02 "Hardware configuration, such as straps, debug modes."
-            auto method = inventoryService.new_method_call(
-                appContext.bus, std::string(inventoryPath).c_str(),
-                "org.freedesktop.DBus.Properties", "Set");
-
-            method.append("xyz.openbmc_project.Inventory.Decorator.Asset",
-                          "SerialNumber",
-                          std::variant<std::string>(
-                              toBigEndianHexString(iter->second.ValueVector)));
-            appContext.bus.call_noreply(method);
+            // 0x02 "Hardware configuratigetBuson, such as straps, debug modes."
+            setSerialNumberAsync(iter->second.ValueVector);
         }
     }
     return rs;
 }
-
 #endif
 
 void Responder::updateLastUpdateTime()
@@ -470,13 +457,18 @@ void Responder::updateLastUpdateTime()
 
 spdmcpp::RetStat MctpTransportClass::setupTimeout(spdmcpp::timeout_ms_t timeout)
 {
-    sdeventplus::Event& event = responder.getEvent();
+    auto& io = responder.getAppCtx().getIo();
     if (!timer)
     {
-        timer = std::make_unique<sdbusplus::Timer>(
-            event.get(), [this](void) { timeoutCallback(); });
+        timer = std::make_unique<boost::asio::steady_timer>(io);
     }
-    timer->start(std::chrono::milliseconds(timeout));
+    timer->expires_after(std::chrono::milliseconds(timeout));
+    timer->async_wait([this](const boost::system::error_code& ec) {
+        if (!ec)
+        {
+            timeoutCallback();
+        }
+    });
     return RetStat::OK;
 }
 
@@ -490,15 +482,102 @@ bool MctpTransportClass::clearTimeout()
 {
     if (timer)
     {
-        auto rc = timer->stop();
-        if (rc)
+        boost::system::error_code ec;
+        timer->cancel(ec);
+        if (ec)
         {
-            log.print("Failed to stop the instance ID expiry timer. RC=");
-            log.println(rc);
+            log.print("Failed to cancel the timer. Error=");
+            log.println(ec.message());
         }
         return true;
     }
     return false;
+}
+
+void Responder::setSerialNumberAsync(const std::vector<uint8_t>& serialData)
+{
+    const std::string propertyInterface =
+        "xyz.openbmc_project.Inventory.Decorator.Asset";
+    const std::string propertyName = "SerialNumber";
+    auto propertyValue =
+        std::variant<std::string>(toBigEndianHexString(serialData));
+
+    const std::string path = std::string(inventoryPath);
+
+    static constexpr auto mapperService = "xyz.openbmc_project.ObjectMapper";
+    static constexpr auto mapperPath = "/xyz/openbmc_project/object_mapper";
+    static constexpr auto mapperInterface = "xyz.openbmc_project.ObjectMapper";
+
+    auto& conn = appContext.getConn();
+
+    conn.async_method_call(
+        [this, path, propertyInterface, propertyName, propertyValue](
+            boost::system::error_code ec, sdbusplus::message::message& msg) {
+            auto& log = getLog();
+            std::map<std::string, std::vector<std::string>> mapperResponse;
+
+            if (ec)
+            {
+                if (log.logLevel >= spdmcpp::LogClass::Level::Error)
+                {
+                    log.iprint(
+                        "setSerialNumberAsync: Mapper GetObject error: ");
+                    log.iprintln(ec.message());
+                }
+                return;
+            }
+
+            try
+            {
+                msg.read(mapperResponse);
+            }
+            catch (const std::exception& e)
+            {
+                if (log.logLevel >= spdmcpp::LogClass::Level::Error)
+                {
+                    log.iprint("setSerialNumberAsync parse mapper response: ");
+                    log.iprintln(e.what());
+                }
+                return;
+            }
+
+            if (mapperResponse.empty())
+            {
+                if (log.logLevel >= spdmcpp::LogClass::Level::Error)
+                {
+                    log.iprint(
+                        "setSerialNumberAsync: No service found for path: ");
+                    log.iprintln(path);
+                }
+                return;
+            }
+
+            const auto& service = mapperResponse.begin()->first;
+            static constexpr auto dbusPropertiesIface =
+                "org.freedesktop.DBus.Properties";
+            static constexpr auto methodSet = "Set";
+
+            auto& conn = appContext.getConn();
+            conn.async_method_call(
+                [this, path](boost::system::error_code ecSet) {
+                    auto& log = getLog();
+                    if (ecSet)
+                    {
+                        if (log.logLevel >= spdmcpp::LogClass::Level::Error)
+                        {
+                            log.iprint(
+                                "Error setting serial number for path: ");
+                            log.iprint(path);
+                            log.iprint(" error: ");
+                            log.iprintln(ecSet.message());
+                        }
+                    }
+                },
+                service, path, dbusPropertiesIface, methodSet,
+                propertyInterface, propertyName, propertyValue);
+        },
+        mapperService, mapperPath, mapperInterface, "GetObject", path,
+        std::vector<std::string>{propertyInterface});
 }
 
 } // namespace dbus_api

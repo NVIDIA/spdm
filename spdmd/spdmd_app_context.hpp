@@ -23,10 +23,11 @@
 #include "spdmcpp/context.hpp"
 #include "spdmcpp/log.hpp"
 
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/steady_timer.hpp>
 #include <nlohmann/json.hpp>
+#include <sdbusplus/asio/connection.hpp>
 #include <sdbusplus/bus.hpp>
-#include <sdeventplus/event.hpp>
-#include <sdeventplus/source/time.hpp>
 #include <xyz/openbmc_project/Logging/Entry/server.hpp>
 
 #include <chrono>
@@ -41,34 +42,16 @@ namespace spdmd
 {
 
 namespace obmcprj = sdbusplus::xyz::openbmc_project;
-extern dbus::ServiceHelper inventoryService;
 
 class SpdmdAppContext
 {
     static constexpr auto confFile = SPDM_JSON_CONF_FILE_NAME;
 
   public:
-    /** @brief ClockId used for specifying various timeouts  */
-    static constexpr sdeventplus::ClockId clockId =
-        sdeventplus::ClockId::Monotonic;
-
-    /** @brief Time class used for setting up various timeouts  */
-    using Clock = sdeventplus::Clock<SpdmdAppContext::clockId>;
-
-    /** @brief Time class used for setting up various timeouts  */
-    using Timer = sdeventplus::source::Time<clockId>;
-
     /** @brief SPDM requester context class */
     spdmcpp::ContextClass context;
 
-    /** @brief SPDM requester event management */
-    sdeventplus::Event event;
-
-    /** @brief SPDM requester used dbus */
-    sdbusplus::bus::bus bus;
-
-    SpdmdAppContext(sdeventplus::Event&& e, sdbusplus::bus::bus&& b,
-                    std::ostream& logOutStream);
+    explicit SpdmdAppContext(std::ostream& logOutStream);
     SpdmdAppContext(const SpdmdAppContext&) = delete;
     SpdmdAppContext& operator=(const SpdmdAppContext&) = delete;
     SpdmdAppContext(SpdmdAppContext&&) = delete;
@@ -140,6 +123,29 @@ class SpdmdAppContext
         return std::nullopt;
     }
 
+    /** @brief Get Bus */
+    auto& getConn()
+    {
+        return *conn;
+    }
+
+    /** @brief GET IO context */
+    auto& getIo()
+    {
+        return io;
+    }
+
+    /** @brief Main asio bus loop */
+    int loop()
+    {
+        return io.run();
+    }
+
+    /** @brief Connect to the dbus
+     * @param[in] busName - Bus name to connect to
+     */
+    void connectDBus(const std::string& busName);
+
   protected:
     /** @brief Set of EIDs to automatically measure, if empty all devices are
      * measured */
@@ -159,15 +165,37 @@ class SpdmdAppContext
     /** @brief call to check if the given EID should be measured right now */
     bool shouldMeasureEID(uint8_t eid) const;
 
+    /** @brief Meas timer */
+    void setupMeasurementDelay();
+
   private:
     bool reportLog(obmcprj::Logging::server::Entry::Level severity,
                    const string& message);
+
+    /** @brief Start the watchdog timer
+     */
+    void startWatchdog();
+
+    /** @brief Watchdog refresh function */
+    void scheduleWatchdog(std::chrono::microseconds interval);
 
     /** @brief Log object used to log debug messages */
     spdmcpp::LogClass log;
 
     /** @brief Configuration data object */
     nlohmann::json conf;
+
+    /** @brief Asio context */
+    boost::asio::io_context io;
+
+    /** @brief dbus connection */
+    std::unique_ptr<sdbusplus::asio::connection> conn;
+
+    /** @brief Measurement daley timer*/
+    std::unique_ptr<boost::asio::steady_timer> measurementDelayTimer;
+
+    /** @brief Watchdog refresh timer */
+    std::unique_ptr<boost::asio::steady_timer> watchdogTimer;
 };
 
 } // namespace spdmd

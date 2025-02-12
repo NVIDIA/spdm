@@ -25,11 +25,10 @@
 #include "xyz/openbmc_project/Object/Enable/server.hpp"
 #include "xyz/openbmc_project/SPDM/Responder/server.hpp"
 
+#include <boost/asio/steady_timer.hpp>
 #include <sdbusplus/bus.hpp>
 #include <sdbusplus/server/object.hpp>
 #include <sdbusplus/timer.hpp>
-#include <sdeventplus/event.hpp>
-#include <sdeventplus/source/io.hpp>
 #include <spdmcpp/connection.hpp>
 #include <spdmcpp/mctp_support.hpp>
 
@@ -59,7 +58,7 @@ struct ResponderArgs
 
 /** @class MctpTransportClass
  *  @brief Support class for transport through the mctp-demux-daemon with
- * timeouts handled by sdeventplus
+ * timeouts handled by boost asio
  */
 // NOLINTNEXTLINE cppcoreguidelines-special-member-functions
 class MctpTransportClass : public spdmcpp::MctpTransportClass
@@ -85,7 +84,7 @@ class MctpTransportClass : public spdmcpp::MctpTransportClass
   protected:
     spdmcpp::TransportMedium transportMedium;
     Responder& responder;
-    std::unique_ptr<sdbusplus::Timer> timer;
+    std::unique_ptr<boost::asio::steady_timer> timer;
     spdmcpp::LogClass& log;
     void timeoutCallback();
 };
@@ -142,11 +141,6 @@ class Responder : public ResponderIntf
         return transportMedium;
     }
 
-    sdeventplus::Event& getEvent()
-    {
-        return appContext.event;
-    }
-
     uint8_t getEid() const
     {
         return eid;
@@ -160,6 +154,11 @@ class Responder : public ResponderIntf
         spdmcpp::EventClass& event) // cppcheck-suppress constParameter
     {
         return (this->*eventHandler)(event);
+    }
+
+    auto& getAppCtx()
+    {
+        return appContext;
     }
 
   protected:
@@ -192,6 +191,12 @@ class Responder : public ResponderIntf
 #if FETCH_SERIALNUMBER_FROM_RESPONDER != 0
     spdmcpp::RetStat handleEventForSerialNumber(spdmcpp::EventClass& event);
 #endif
+
+  private:
+    /** @brief Update serial number in the inventory
+     * @param[in] serialData Serial number data
+     */
+    void setSerialNumberAsync(const std::vector<uint8_t>& serialData);
 };
 
 } // namespace dbus_api

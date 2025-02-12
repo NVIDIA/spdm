@@ -23,7 +23,6 @@ executable(
     CLI11_dep,
     phosphor_dbus_interfaces,
     sdbusplus,
-    sdeventplus,
     crypto_deps,
     nlohmann_json,
     libspdmcpp_requester_dep,

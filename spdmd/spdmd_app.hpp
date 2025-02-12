@@ -27,13 +27,14 @@
 #include "spdmcpp/mctp_support.hpp"
 #include "spdmd_app_context.hpp"
 
-#include <sdeventplus/event.hpp>
-#include <sdeventplus/source/io.hpp>
+#include <boost/asio.hpp>
+#include <boost/asio/posix/stream_descriptor.hpp>
+#include <boost/asio/steady_timer.hpp>
+#include <sdbusplus/asio/connection.hpp>
 
 #include <memory>
 #include <unordered_map>
 
-using namespace std;
 using namespace spdmd;
 using namespace spdmcpp;
 using namespace sdbusplus;
@@ -60,11 +61,6 @@ class SpdmdApp : public SpdmdAppContext
      */
     void setupCli(int argc, char** argv);
 
-    /** @brief Connect SPDM daemon to D-bus
-     *
-     */
-    void connectDBus();
-
     /** @brief Connect SPDM daemon to MCTP
      *  @details Safe to call redundantly if necessary,
      * it'll create only one connection.
@@ -79,19 +75,6 @@ class SpdmdApp : public SpdmdAppContext
      * parameters
      */
     void setupMeasurementDelay();
-
-    /** @brief Enter SPDM daemon into forever loop
-     *
-     */
-    int loop();
-
-    /** @brief Get reference to the used d-bus object
-     *
-     */
-    sdbusplus::bus::bus& getBus()
-    {
-        return SpdmdAppContext::bus;
-    }
 
     /** @brief Check the UUIDs in the existing disovery table responder
      * and create responder when UUID is not exist, or re-create responder
@@ -121,12 +104,15 @@ class SpdmdApp : public SpdmdAppContext
     /** @brief verbose - debug level for SPDM daemon */
     spdmcpp::LogClass::Level verbose = spdmcpp::LogClass::Level::Emergency;
 
-    /** @brief Event handlar for MCTP events - used for transmission purposes
+    /** @brief Event handler for MCTP events - used for transmission purposes
      * over MCTP */
-    std::unordered_map<std::string, std::unique_ptr<sdeventplus::source::IO>>
+    std::unordered_map<std::string,
+                       std::unique_ptr<boost::asio::posix::stream_descriptor>>
         mctpEvents;
 
-    std::unique_ptr<sdeventplus::source::IO> af_mctp_event;
+    /** @brief Event handler for MCTP events - used for transmission purposes
+     * over af*/
+    std::unique_ptr<boost::asio::posix::stream_descriptor> afMctpEvent;
 
     /** @brief Array of all responder objects, managed by SPDM daemon */
     std::vector<std::unique_ptr<dbus_api::Responder>> responders;
@@ -138,7 +124,7 @@ class SpdmdApp : public SpdmdAppContext
 
     /** @brief Timer for handling the measurement delay
      */
-    std::unique_ptr<sdbusplus::Timer> measurementDelayTimer;
+    std::unique_ptr<boost::asio::steady_timer> measurementDelayTimer;
 
     /** @brief Callback for the automatic measurement delay
      */
