@@ -22,11 +22,15 @@
 #include "spdmd_app.hpp"
 #include "spdmd_version.hpp"
 
-#include <bits/stdc++.h>
-
 #include <CLI/CLI.hpp>
 
+#include <algorithm>
+#include <chrono>
+#include <iostream>
+#include <memory>
+#include <stdexcept>
 #include <string>
+#include <vector>
 
 using namespace std;
 using namespace spdmd;
@@ -39,17 +43,7 @@ constexpr auto spdmDefaultService = "xyz.openbmc_project.SPDM";
 namespace spdmd
 {
 
-dbus::ServiceHelper inventoryService("/", "org.freedesktop.DBus.ObjectManager",
-                                     "xyz.openbmc_project.PLDM");
-
-SpdmdApp::SpdmdApp() :
-    SpdmdAppContext(sdeventplus::Event::get_default(),
-#ifdef USE_DEFAULT_DBUS
-                    bus::new_default(),
-#else
-                    bus::new_system(),
-#endif
-                    std::cout)
+SpdmdApp::SpdmdApp() : SpdmdAppContext(std::cout)
 {}
 
 void SpdmdApp::setupCli(int argc, char** argv)
@@ -121,10 +115,63 @@ void SpdmdApp::setupCli(int argc, char** argv)
     }
 }
 
-void SpdmdApp::connectDBus()
+void SpdmdApp::connectMCTP(const std::string& sockPath)
 {
-    SPDMCPP_LOG_TRACE_FUNC(getLog());
-    bus.attach_event(event.get(), SD_EVENT_PRIORITY_NORMAL);
+    if (!context.isIOPathRegistered(sockPath))
+    {
+        std::cout << "connectMCTP() " << sockPath << std::endl;
+        auto mctpIo = std::make_shared<spdmcpp::MctpIoClass>(getLog());
+        if (mctpIo->createSocket(sockPath))
+        {
+            int fd = mctpIo->getSocket();
+
+            auto streamDesc =
+                std::make_unique<boost::asio::posix::stream_descriptor>(getIo(),
+                                                                        fd);
+            auto rearmPtr = std::make_shared<
+                std::function<void(boost::asio::posix::stream_descriptor*)>>();
+            *rearmPtr = [this, mctpIo, sockPath, rearmPtr](
+                            boost::asio::posix::stream_descriptor* desc) {
+                desc->async_wait(
+                    boost::asio::posix::stream_descriptor::wait_read,
+                    [this, desc, mctpIo, sockPath,
+                     rearmPtr](const boost::system::error_code& ec) {
+                        if (!ec)
+                        {
+                            mctpCallback(EPOLLIN, *mctpIo);
+                            (*rearmPtr)(desc);
+                        }
+                        else
+                        {
+                            auto& log = getLog();
+                            if (log.logLevel >= spdmcpp::LogClass::Level::Error)
+                            {
+                                log.iprint(
+                                    "Error on MCTP async_wait for sockPath ");
+                                log.iprint(sockPath);
+                                log.iprint(": ");
+                                log.iprintln(ec.message());
+                            }
+                        }
+                    });
+            };
+
+            (*rearmPtr)(streamDesc.get());
+            mctpEvents[sockPath] = std::move(streamDesc);
+            context.registerIo(mctpIo, sockPath);
+        }
+        else
+        {
+            if (getLog().logLevel >= spdmcpp::LogClass::Level::Warning)
+            {
+                getLog().iprintln("Unable to connect to socket");
+            }
+        }
+    }
+    if (mctpEvents.empty())
+    {
+        throw std::runtime_error("Couldn't connect to any MCTP endpoint");
+    }
 }
 
 void SpdmdApp::connectMCTP()
@@ -132,16 +179,38 @@ void SpdmdApp::connectMCTP()
     auto io = std::make_shared<spdmcpp::MctpIoClass>(getLog());
     if (io->createSocket())
     {
-        auto callback = [io, this](sdeventplus::source::IO& /*io*/, int /*fd*/,
-                                   uint32_t revents) {
-            mctpCallback(revents, *io);
+        int fd = io->getSocket();
+
+        auto streamDesc =
+            std::make_unique<boost::asio::posix::stream_descriptor>(getIo(),
+                                                                    fd);
+        auto rearmPtr = std::make_shared<
+            std::function<void(boost::asio::posix::stream_descriptor*)>>();
+        *rearmPtr = [this, io,
+                     rearmPtr](boost::asio::posix::stream_descriptor* desc) {
+            desc->async_wait(
+                boost::asio::posix::stream_descriptor::wait_read,
+                [this, desc, io,
+                 rearmPtr](const boost::system::error_code& ec) {
+                    if (!ec)
+                    {
+                        mctpCallback(EPOLLIN, *io);
+                        (*rearmPtr)(desc);
+                    }
+                    else
+                    {
+                        auto& log = getLog();
+                        if (log.logLevel >= spdmcpp::LogClass::Level::Error)
+                        {
+                            log.iprint("Error on MCTP async_wait for afPath: ");
+                            log.iprintln(ec.message());
+                        }
+                    }
+                });
         };
-        af_mctp_event = std::make_unique<sdeventplus::source::IO>(
-            event, io->getSocket(), EPOLLIN, std::move(callback));
-        if (!af_mctp_event)
-        {
-            throw std::runtime_error("Couldn't bind to any MCTP endpoint");
-        }
+
+        (*rearmPtr)(streamDesc.get());
+        afMctpEvent = std::move(streamDesc);
         context.registerIo(io);
     }
     else
@@ -150,36 +219,6 @@ void SpdmdApp::connectMCTP()
         {
             getLog().iprintln("Unable to connect to socket");
         }
-    }
-}
-
-void SpdmdApp::connectMCTP(const std::string& sockPath)
-{
-    if (!context.isIOPathRegistered(sockPath))
-    {
-        std::cout << "connectMCTP() " << sockPath << std::endl;
-        auto io = std::make_shared<spdmcpp::MctpIoClass>(getLog());
-        if (io->createSocket(sockPath))
-        {
-            auto callback = [io, this](sdeventplus::source::IO& /*io*/,
-                                       int /*fd*/, uint32_t revents) {
-                mctpCallback(revents, *io);
-            };
-            mctpEvents[sockPath] = std::make_unique<sdeventplus::source::IO>(
-                event, io->getSocket(), EPOLLIN, std::move(callback));
-            context.registerIo(io, sockPath);
-        }
-        else
-        {
-            if (getLog().logLevel >= spdmcpp::LogClass::Level::Warning)
-            {
-                getLog().iprintln("Unable to connect to mctp-i2c-mux socket");
-            }
-        }
-    }
-    if (mctpEvents.empty())
-    {
-        throw std::runtime_error("Couldn't connect to any MCTP endpoint");
     }
 }
 
@@ -320,10 +359,25 @@ void SpdmdApp::setupMeasurementDelay()
         SPDMCPP_ASSERT(measureOnDiscoveryActive);
         return;
     }
-    auto timerCallback = [this](void) { measurementDelayCallback(); };
     measurementDelayTimer =
-        std::make_unique<sdbusplus::Timer>(event.get(), timerCallback);
-    measurementDelayTimer->start(std::chrono::seconds(measureOnDiscoveryDelay));
+        std::make_unique<boost::asio::steady_timer>(getIo());
+    measurementDelayTimer->expires_after(measureOnDiscoveryDelay);
+    measurementDelayTimer->async_wait(
+        [this](const boost::system::error_code& ec) {
+            if (!ec)
+            {
+                measurementDelayCallback();
+            }
+            else
+            {
+                auto& log = getLog();
+                if (log.logLevel >= spdmcpp::LogClass::Level::Warning)
+                {
+                    log.print("Measurement delay timer error: ");
+                    log.println(ec.message());
+                }
+            }
+        });
 }
 
 void SpdmdApp::mctpCallback(uint32_t revents, spdmcpp::MctpIoClass& mctpIo)
@@ -342,7 +396,7 @@ void SpdmdApp::mctpCallback(uint32_t revents, spdmcpp::MctpIoClass& mctpIo)
         {
             getLog().println(
                 "SpdmdApp::IO read failed likely due to broken socket connection, quitting!");
-            event.exit(1);
+            std::exit(1);
             return;
         }
     }
@@ -414,11 +468,6 @@ bool SpdmdApp::autoMeasure(uint8_t eid) const
     return true;
 }
 
-int SpdmdApp::loop()
-{
-    return event.loop();
-}
-
 } // namespace spdmd
 
 int main(int argc, char** argv)
@@ -431,8 +480,7 @@ int main(int argc, char** argv)
 
         spdmApp.setupCli(argc, argv);
 
-        spdmApp.connectDBus();
-
+        spdmApp.connectDBus(spdmDefaultService);
 #ifdef MCTP_IN_KERNEL
         spdmApp.connectMCTP();
 #endif
@@ -442,10 +490,8 @@ int main(int argc, char** argv)
 
         spdmApp.setupMeasurementDelay();
 
-        auto& bus = spdmApp.getBus();
-        sdbusplus::server::manager_t objManager(bus, spdmRootObjectPath);
-        bus.request_name(spdmDefaultService);
-
+        auto& conn = spdmApp.getConn();
+        sdbusplus::server::manager_t objManager(conn, spdmRootObjectPath);
         returnCode = spdmApp.loop();
     }
     catch (const std::exception& e)

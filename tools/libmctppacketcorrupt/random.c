@@ -17,23 +17,19 @@
 
 #include "random.h"
 
-#include <errno.h>
-#include <fcntl.h>
-#include <stdio.h>
-#include <stdlib.h> /* exit */
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
+#include <stdint.h>
+#include <time.h>
 
-static FILE* frand;
+// Global PRNG state
+static u32 prng_state = 0;
 
 //! Initialize random generator
 int random_init(void)
 {
-    frand = fopen("/dev/urandom", "r");
-    if (!frand)
+    prng_state = (u32)time(NULL);
+    if (prng_state == 0)
     {
-        return -1;
+        prng_state = 2463534242U;
     }
     return 0;
 }
@@ -41,23 +37,17 @@ int random_init(void)
 //! Get random value
 int random_value(u32* val)
 {
-    if (frand)
-    {
-        unsigned ret = fread(val, sizeof(*val), 1, frand);
-        if (ret == 1)
-        {
-            return 0;
-        }
-        return -1;
-    }
-    return -1;
+    // Xorshift32
+    uint32_t x = prng_state;
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
+    prng_state = x;
+    *val = x;
+    return 0;
 }
 
 //! Deinitialize random gen
 void random_deinit(void)
-{
-    if (frand)
-    {
-        fclose(frand);
-    }
-}
+{}
+

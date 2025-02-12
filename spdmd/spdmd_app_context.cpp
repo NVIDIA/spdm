@@ -17,19 +17,16 @@
 
 #include "spdmd_app_context.hpp"
 
+#include <systemd/sd-daemon.h>
+
 #include <fstream>
 
 namespace spdmd
 {
 using json = nlohmann::json;
 
-SpdmdAppContext::SpdmdAppContext(sdeventplus::Event&& e,
-                                 sdbusplus::bus::bus&& b,
-                                 std::ostream& logOutStream) :
-    event(std::move(e)),
-    bus(std::move(b)), log(logOutStream)
+SpdmdAppContext::SpdmdAppContext(std::ostream& logOutStream) : log(logOutStream)
 {
-    event.set_watchdog(true);
     try
     {
         std::ifstream ifs(confFile);
@@ -121,4 +118,73 @@ bool SpdmdAppContext::reportLog(obmcprj::Logging::server::Entry::Level severity,
 
     return true;
 }
+
+void SpdmdAppContext::connectDBus(const std::string& busName)
+{
+    startWatchdog();
+    auto bus =
+#ifdef USE_DEFAULT_DBUS
+        sdbusplus::bus::new_default();
+
+#else
+        sdbusplus::bus::new_system();
+#endif
+    conn = std::make_unique<sdbusplus::asio::connection>(io);
+    if (conn)
+    {
+        conn->request_name(busName.c_str());
+    }
+}
+
+void SpdmdAppContext::setupMeasurementDelay()
+{
+    if (!measureOnDiscovery)
+        return;
+
+    if (measureOnDiscoveryDelay == std::chrono::seconds(0))
+    {
+        measureOnDiscoveryActive = true;
+        return;
+    }
+
+    measurementDelayTimer = std::make_unique<boost::asio::steady_timer>(io);
+    measurementDelayTimer->expires_after(measureOnDiscoveryDelay);
+    measurementDelayTimer->async_wait(
+        [this](const boost::system::error_code& ec) {
+            if (!ec)
+            {
+                measureOnDiscoveryActive = true;
+            }
+            else
+            {
+                log.getOstream()
+                    << "Timer canceled or error: " << ec.message() << "\n";
+            }
+        });
+}
+
+void SpdmdAppContext::startWatchdog()
+{
+    uint64_t usec = 0;
+    int enabled = sd_watchdog_enabled(0, &usec);
+    if (enabled > 0 && usec > 0)
+    {
+        watchdogTimer = std::make_unique<boost::asio::steady_timer>(io);
+        scheduleWatchdog(std::chrono::microseconds(usec / 2));
+    }
+}
+
+void SpdmdAppContext::scheduleWatchdog(std::chrono::microseconds interval)
+{
+    watchdogTimer->expires_after(interval);
+    watchdogTimer->async_wait(
+        [this, interval](const boost::system::error_code& ec) {
+            if (!ec)
+            {
+                sd_notify(0, "WATCHDOG=1");
+                scheduleWatchdog(interval);
+            }
+        });
+}
+
 } // namespace spdmd

@@ -27,8 +27,6 @@
 namespace spdmd
 {
 
-extern dbus::ServiceHelper mctpControlService;
-
 using mctp_eid_t = uint8_t;
 using createResponder_t = bool (*)(mctp_eid_t);
 class SpdmdApp;
@@ -84,6 +82,12 @@ class MctpDiscovery
 
     /** @brief Used to watch for new CCSM interface */
     unique_ptr<sdbusplus::bus::match_t> ccsmChange;
+
+    /** @brief CCSM ready variable indicates MCTP ready */
+    bool ccsmReady{};
+
+    /** @brief MCTP ready variable indicates MCTP ready */
+    void initCsmStatus();
 
 #ifndef DISCOVERY_ONLY_FROM_MCTP_CONTROL
     /** @brief Inventory new object signal queue */
@@ -213,39 +217,58 @@ class MctpDiscovery
         const std::map<std::string, dbus::Value>& properties,
         std::string_view propName);
 
-    /** @brief Get Transport Unix socket from the endpoint */
+    /** @brief Get Transport Unix socket from the endpoint
+     *  @param[in] interfaces - Map of interfaces and their properties
+     *  @return String with the Unix socket path or empty string if not found
+     */
     std::string getTransportSocket(const dbus::InterfaceMap& interfaces);
 
-    /** @brief Extract UUID value from the object's interfaces */
+    /** @brief Extract UUID value from the object's interfaces
+     *  @param[in] interfaces - Map of interfaces and their properties
+     *  @return String with the UUID value or empty string if not found
+     */
     std::string getUUID(const dbus::InterfaceMap& interfaces);
 
-    /** @brief Extract UUID value from the service and path */
-    std::string getPropertyValue(const std::string& service,
-                                 const std::string& path,
-                                 const std::string& interface,
-                                 const std::string& property);
-
-    /** @brief get an object from MCTP.Control with the provided uuid
+    /** @brief Extract property value from the service and path asynchronously
+     *  @param[in] service - The D-Bus service name
+     *  @param[in] path - The D-Bus object path
+     *  @param[in] interface - The D-Bus interface name
+     *  @param[in] property - The property name to retrieve
+     *  @param[in] callback - Function to call with the retrieved string value
      */
-    Object getMCTPObject(const std::string& uuid);
+    void getPropertyValueAsync(const std::string& service,
+                               const std::string& path,
+                               const std::string& interface,
+                               const std::string& property,
+                               std::function<void(std::string)> callback);
 
-    /** @brief get a path from the inventory to an object with the provided uuid
+    /** @brief Get an object from MCTP.Control with the provided UUID
+     * asynchronously
+     *  @param[in] uuid - The UUID to search for
+     *  @param[in] callback - Function to call with the retrieved Object
      */
-    sdbusplus::message::object_path getInventoryPath(const std::string& uuid);
+    void getMCTPObjectAsync(const std::string& uuid,
+                            std::function<void(Object)> callback);
 
-    /** @brief Get the unique service from the object mapper */
-    std::unordered_set<std::string> getMCTPServices();
+    /** @brief Get a path from the inventory to an object with the provided UUID
+     * asynchronously
+     *  @param[in] uuid - The UUID to search for
+     *  @param[in] callback - Function to call with the retrieved object path
+     */
+    void getInventoryPathAsync(
+        const std::string& uuid,
+        std::function<void(sdbusplus::message::object_path)> callback);
 
-    /** @brief return true if MCTP services are ready */
-    bool checkMctpServicesReady();
+    /** @brief Get the unique services from the object mapper asynchronously
+     *  @param[in] callback - Function to call with the set of service names
+     */
+    void getMCTPServicesAsync(
+        std::function<void(std::unordered_set<std::string>)> callback);
 
-    /** @brief Setup MCTP services */
+    /** @brief Setup MCTP services
+     *  Discovers and initializes all available MCTP control services
+     */
     void setupMCTPServices();
-
-    /** @brief Call SDBUS with watchdog refresh */
-    template <typename ReplyType>
-    ReplyType sdbusCallWithRetry(sdbusplus::message_t& method,
-                                 unsigned int maxRetries = 4);
 };
 
 } // namespace spdmd
