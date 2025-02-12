@@ -309,6 +309,8 @@ void MctpDiscovery::mctpNewObjectSignal(
         invPath = "/" + eidName.value();
     }
 #endif
+
+#ifndef MCTP_IN_KERNEL
     auto mediumType = getMediumType(interfaces);
     if (!mediumType)
     {
@@ -327,7 +329,7 @@ void MctpDiscovery::mctpNewObjectSignal(
         }
         return;
     }
-#ifndef MCTP_IN_KERNEL
+
     auto sockPath = getTransportSocket(interfaces);
     if (sockPath.empty())
     {
@@ -349,6 +351,7 @@ void MctpDiscovery::mctpNewObjectSignal(
     tryConnectMCTP(sockPath);
 #else
     auto sockPath = "";
+    auto mediumType = std::nullopt;
 #endif
     dbus_api::ResponderArgs args{};
     if (eid.has_value())
@@ -418,8 +421,10 @@ void MctpDiscovery::inventoryNewObjectSignal(
             uuid + '\'');
         return;
     }
+
     auto mediumType = getMediumType(mctp.interfaces);
 
+#ifndef MCTP_IN_KERNEL
     if (!mediumType)
     {
         auto& log = spdmApp.getLog();
@@ -438,7 +443,6 @@ void MctpDiscovery::inventoryNewObjectSignal(
         return;
     }
 
-#ifndef MCTP_IN_KERNEL
     const auto transpSock = getTransportSocket(mctp.interfaces);
     if (transpSock.empty())
     {
@@ -460,6 +464,7 @@ void MctpDiscovery::inventoryNewObjectSignal(
     tryConnectMCTP(transpSock);
 #else
     const auto transpSock = "";
+    auto mediumType = std::nullopt;
 #endif
     dbus_api::ResponderArgs args{};
     if (eid.has_value())
