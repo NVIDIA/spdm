@@ -70,6 +70,13 @@ static constexpr auto mctpBindingIntfName = "xyz.openbmc_project.MCTP.Binding";
 /** @brief Return binding type*/
 static constexpr auto mctpBindingIntfPropertyBindType = "BindingType";
 
+/** @brief MCTP discovery path */
+#ifdef MCTP_IN_KERNEL
+constexpr auto interfacePath = "/au/com/codeconstruct/mctp1";
+#else
+constexpr auto interfacePath = "/xyz/openbmc_project/mctp";
+#endif
+
 /** @brief MCTP transport socket interface name */
 static constexpr auto mctpUnixSockIntfName =
     "xyz.openbmc_project.Common.UnixSocket";

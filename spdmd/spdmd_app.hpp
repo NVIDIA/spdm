@@ -19,13 +19,13 @@
 
 #include "config.h"
 
+#include "common_headers/utils.hpp"
 #include "dbus_impl_responder.hpp"
 #include "spdmcpp/common.hpp"
 #include "spdmcpp/context.hpp"
 #include "spdmcpp/log.hpp"
 #include "spdmcpp/mctp_support.hpp"
 #include "spdmd_app_context.hpp"
-#include "utils.hpp"
 
 #include <sdeventplus/event.hpp>
 #include <sdeventplus/source/io.hpp>

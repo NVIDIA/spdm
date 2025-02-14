@@ -19,6 +19,7 @@
 
 #include "enumerate_utils.hpp"
 
+#include <common_headers/utils.hpp>
 #include <sdbusplus/bus.hpp>
 #include <sdbusplus/bus/match.hpp>
 
@@ -29,31 +30,53 @@ using namespace spdmcpp;
 namespace spdmt
 {
 
-EnumerateEndpoints::EnumerateEndpoints(std::string_view dbusIfc)
+size_t invalid_eid = 255;
+
+EnumerateEndpoints::EnumerateEndpoints(int m_eid)
 {
 #ifdef USE_DEFAULT_DBUS
     auto bus = sdbusplus::bus::new_default();
 #else
     auto bus = sdbusplus::bus::new_system();
 #endif
-    enumerateMCTPDBusObjects(bus, dbusIfc);
+    enumerateMCTPDBusObjects(bus, m_eid);
 }
 
 auto EnumerateEndpoints::enumerateMCTPDBusObjects(sdbusplus::bus::bus& bus,
-                                                  std::string_view dbusIfc)
-    -> void
+                                                  int m_eid) -> void
 {
-    constexpr auto interfacePath = "/xyz/openbmc_project/mctp";
-    auto method = bus.new_method_call(
-        std::string(dbusIfc).c_str(), interfacePath,
-        "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
-    auto reply = bus.call(method);
-    DbusObjectValueTree objects;
-    reply.read(objects);
+
+    auto svcNames = getMCTPServices(bus, m_eid);
+    if (svcNames.empty())
     {
-        for (const auto& [path, ifc] : objects)
+        std::cerr << "No mctp D-Bus services found" << std::endl;
+        return;
+    }
+    for (const auto& pair : svcNames)
+    {
+        auto object_path = pair.first;
+        auto service = pair.second;
+        try
         {
-            exploreMctpItem(path, ifc);
+            auto method = bus.new_method_call(
+                service.c_str(), interfacePath,
+                "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
+            DbusObjectValueTree objects;
+            auto reply = bus.call(method);
+            reply.read(objects);
+            for (const auto& [path, ifc] : objects)
+            {
+                if (path == object_path)
+                {
+                    exploreMctpItem(path, ifc);
+                    break;
+                }
+            }
+        }
+        catch (const sdbusplus::exception::SdBusError& e)
+        {
+            std::cerr << "Failed to retrieve managed objects. Details are "
+                      << e.what() << "\n";
         }
     }
 }
@@ -181,6 +204,99 @@ auto EnumerateEndpoints::getUnixSocketAddress(
     catch (const std::exception& e)
     {}
     return {};
+}
+
+auto EnumerateEndpoints::getMCTPServices(sdbusplus::bus::bus& bus, int m_eid)
+    -> std::vector<std::pair<std::string, std::string>>
+{
+    static constexpr auto mapperService = "xyz.openbmc_project.ObjectMapper";
+    static constexpr auto mapperPath = "/xyz/openbmc_project/object_mapper";
+    static constexpr auto mapperInterface = "xyz.openbmc_project.ObjectMapper";
+    static constexpr auto method = "GetSubTree";
+
+    std::string path = "/";
+    int depth = 0;
+    const std::vector<std::string> interfaces = {
+        "xyz.openbmc_project.MCTP.Endpoint"};
+
+    std::map<std::string, std::map<std::string, std::vector<std::string>>>
+        response;
+    std::vector<std::pair<std::string, std::string>> devServices;
+
+    try
+    {
+        auto reply = bus.new_method_call(mapperService, mapperPath,
+                                         mapperInterface, method);
+        reply.append(path, depth, interfaces);
+        auto dbus_reply = bus.call(reply);
+        dbus_reply.read(response);
+        bool eidFound = false;
+        for (const auto& objectPath : response)
+        {
+            for (const auto& interface : objectPath.second)
+            {
+                const auto currEid =
+                    getPropertyValue(bus, interface.first, objectPath.first,
+                                     "xyz.openbmc_project.MCTP.Endpoint",
+                                     mctpEndpointIntfPropertyEid);
+                if (static_cast<size_t>(m_eid) == currEid &&
+                    currEid != invalid_eid)
+                {
+                    devServices.emplace_back(objectPath.first, interface.first);
+                    eidFound = true;
+                }
+            }
+        }
+        if (!eidFound)
+        {
+            std::cerr << "Error: EID " << m_eid
+                      << " not found in MCTP endpoints" << std::endl;
+        }
+    }
+    catch (const sdbusplus::exception_t& e)
+    {
+        std::cerr << "Error: Failed to get all bus interfaces" << e.what()
+                  << std::endl;
+    }
+    return devServices;
+}
+
+auto EnumerateEndpoints::getPropertyValue(sdbusplus::bus::bus& bus,
+                                          const std::string& service,
+                                          const std::string& path,
+                                          const std::string& interface,
+                                          const std::string& property) -> size_t
+{
+    try
+    {
+        auto method =
+            bus.new_method_call(service.c_str(), path.c_str(),
+                                "org.freedesktop.DBus.Properties", "Get");
+        method.append(interface);
+        method.append(property);
+        auto reply = bus.call(method);
+        std::variant<uint8_t, uint32_t> rawValue;
+        reply.read(rawValue);
+        std::optional<std::variant<unsigned char, unsigned int>> value{
+            rawValue};
+        if (!value)
+        {
+            return invalid_eid;
+        }
+        if (auto sizeValue = std::get_if<unsigned char>(&(*value)))
+        {
+            return *sizeValue;
+        }
+        else if (auto uintValue = std::get_if<unsigned int>(&(*value)))
+        {
+            return static_cast<size_t>(*uintValue);
+        }
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "Error while getting the EID" << e.what() << std::endl;
+    }
+    return invalid_eid;
 }
 
 } // namespace spdmt

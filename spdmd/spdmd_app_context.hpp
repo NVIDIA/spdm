@@ -19,9 +19,9 @@
 
 #include "config.h"
 
+#include "common_headers/utils.hpp"
 #include "spdmcpp/context.hpp"
 #include "spdmcpp/log.hpp"
-#include "utils.hpp"
 
 #include <nlohmann/json.hpp>
 #include <sdbusplus/bus.hpp>
