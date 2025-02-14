@@ -1,7 +1,8 @@
 spdmd_headers = [
   '.',
   '..',
-  '../libspdmcpp/headers_public'
+  '../libspdmcpp/headers_public',
+  '../common_headers'
 ]
 
 sources = [

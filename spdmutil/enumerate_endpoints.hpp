@@ -19,11 +19,14 @@
 
 #include "enumerate_utils.hpp"
 
+#include <common_headers/utils.hpp>
 #include <sdbusplus/bus.hpp>
 #include <spdmcpp/common.hpp>
 
 #include <optional>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 
 namespace spdmt
 {
@@ -42,9 +45,8 @@ class EnumerateEndpoints
   public:
     /**
      * Enumerate MCTP SPDM endpoints
-     * @param dbusIfc Dbus inteface
      */
-    explicit EnumerateEndpoints(std::string_view dbusIfc);
+    explicit EnumerateEndpoints(int m_eid);
 
     /**
      * @brief Get enumerated responders information
@@ -56,9 +58,15 @@ class EnumerateEndpoints
 
   private:
     /** @brief Explore MCTP spdm objects */
-    auto enumerateMCTPDBusObjects(sdbusplus::bus::bus& bus,
-                                  std::string_view dbusIfc) -> void;
-    /** @brief Explore single item */
+    auto enumerateMCTPDBusObjects(sdbusplus::bus::bus& bus, int m_eid) -> void;
+
+    /** @brief Explore a single MCTP item
+     *
+     * @param path The D-Bus object path of the MCTP item
+     * @param ifc The D-Bus interface map containing properties of the MCTP item
+     *
+     * @return void This method doesn't return a value
+     */
     auto exploreMctpItem(const sdbusplus::message::object_path& path,
                          const DbusInterfaceMap& ifc) -> void;
     /** @brief Get endpoint EID*/
@@ -70,6 +78,30 @@ class EnumerateEndpoints
     auto getUUID(const DbusInterfaceMap& ifc) -> std::string;
     /** @brief Get transport socket */
     auto getUnixSocketAddress(const DbusInterfaceMap& ifc) -> std::string;
+
+    /** @brief Get the unique service from the object mapper
+     *
+     * @param bus The D-Bus connection to use for querying the object mapper
+     * @type bus: sdbusplus::bus::bus&
+     *
+     * @return std::unordered_set<std::string> A set of unique MCTP service
+     * names
+     */
+    auto getMCTPServices(sdbusplus::bus::bus& bus, int m_eid)
+        -> std::vector<std::pair<std::string, std::string>>;
+
+    /** @brief Extract a particular value from the service and path
+     *
+     * @param service The name of the D-Bus service to query
+     * @param path The object path within the D-Bus service
+     * @param interface The D-Bus interface to query
+     * @param property The name of the property to retrieve
+     *
+     * @return std::string The value of the requested property
+     */
+    auto getPropertyValue(sdbusplus::bus::bus& bus, const std::string& service,
+                          const std::string& path, const std::string& interface,
+                          const std::string& property) -> size_t;
 
   private:
     std::vector<ResponderInfo> respInfos;

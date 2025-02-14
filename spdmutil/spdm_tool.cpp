@@ -66,24 +66,9 @@ auto SpdmTool::parseArgs(int argc, char** argv) -> int
     bool debugMode{};
     // Print help
     app.set_help_all_flag("--help-all", "Expand all help");
-    // Inteface medium options
-    const std::map<std::string, std::string> mediumMap{
-        {"pcie", dbusIfcPCIe},
-        {"spi", dbusIfcSPI},
-        {"i2c", dbusIfcI2C},
-        {"usb", dbusIfcUSB},
-    };
-    app.add_option("-i,--interface", dbusIfc, "Transport medium")
-        ->transform(CLI::CheckedTransformer(mediumMap, CLI::ignore_case))
-        ->default_str("pcie");
     // Target EID
     app.add_option("-e,--eid", m_eid, "Endpoint EID")
         ->check(CLI::Range(0x00, 0xff));
-    // I2C bus number
-    int i2cBusNo{6};
-    app.add_option("-b,--bus", i2cBusNo, "I2C bus number")
-        ->check(CLI::Range(0x00, 0xff))
-        ->default_str("6");
     // Add option json file
     app.add_option("--json", jsonFilename, "Save responses to JSON file");
     // Add option for the debug tool
@@ -163,10 +148,6 @@ auto SpdmTool::parseArgs(int argc, char** argv) -> int
     {
         std::cerr << "--eid argument not specified" << std::endl;
         return EXIT_FAILURE;
-    }
-    if (dbusIfc == dbusIfcI2C)
-    {
-        dbusIfc += std::to_string(i2cBusNo);
     }
     // Check if the directory exists and we are able to create file
     if (!jsonFilename.empty())
@@ -712,7 +693,7 @@ auto SpdmTool::parseResp(std::vector<uint8_t>& buf) -> spdmcpp::RetStat
 // Try connect MCTP
 auto SpdmTool::connectMctp() -> void
 {
-    EnumerateEndpoints enumerate(dbusIfc);
+    EnumerateEndpoints enumerate(m_eid);
     auto& respInfo = enumerate.getRespondersInfo();
     if (respInfo.empty() || respInfo.back().sockPath.empty())
     {
@@ -889,7 +870,7 @@ auto SpdmTool::runEnumerate() -> bool
     {
         return true;
     }
-    EnumerateEndpoints eobj(dbusIfc);
+    EnumerateEndpoints eobj(m_eid);
     for (const auto& epInfo : eobj.getRespondersInfo())
     {
         jsonGen["Endpoints"].push_back({{"Path", epInfo.path},

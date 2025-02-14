@@ -85,14 +85,8 @@ class SpdmTool
 
   private:
     static constexpr auto cmdCliInvalid = -1;
-    static constexpr auto dbusIfcPCIe = "xyz.openbmc_project.MCTP.Control.PCIe";
-    static constexpr auto dbusIfcSPI = "xyz.openbmc_project.MCTP.Control.SPI";
-    static constexpr auto dbusIfcUSB = "xyz.openbmc_project.MCTP.Control.USB";
-    static constexpr auto dbusIfcI2C = "xyz.openbmc_project.MCTP.Control.SMBus";
     //! Logger
     spdmcpp::LogClass log;
-    // Selected medium
-    std::string dbusIfc{dbusIfcPCIe};
     // Current request with args
     std::vector<std::optional<cmdv>> cmdList;
     // Connection class
