@@ -22,6 +22,9 @@
 #include "spdmcpp/common.hpp"
 #include "spdmd_app_context.hpp"
 #include "xyz/openbmc_project/Association/Definitions/server.hpp"
+#include "xyz/openbmc_project/Attestation/ComponentIntegrity/server.hpp"
+#include "xyz/openbmc_project/Attestation/IdentityAuthentication/server.hpp"
+#include "xyz/openbmc_project/Inventory/Item/TrustedComponent/server.hpp"
 #include "xyz/openbmc_project/Object/Enable/server.hpp"
 #include "xyz/openbmc_project/SPDM/Responder/server.hpp"
 
@@ -92,7 +95,11 @@ class MctpTransportClass : public spdmcpp::MctpTransportClass
 using ResponderIntf = sdbusplus::server::object::object<
     sdbusplus::xyz::openbmc_project::SPDM::server::Responder,
     sdbusplus::xyz::openbmc_project::Association::server::Definitions,
-    sdbusplus::xyz::openbmc_project::Object::server::Enable>;
+    sdbusplus::xyz::openbmc_project::Object::server::Enable,
+    sdbusplus::xyz::openbmc_project::Attestation::server::ComponentIntegrity,
+    sdbusplus::xyz::openbmc_project::Attestation::server::
+        IdentityAuthentication,
+    sdbusplus::xyz::openbmc_project::Inventory::Item::server::TrustedComponent>;
 
 /** @class Responder
  *  @brief OpenBMC SPDM.Responder implementation.
@@ -160,6 +167,9 @@ class Responder : public ResponderIntf
     {
         return appContext;
     }
+    /** @brief Update responder verification status for identity authentication
+     */
+    void updateResponderVerificationStatus();
 
   protected:
     using MeasurementsContainerType =

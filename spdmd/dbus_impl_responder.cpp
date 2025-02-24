@@ -30,6 +30,27 @@ namespace spdmd
 namespace dbus_api
 {
 
+/**
+ * @brief Convert SPDM version to string
+ *
+ * @param version SPDM version
+ * @return std::string SPDM version string
+ */
+inline std::string getVersionStr(const uint8_t version)
+{
+    switch (version)
+    {
+        case 0x11:
+            return "1.1.0";
+        case 0x10:
+            return "1.0.0";
+        case 0x12:
+            return "1.1.2";
+        default:
+            return "unknown";
+    }
+}
+
 Responder::Responder(SpdmdAppContext& appCtx, const std::string& path,
                      uint8_t eid,
                      const sdbusplus::message::object_path& mctpPath,
@@ -53,9 +74,31 @@ Responder::Responder(SpdmdAppContext& appCtx, const std::string& path,
     }
     connection.registerTransport(transport);
 
+    type(sdbusplus::xyz::openbmc_project::Attestation::server::
+             ComponentIntegrity::SecurityTechnologyType::SPDM);
+    // Initialize with empty version, will be updated when connection is
+    // established
+    typeVersion("");
+    if (inventoryPath.filename().find("ERoT") != std::string::npos)
+    {
+        trustedComponentType(
+            sdbusplus::xyz::openbmc_project::Inventory::Item::server::
+                TrustedComponent::ComponentAttachType::Discrete);
+    }
+    else
+    {
+        trustedComponentType(
+            sdbusplus::xyz::openbmc_project::Inventory::Item::server::
+                TrustedComponent::ComponentAttachType::Integrated);
+    }
+
     // Update hidden property
     static constexpr auto confName = "visible";
-    enabled(appCtx.getPropertyByEid<bool>(eid, confName).value_or(true));
+    sdbusplus::xyz::openbmc_project::Object::server::Enable::enabled(
+        appCtx.getPropertyByEid<bool>(eid, confName).value_or(true));
+    sdbusplus::xyz::openbmc_project::Attestation::server::ComponentIntegrity::
+        enabled(true);
+
     emit_object_added();
 }
 
@@ -67,6 +110,8 @@ Responder::~Responder()
 void Responder::updateVersionInfo()
 {
     version(static_cast<uint8_t>(connection.getMessageVersion()));
+    typeVersion(
+        getVersionStr(static_cast<uint8_t>(connection.getMessageVersion())));
 }
 
 void Responder::updateCapabilities()
@@ -138,6 +183,29 @@ void Responder::updateCertificatesInfo()
     certificate(std::move(certs));
 }
 
+void Responder::updateResponderVerificationStatus()
+{
+    responderVerificationStatus(
+        sdbusplus::xyz::openbmc_project::Attestation::server::
+            IdentityAuthentication::VerificationStatus::Unknown);
+    for (ConnectionClass::SlotIdx idx = 0; idx < ConnectionClass::slotNum;
+         ++idx)
+    {
+        if (connection.slotHasInfo(idx, SlotInfoEnum::CERTIFICATES))
+        {
+            responderVerificationStatus(
+                sdbusplus::xyz::openbmc_project::Attestation::server::
+                    IdentityAuthentication::VerificationStatus::Success);
+            return;
+        }
+    }
+    responderVerificationStatus(
+        sdbusplus::xyz::openbmc_project::Attestation::server::
+            IdentityAuthentication::VerificationStatus::Failed);
+    getLog().iprint("Responder verification status failed for EID: ");
+    getLog().iprintln(eid);
+}
+
 void Responder::syncSlotsInfo()
 {
     MeasurementsContainerType meas;
@@ -145,6 +213,7 @@ void Responder::syncSlotsInfo()
     updateVersionInfo();
     updateAlgorithmsInfo();
     updateCertificatesInfo();
+    updateResponderVerificationStatus();
     updateCapabilities();
 
     if (connection.hasInfo(ConnectionInfoEnum::MEASUREMENTS))
@@ -451,6 +520,9 @@ void Responder::updateLastUpdateTime()
         std::chrono::system_clock::now(); // TODO why is utc_clock undeclared!?
 
     lastUpdate(
+        std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch())
+            .count());
+    lastUpdated(
         std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch())
             .count());
 }
