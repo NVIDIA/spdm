@@ -24,6 +24,7 @@
 #include "xyz/openbmc_project/Association/Definitions/server.hpp"
 #include "xyz/openbmc_project/Attestation/ComponentIntegrity/server.hpp"
 #include "xyz/openbmc_project/Attestation/IdentityAuthentication/server.hpp"
+#include "xyz/openbmc_project/Certs/Certificate/server.hpp"
 #include "xyz/openbmc_project/Inventory/Item/TrustedComponent/server.hpp"
 #include "xyz/openbmc_project/Object/Enable/server.hpp"
 #include "xyz/openbmc_project/SPDM/Responder/server.hpp"
@@ -96,6 +97,7 @@ using ResponderIntf = sdbusplus::server::object::object<
     sdbusplus::xyz::openbmc_project::SPDM::server::Responder,
     sdbusplus::xyz::openbmc_project::Association::server::Definitions,
     sdbusplus::xyz::openbmc_project::Object::server::Enable,
+    sdbusplus::xyz::openbmc_project::Certs::server::Certificate,
     sdbusplus::xyz::openbmc_project::Attestation::server::ComponentIntegrity,
     sdbusplus::xyz::openbmc_project::Attestation::server::
         IdentityAuthentication,
@@ -210,6 +212,14 @@ class Responder : public ResponderIntf
      * @param[in] serialData Serial number data
      */
     void setSerialNumberAsync(const std::vector<uint8_t>& serialData);
+
+    /** @brief Parse a PEM-formatted certificate and fill the certificate info
+     *  @param[in] certPEM - PEM-formatted certificate string to parse
+     *  @details Parses the provided PEM certificate string and populates the
+     *           internal certificate information structures. The certificate
+     *           is expected to be in valid PEM format.
+     */
+    void parseAndFillCertificate(const std::string& certPEM);
 };
 
 } // namespace dbus_api

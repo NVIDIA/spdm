@@ -21,6 +21,7 @@
 #include "flag.hpp"
 #include "log.hpp"
 
+#include <mbedtls/config.h>
 #include <mbedtls/ecdh.h>
 #include <mbedtls/ecdsa.h>
 #include <mbedtls/error.h>
@@ -36,6 +37,8 @@
 #include <limits>
 #include <memory>
 #include <vector>
+
+#define MBEDTLS_X509_MAX_DN_NAME_SIZE 256
 
 namespace spdmcpp
 {
@@ -285,6 +288,176 @@ inline std::pair<int, std::unique_ptr<mbedtls_x509_crt_raii>>
     } // clang-format on
     off += asn1Len;
     return std::make_pair(ret, std::move(cert));
+}
+
+/** @brief Converts mbedtls_x509_time struct to Unix timestamp in milliseconds
+ *  @param[in] t - mbedtls_x509_time struct containing date/time information
+ *  @returns Unix timestamp in milliseconds (milliseconds since epoch)
+ *
+ *  This function takes an mbedtls_x509_time struct which contains calendar
+ * date/time fields and converts it to a Unix timestamp (milliseconds since
+ * epoch). The conversion accounts for the different field representations
+ * between mbedtls_x509_time and std::tm structs.
+ */
+inline uint64_t convertMbedtlsTime(const mbedtls_x509_time& t)
+{
+    std::tm tmVal{};
+    // In mbedtls_x509_time, year is stored as full year (e.g., 2024)
+    // In std::tm, year is stored as years since 1900 (e.g., 124 for 2024)
+    tmVal.tm_year = t.year - 1900;
+
+    // In mbedtls_x509_time, month is 1-12 (January = 1)
+    // In std::tm, month is 0-11 (January = 0)
+    tmVal.tm_mon = t.mon - 1;
+    tmVal.tm_mday = t.day;
+    tmVal.tm_hour = t.hour;
+    tmVal.tm_min = t.min;
+    tmVal.tm_sec = t.sec;
+    time_t timeSinceEpoch = timegm(&tmVal);
+    return static_cast<uint64_t>(timeSinceEpoch) * 1000ULL;
+}
+
+/** @brief Gets the key usage flags from an X.509 certificate
+ *  @param[in] cert - Pointer to mbedtls_x509_crt certificate structure
+ *  @returns Vector of strings representing the key usage flags that are set
+ *
+ *  This function examines the key usage extension flags in the X.509
+ * certificate and returns a vector of human-readable strings for each usage
+ * that is enabled. The possible key usages are:
+ *  - DigitalSignature: For digital signatures
+ *  - NonRepudiation: For non-repudiation
+ *  - KeyEncipherment: For key encryption
+ *  - DataEncipherment: For data encryption
+ *  - KeyCertSign: For signing certificates
+ *  - CRLSigning: For signing CRLs
+ *  - EncipherOnly: For encryption only
+ *  - DecipherOnly: For decryption only
+ */
+inline std::vector<std::string> getKeyUsage(LogClass& log,
+                                            const mbedtls_x509_crt* cert)
+{
+    if (cert == nullptr)
+    {
+        log.iprint("getKeyUsage: Certificate pointer is null");
+        log.println('\'');
+        return {};
+    }
+
+    static const std::array<std::pair<unsigned int, std::string_view>, 8>
+        keyUsageMap = {{{MBEDTLS_X509_KU_DIGITAL_SIGNATURE, "DigitalSignature"},
+                        {MBEDTLS_X509_KU_NON_REPUDIATION, "NonRepudiation"},
+                        {MBEDTLS_X509_KU_KEY_ENCIPHERMENT, "KeyEncipherment"},
+                        {MBEDTLS_X509_KU_DATA_ENCIPHERMENT, "DataEncipherment"},
+                        {MBEDTLS_X509_KU_KEY_CERT_SIGN, "KeyCertSign"},
+                        {MBEDTLS_X509_KU_CRL_SIGN, "CRLSigning"},
+                        {MBEDTLS_X509_KU_ENCIPHER_ONLY, "EncipherOnly"},
+                        {MBEDTLS_X509_KU_DECIPHER_ONLY, "DecipherOnly"}}};
+
+    std::vector<std::string> usage;
+    usage.reserve(keyUsageMap.size());
+
+    for (const auto& [flag, name] : keyUsageMap)
+    {
+        if ((cert->key_usage & flag) != 0)
+        {
+            usage.push_back(std::string(name));
+        }
+    }
+
+    return usage;
+}
+
+/** @brief Structure to hold parsed certificate information */
+struct CertificateInfo
+{
+    std::string certificate; // The PEM certificate string
+    std::string issuer;
+    std::string subject;
+    uint64_t notBefore{0};
+    uint64_t notAfter{0};
+    std::vector<std::string> keyUsage;
+};
+
+/** @brief Parses a PEM-formatted X.509 certificate
+ *  @param[in] log - Logger for errors
+ *  @param[in] certPEM - PEM certificate to parse
+ *  @return CertificateInfo containing parsed certificate data
+ *  @throws std::invalid_argument if certificate data is invalid
+ *  @throws std::runtime_error if certificate parsing fails
+ */
+inline CertificateInfo parseCertificatePEM(LogClass& log,
+                                           const std::string& certPEM)
+{
+    CertificateInfo info;
+
+    if (certPEM.empty())
+    {
+        throw std::invalid_argument("Empty certificate provided");
+    }
+
+    mbedtls_x509_crt_raii chain;
+
+    int rc = mbedtls_x509_crt_parse(
+        chain, reinterpret_cast<const unsigned char*>(certPEM.data()),
+        certPEM.size() + 1);
+    if (rc < 0)
+    {
+        std::string msg = "Failed to parse certificate chain: ";
+        mbedtlsPrintErrorString(log, rc);
+        throw std::runtime_error(msg);
+    }
+
+    constexpr size_t maxDNLen = MBEDTLS_X509_MAX_DN_NAME_SIZE;
+    std::vector<char> dnBuf(maxDNLen + 1); // +1 for null terminator
+
+    // Use the first certificate in the chain as it is the leaf certificate
+    int ret = mbedtls_x509_dn_gets(dnBuf.data(), dnBuf.size(), &chain->issuer);
+    if (ret < 0)
+    {
+        std::string msg = "Failed to get issuer DN: ";
+        mbedtlsPrintErrorString(log, ret);
+        throw std::runtime_error(msg);
+    }
+    std::string issuer = dnBuf.data();
+    if (issuer.empty())
+    {
+        throw std::invalid_argument("Missing issuer DN");
+    }
+
+    ret = mbedtls_x509_dn_gets(dnBuf.data(), dnBuf.size(), &chain->subject);
+    if (ret < 0)
+    {
+        std::string msg = "Failed to get subject DN: ";
+        mbedtlsPrintErrorString(log, ret);
+        throw std::runtime_error(msg);
+    }
+    std::string subject = dnBuf.data();
+    if (subject.empty())
+    {
+        throw std::invalid_argument("Missing subject DN");
+    }
+
+    uint64_t notBefore = convertMbedtlsTime(chain->valid_from);
+    uint64_t notAfter = convertMbedtlsTime(chain->valid_to);
+    if (notBefore == 0 || notAfter == 0)
+    {
+        throw std::invalid_argument("Invalid validity period");
+    }
+
+    auto keyUsage = getKeyUsage(log, chain);
+    if (keyUsage.empty())
+    {
+        throw std::invalid_argument("No key usage found");
+    }
+
+    info.certificate = certPEM;
+    info.issuer = std::move(issuer);
+    info.subject = std::move(subject);
+    info.notBefore = notBefore;
+    info.notAfter = notAfter;
+    info.keyUsage = std::move(keyUsage);
+
+    return info;
 }
 
 } // namespace spdmcpp

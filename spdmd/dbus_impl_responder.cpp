@@ -168,6 +168,8 @@ void Responder::updateAlgorithmsInfo()
 void Responder::updateCertificatesInfo()
 {
     CertificatesContainerType certs;
+    std::string certToUse;
+
     for (ConnectionClass::SlotIdx idx = 0; idx < ConnectionClass::slotNum;
          ++idx)
     {
@@ -176,11 +178,20 @@ void Responder::updateCertificatesInfo()
             std::string cert;
             if (connection.getCertificatesPEM(cert, idx))
             {
+                certToUse = cert;
                 certs.emplace_back(idx, std::move(cert));
             }
         }
     }
+
+    if (certToUse.empty())
+    {
+        log.iprint("No valid certificates found for EID ");
+        log.println(eid);
+    }
+
     certificate(std::move(certs));
+    parseAndFillCertificate(certToUse);
 }
 
 void Responder::updateResponderVerificationStatus()
@@ -570,6 +581,43 @@ bool MctpTransportClass::clearTimeout()
         return true;
     }
     return false;
+}
+
+void Responder::parseAndFillCertificate(const std::string& certPEM)
+{
+    auto resetCertificateProperties = [this]() {
+        if (this->log.logLevel >= spdmcpp::LogClass::Level::Debug)
+        {
+            this->log.print(
+                "parseAndFillCertificate: Resetting certificate properties for EID: ");
+            this->log.println(this->eid);
+        }
+        certificateString("");
+        issuer("");
+        subject("");
+        validNotBefore(0);
+        validNotAfter(0);
+        keyUsage({});
+    };
+
+    try
+    {
+        auto certInfo = ::parseCertificatePEM(this->log, certPEM);
+        certificateString(certInfo.certificate);
+        issuer(certInfo.issuer);
+        subject(certInfo.subject);
+        validNotBefore(certInfo.notBefore);
+        validNotAfter(certInfo.notAfter);
+        keyUsage(std::move(certInfo.keyUsage));
+    }
+    catch (const std::exception& e)
+    {
+        log.iprint("Certificate error for EID ");
+        log.println(eid);
+        log.iprint(e.what());
+        log.println('\n');
+        resetCertificateProperties();
+    }
 }
 
 void Responder::setSerialNumberAsync(const std::vector<uint8_t>& serialData)
