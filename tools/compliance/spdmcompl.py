@@ -204,22 +204,42 @@ def verify_spdm_capabilities(conf, meas):
     errors = []
     report = []
     cap_req = conf['capabilities']
+    max_ct_exponent = conf.get('max_ct_exponent', 0x1A)  # Assuming the expected CTExponent value is defined in the configuration
+
     for bus, eps in meas.items():
         for ep_num, data in eps:
             cap_resp = data.get('GetCapabilities')
             if cap_resp:
                 rc =  cap_resp.get('ResponseCode')
                 cap = cap_resp.get('Capabilities')
+                ct_exponent = cap_resp.get('CTExponent')  # Extract CTExponent
+
                 if rc != 'RetStat::OK':
                     errors.append( { 'bus': bus, 'endpoint': ep_num, 'reason' : 'CheckCapabilities' ,
                                     'error' : 'Invalid response code', 'val': rc} )
                     continue
+
+                # Check capabilities
                 if cap and (set(cap_req) != set(cap)):
+                    errors.append({'bus': bus, 'endpoint': ep_num, 'reason': 'CheckCapabilities',
+                                   'error': 'Value not match', 'val': ', '.join(cap)})
+                else:
+                    report.append({'bus': bus, 'endpoint': ep_num, 'reason': 'CheckCapabilities',
+                                   'status': 'Success', 'val': rc, 'cap': cap})
+ 
+                # Check if CTExponent is present
+                if ct_exponent is None:
                     errors.append( { 'bus': bus, 'endpoint': ep_num, 'reason' : 'CheckCapabilities' ,
                                     'error' : 'Value not match', 'val': ', '.join(cap)} )
+                # Check if CTExponent exceeds the maximum allowed value
+                elif ct_exponent > max_ct_exponent:
+                    errors.append({'bus': bus, 'endpoint': ep_num, 'reason': 'CheckCTExponent',
+                                   'error': f'CTExponent {ct_exponent} exceeds maximum allowed value {max_ct_exponent}', 'val': ct_exponent})
                 else:
                     report.append( { 'bus': bus, 'endpoint': ep_num, 'reason' : 'CheckCapabilities' ,
                                     'status' : 'Success', 'val': rc, 'cap' : cap} )
+                    report.append({'bus': bus, 'endpoint': ep_num, 'reason': 'CheckCTExponent',
+                                   'status': 'Success', 'val': rc, 'CTExponent': ct_exponent})
             else:
                 errors.append( { 'bus': bus, 'endpoint': ep_num, 'reason' : 'CheckCapabilities' ,
                                 'error' : 'Cmd not executed', 'val': None} )
