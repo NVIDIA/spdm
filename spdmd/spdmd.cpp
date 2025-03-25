@@ -222,15 +222,6 @@ bool SpdmdApp::needRecreateResponder(spdmcpp::TransportMedium currMedium,
                                      spdmcpp::TransportMedium newMedium)
 {
     using tran = spdmcpp::TransportMedium;
-
-    // If currMedium is set, it indicates that the
-    // responder is already created. This check is added to
-    // allow recreation if the medium is same
-    if (currMedium == newMedium)
-    {
-        return true;
-    }
-
     switch (currMedium)
     {
         case tran::PCIe:
