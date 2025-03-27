@@ -54,8 +54,8 @@ auto EnumerateEndpoints::enumerateMCTPDBusObjects(sdbusplus::bus::bus& bus,
     }
     for (const auto& pair : svcNames)
     {
-        auto object_path = pair.first;
-        auto service = pair.second;
+        const auto& object_path = pair.first;
+        const auto& service = pair.second;
         try
         {
             auto method = bus.new_method_call(
@@ -138,7 +138,7 @@ auto EnumerateEndpoints::getEid(
     {
         try
         {
-            auto types = std::get<std::vector<uint8_t>>(
+            const auto& types = std::get<std::vector<uint8_t>>(
                 properties.at(mctpEndpointIntfPropertySupportedMessageTypes));
             if (std::find(types.begin(), types.end(), mctpTypeSPDM) !=
                 types.end())
@@ -192,7 +192,7 @@ auto EnumerateEndpoints::getUnixSocketAddress(
             {
                 try
                 {
-                    const auto vec =
+                    const auto& vec =
                         std::get<std::vector<uint8_t>>(addr->second);
                     return {vec.begin(), vec.end()};
                 }

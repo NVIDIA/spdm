@@ -163,17 +163,15 @@ int corrupt_pkt_mod_algo_param_reserved(char* buf, size_t len)
     {
         return modify_reserved_fields(buf, len, 7, 1);
     }
-    else if (field_id <= 2 + 12)
+    else if (field_id <= 14)
     {
         field_id -= 2;
         return modify_reserved_fields(buf, len, field_id, 12);
     }
-    else if (field_id <= 15)
+    else /* field_id == 15 */
     {
-        field_id -= 15;
         return modify_reserved_fields(buf, len, 34, 2);
     }
-    return len;
 }
 
 // Corrupt Certificate sizes

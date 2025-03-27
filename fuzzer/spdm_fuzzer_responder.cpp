@@ -300,10 +300,10 @@ bool FuzzingResponder::sendResponse(RequestResponseEnum expectedResponse,
                         std::prev(buf.end(), ret), std::end(buf));
                     log.println("mbedtls_x509write_crt_der() len: ", ret,
                                 ", der: ", bufDer);
-                }
 
-                LOCAL_ASSERT_MBEDTLS_0(mbedtls_x509_crt_parse_der(
-                    &caCert, &*std::prev(buf.end(), ret), ret));
+                    LOCAL_ASSERT_MBEDTLS_0(mbedtls_x509_crt_parse_der(
+                        &caCert, &*std::prev(buf.end(), ret), ret));
+                }
                 mbedtls_x509write_crt_free(&ctx);
             }
             {

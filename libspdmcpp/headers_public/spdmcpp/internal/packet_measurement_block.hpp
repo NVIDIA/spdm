@@ -72,7 +72,6 @@ struct PacketMeasurementBlockVar
         SPDMCPP_ASSERT(MeasurementVector.size() <=
                        std::numeric_limits<uint16_t>::max());
         size += MeasurementVector.size();
-        SPDMCPP_ASSERT(size <= std::numeric_limits<uint32_t>::max());
         return static_cast<uint32_t>(size);
     }
     RetStat finalize()
@@ -129,9 +128,7 @@ struct PacketMeasurementBlockVar
     auto rs = packetDecodeBasic(logg, p.Min, buf, off);
     if (isError(rs))
     {
-        {
-            return rs;
-        }
+        return rs;
     }
     p.MeasurementVector.resize(p.Min.MeasurementSize);
     rs = packetDecodeBasic(logg, p.MeasurementVector, buf, off);
