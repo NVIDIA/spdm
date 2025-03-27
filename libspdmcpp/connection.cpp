@@ -176,7 +176,8 @@ void ConnectionClass::resetConnection()
     Algorithms = PacketAlgorithmsResponseVar();
     packetDecodeInfo = PacketDecodeInfo();
     SupportedVersions.clear();
-
+    respIfReqCode = 0;
+    respIfReadyToken = std::nullopt;
     DMTFMeasurements.clear();
     MeasurementsHash.clear();
     MeasurementsSignature.clear();
@@ -291,7 +292,7 @@ RetStat ConnectionClass::parseCertChain(SlotClass& slot,
         if (Log.logLevel >= spdmcpp::LogClass::Level::Informational)
         {
             Log.iprint("provided root certificate hash = ");
-            Log.println(rootCertHash);
+            Log.println(std::move(rootCertHash));
         }
     }
 
@@ -1018,7 +1019,7 @@ RetStat ConnectionClass::handleRecv<PacketMeasurementsResponseVar>()
         if (getCertificatesPEM(cert, CertificateSlotIdx))
         {
             Log.iprint("Certificate chain: ");
-            Log.println(cert);
+            Log.println(std::move(cert));
         }
         return tryGetVersion();
     }
@@ -1113,6 +1114,10 @@ RetStat ConnectionClass::handleRecv(EventReceiveClass& event)
             const auto RTDM =
                 err.ExtendedErrorData
                     [PacketErrorResponseVar::ExtErrOffsNotReadyRTDM];
+            if (!transport)
+            {
+                return RetStat::ERROR_UNKNOWN;
+            }
             return transport->setupTimeout(
                 calcResponseIfReadyWaitTimeMs(RTDExp, RTDM));
         }

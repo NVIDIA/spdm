@@ -475,11 +475,14 @@ inline RetStat MctpIoClass::write(const std::vector<uint8_t>& buf,
                                   [[maybe_unused]] timeout_us_t /*timeout*/)
 {
     SPDMCPP_LOG_TRACE_FUNC(Log);
-    size_t sent = 0;
-    while (sent < buf.size())
+    ssize_t sent = 0;
+    ssize_t toSend = static_cast<ssize_t>(buf.size());
+
+    while (sent < toSend)
     {
-        ssize_t ret = send(Socket, (void*)&buf[sent], buf.size() - sent, 0);
-        if (ret == -1)
+        ssize_t ret = send(Socket, (void*)&buf[static_cast<size_t>(sent)],
+                           static_cast<size_t>(toSend - sent), 0);
+        if (ret <= 0)
         {
             if (Log.logLevel >= LogClass::Level::Critical)
             {

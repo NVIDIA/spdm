@@ -205,8 +205,9 @@ void MctpDiscovery::getMCTPServicesAsync(
     auto& conn = spdmApp.getConn();
 
     conn.async_method_call(
-        [this, callback](boost::system::error_code ec,
-                         sdbusplus::message::message& replyMsg) {
+        [this, callback =
+                   std::move(callback)](boost::system::error_code ec,
+                                        sdbusplus::message::message& replyMsg) {
             std::unordered_set<std::string> devServices;
 
             if (ec)
@@ -217,7 +218,7 @@ void MctpDiscovery::getMCTPServicesAsync(
                     log.iprint("getMCTPServicesAsync: D-Bus error: ");
                     log.iprintln(ec.message());
                 }
-                callback(devServices);
+                callback(std::move(devServices));
                 return;
             }
 
@@ -246,7 +247,7 @@ void MctpDiscovery::getMCTPServicesAsync(
                 }
             }
 
-            callback(devServices);
+            callback(std::move(devServices));
         },
         mapperService, mapperPath, mapperInterface, method,
         rootPath, // Args
@@ -355,8 +356,8 @@ void MctpDiscovery::mctpNewObjectSignal(
                                            uuid,
                                            mediumType,
                                            objPath,
-                                           invPath,
-                                           sockPath};
+                                           std::move(invPath),
+                                           std::move(sockPath)};
         }
         else if (std::holds_alternative<unsigned int>(value))
         {
@@ -365,8 +366,8 @@ void MctpDiscovery::mctpNewObjectSignal(
                 uuid,
                 mediumType,
                 objPath,
-                invPath,
-                sockPath};
+                std::move(invPath),
+                std::move(sockPath)};
         }
         spdmApp.discoveryUpdateResponder(args);
     }
@@ -443,8 +444,8 @@ void MctpDiscovery::mctpNewObjectSignal(
                                            uuid,
                                            mediumType,
                                            objPath,
-                                           invPath,
-                                           sockPath};
+                                           std::move(invPath),
+                                           std::move(sockPath)};
         }
         else if (std::holds_alternative<unsigned int>(value))
         {
@@ -453,8 +454,8 @@ void MctpDiscovery::mctpNewObjectSignal(
                 uuid,
                 mediumType,
                 objPath,
-                invPath,
-                sockPath};
+                std::move(invPath),
+                std::move(sockPath)};
         }
         spdmApp.discoveryUpdateResponder(args);
     }
@@ -559,7 +560,7 @@ void MctpDiscovery::inventoryNewObjectSignal(
                                            mediumType,
                                            mctpObj.path,
                                            objPath,
-                                           transpSock};
+                                           std::move(transpSock)};
         }
         else if (std::holds_alternative<unsigned int>(eidvalue))
         {
@@ -569,7 +570,7 @@ void MctpDiscovery::inventoryNewObjectSignal(
                 mediumType,
                 mctpObj.path,
                 objPath,
-                transpSock};
+                std::move(transpSock)};
         }
         spdmApp.discoveryUpdateResponder(args);
     }
@@ -691,7 +692,7 @@ std::string
             {
                 try
                 {
-                    const auto vec =
+                    const auto& vec =
                         std::get<std::vector<uint8_t>>(addr->second);
                     return {vec.begin(), vec.end()};
                 }
@@ -762,8 +763,9 @@ void MctpDiscovery::getPropertyValueAsync(
     auto& conn = spdmApp.getConn();
 
     conn.async_method_call(
-        [this, callback](boost::system::error_code ec,
-                         sdbusplus::message::message& replyMsg) {
+        [this, callback =
+                   std::move(callback)](boost::system::error_code ec,
+                                        sdbusplus::message::message& replyMsg) {
             std::string result;
             if (ec)
             {
@@ -773,7 +775,7 @@ void MctpDiscovery::getPropertyValueAsync(
                     log.iprint("getPropertyValueAsync: dbus error: ");
                     log.iprintln(ec.message());
                 }
-                callback(result);
+                callback(std::move(result));
                 return;
             }
 
@@ -793,7 +795,7 @@ void MctpDiscovery::getPropertyValueAsync(
                 }
             }
 
-            callback(result);
+            callback(std::move(result));
         },
         service.c_str(), path.c_str(), "org.freedesktop.DBus.Properties", "Get",
         interface, property);
@@ -855,7 +857,7 @@ void MctpDiscovery::getMCTPObjectAsync(const std::string& uuid,
                     {
                         *found = true;
                         Object obj{objectPath, interfaces};
-                        callback(obj);
+                        callback(std::move(obj));
                         return;
                     }
                 }
@@ -889,8 +891,9 @@ void MctpDiscovery::getInventoryPathAsync(
 
     auto& conn = spdmApp.getConn();
     conn.async_method_call(
-        [this, uuid, callback](boost::system::error_code ec,
-                               sdbusplus::message::message& replyMsg) {
+        [this, uuid, callback = std::move(callback)](
+            boost::system::error_code ec,
+            sdbusplus::message::message& replyMsg) {
             auto resultPathPtr =
                 std::make_shared<sdbusplus::message::object_path>();
 
@@ -1091,7 +1094,7 @@ std::optional<spdmcpp::TransportMedium> MctpDiscovery::getInternalMediumType(
         if (log.logLevel >= LogClass::Level::Error)
         {
             log.iprint("Unknown transport medium string: ");
-            log.iprintln(mediumTypeStr);
+            log.iprintln(std::move(mediumTypeStr));
         }
     }
     return std::nullopt;

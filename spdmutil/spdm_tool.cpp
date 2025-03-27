@@ -172,7 +172,7 @@ auto SpdmTool::parseArgs(int argc, char** argv) -> int
     // Subcommands to commands list
     for (auto* subcom : app.get_subcommands())
     {
-        auto name = subcom->get_name();
+        const auto& name = subcom->get_name();
         if (name == "get-version")
         {
             cmdList[vpos_ver] = ver;

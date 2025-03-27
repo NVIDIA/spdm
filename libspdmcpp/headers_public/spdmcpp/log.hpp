@@ -87,7 +87,7 @@ class LogClass
     void print(T value, Targs... fargs)
     {
         print(value);
-        print(fargs...);
+        print(std::forward<Targs>(fargs)...);
     }
 
     void print(char* str)
@@ -216,19 +216,19 @@ class LogClass
     template <typename... Targs>
     void println(Targs... fargs)
     {
-        print(fargs...);
+        print(std::forward<Targs>(fargs)...);
         endl();
     }
     template <typename... Targs>
     void iprint(Targs... fargs)
     {
         printIndent();
-        print(fargs...);
+        print(std::forward<Targs>(fargs)...);
     }
     template <typename... Targs>
     void iprintln(Targs... fargs)
     {
-        iprint(fargs...);
+        iprint(std::forward<Targs>(fargs)...);
         endl();
     }
 
