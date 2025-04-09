@@ -473,10 +473,12 @@ spdmcpp::RetStat MctpTransportClass::setupTimeout(spdmcpp::timeout_ms_t timeout)
     sdeventplus::Event& event = responder.getEvent();
     if (!timer)
     {
-        timer = std::make_unique<sdbusplus::Timer>(
-            event.get(), [this](void) { timeoutCallback(); });
+        timer = std::make_unique<sdbusplus::Timer>(event.get(), [this](void) {
+            timer->stop();
+            timeoutCallback();
+        });
     }
-    timer->start(std::chrono::milliseconds(timeout));
+    timer->start(std::chrono::milliseconds(timeout), true);
     return RetStat::OK;
 }
 
