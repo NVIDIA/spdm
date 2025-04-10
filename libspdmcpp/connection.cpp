@@ -1361,7 +1361,7 @@ RetStat ConnectionClass::handleTimeoutOrRetry(EventTimeoutClass&)
 
     stateEnabled = false;
     WaitingForResponse = RequestResponseEnum::INVALID;
-    return RetStat::OK;
+    return RetStat::ERROR_UNKNOWN;
 }
 
 void ConnectionClass::clearTimeout()
