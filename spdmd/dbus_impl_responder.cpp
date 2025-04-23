@@ -55,13 +55,13 @@ Responder::Responder(SpdmdAppContext& appCtx, const std::string& path,
                      uint8_t eid,
                      const sdbusplus::message::object_path& mctpPath,
                      const sdbusplus::message::object_path& invPath,
-                     spdmcpp::TransportMedium transportMedium,
+                     std::string transportMedium, std::string bindingType,
                      std::string socketPath) :
     ResponderIntf(appCtx.getConn(), path.c_str(), action::defer_emit),
     appContext(appCtx), log(appCtx.getLog()),
     connection(appCtx.context, log, eid, std::move(socketPath)),
-    transport(eid, *this, transportMedium, log), inventoryPath(invPath),
-    transportMedium(transportMedium), eid(eid)
+    transport(eid, *this, std::move(transportMedium), log),
+    inventoryPath(invPath), bindingType(bindingType), eid(eid)
 {
     {
         std::vector<std::tuple<std::string, std::string, std::string>> prop;

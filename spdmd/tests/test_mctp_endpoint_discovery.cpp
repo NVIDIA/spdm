@@ -292,7 +292,8 @@ TEST_F(MctpDiscoveryTest, MctpNewObjectSignal)
     dbus_api::ResponderArgs expectedArgs;
     expectedArgs.eid = 42;
     expectedArgs.uuid = testUuid;
-    expectedArgs.mediumType = spdmcpp::TransportMedium::PCIe;
+    expectedArgs.mediumType =
+        "xyz.openbmc_project.MCTP.Endpoint.MediaTypes.PCIe";
     expectedArgs.mctpPath = objPath;
 
 #ifdef DISCOVERY_ONLY_FROM_MCTP_CONTROL
@@ -346,7 +347,8 @@ TEST_F(MctpDiscoveryTest, MctpNewObjectSignal)
     // Verify args passed to discoveryUpdateResponder
     EXPECT_EQ(expectedArgs.eid, 42);
     EXPECT_EQ(expectedArgs.uuid, testUuid);
-    EXPECT_EQ(expectedArgs.mediumType, spdmcpp::TransportMedium::PCIe);
+    EXPECT_EQ(expectedArgs.mediumType,
+              "xyz.openbmc_project.MCTP.Endpoint.MediaTypes.PCIe");
     EXPECT_EQ(expectedArgs.mctpPath, objPath);
 }
 

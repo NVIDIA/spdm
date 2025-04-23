@@ -53,7 +53,8 @@ struct ResponderArgs
 {
     uint8_t eid;
     std::string uuid;
-    std::optional<spdmcpp::TransportMedium> medium;
+    std::string medium;
+    std::string bindingType;
     sdbusplus::message::object_path mctpPath;
     sdbusplus::message::object_path inventoryPath;
     std::string socketPath;
@@ -67,11 +68,10 @@ struct ResponderArgs
 class MctpTransportClass : public spdmcpp::MctpTransportClass
 {
   public:
-    MctpTransportClass(uint8_t eid, Responder& resp,
-                       spdmcpp::TransportMedium medium,
+    MctpTransportClass(uint8_t eid, Responder& resp, std::string medium,
                        spdmcpp::LogClass& logIn) :
         spdmcpp::MctpTransportClass(eid),
-        transportMedium(medium), responder(resp), log(logIn)
+        transportMedium(std::move(medium)), responder(resp), log(logIn)
     {}
     ~MctpTransportClass() override = default;
 
@@ -85,7 +85,7 @@ class MctpTransportClass : public spdmcpp::MctpTransportClass
     }
 
   protected:
-    spdmcpp::TransportMedium transportMedium;
+    std::string transportMedium;
     Responder& responder;
     std::unique_ptr<boost::asio::steady_timer> timer;
     spdmcpp::LogClass& log;
@@ -121,12 +121,14 @@ class Responder : public ResponderIntf
      *  @param[in] eid - MCTP EndpointID of the responder
      *  @param[in] inventoryPath - Used for the object-manager association
      *  @param[in] transportMedium - Responder base transport medium
+     *  @param[in] bindingType - Responder binding type
      *  @param[in] socketPath      - IO device path
      */
     Responder(SpdmdAppContext& appCtx, const std::string& path, uint8_t eid,
               const sdbusplus::message::object_path& mctpPath,
               const sdbusplus::message::object_path& inventPath,
-              spdmcpp::TransportMedium transportMedium, std::string socketPath);
+              std::string transportMedium, std::string bindingType,
+              std::string socketPath);
 
     ~Responder() override;
 
@@ -143,7 +145,7 @@ class Responder : public ResponderIntf
         return log;
     }
 
-    spdmcpp::TransportMedium getTransportMedium() const
+    std::string getTransportMedium() const
     {
         return transportMedium;
     }
@@ -183,7 +185,8 @@ class Responder : public ResponderIntf
     spdmcpp::ConnectionClass connection;
     MctpTransportClass transport;
     sdbusplus::message::object_path inventoryPath;
-    spdmcpp::TransportMedium transportMedium;
+    std::string transportMedium;
+    std::string bindingType;
     uint8_t eid;
 
     spdmcpp::RetStat (Responder::*eventHandler)(spdmcpp::EventClass& event) =
