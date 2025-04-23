@@ -222,23 +222,59 @@ void SpdmdApp::connectMCTP()
     }
 }
 
-bool SpdmdApp::needRecreateResponder(spdmcpp::TransportMedium currMedium,
-                                     spdmcpp::TransportMedium newMedium)
+bool SpdmdApp::needRecreateResponder(const std::string& currMedium,
+                                     const std::string& newMedium,
+                                     const std::string& currBinding,
+                                     const std::string& newBinding)
 {
-    using tran = spdmcpp::TransportMedium;
-    switch (currMedium)
+    auto currMediumPriority = mediumPriority.find(currMedium);
+    auto newMediumPriority = mediumPriority.find(newMedium);
+
+    if (currMediumPriority == mediumPriority.end() ||
+        newMediumPriority == mediumPriority.end())
     {
-        case tran::None:
-        case tran::PCIe:
-            return false;
-        case tran::USB:
-            return newMedium == tran::PCIe;
-        case tran::SPI:
-            return (newMedium == tran::PCIe || newMedium == tran::USB);
-        case tran::I2C:
-            return newMedium != tran::I2C;
+        auto& log = getLog();
+        if (log.logLevel >= spdmcpp::LogClass::Level::Error)
+        {
+            log.iprint("medium type priority not found in the map");
+            log.println("Current Medium: " + currMedium + "(" +
+                        std::to_string(currMediumPriority->second) +
+                        "), New Medium: " + newMedium + "(" +
+                        std::to_string(newMediumPriority->second) + ")");
+        }
+        return false;
     }
-    return false;
+
+    // If medium priorities are different, recreate if new medium has
+    // higher priority (lower number)
+    if (currMediumPriority->second != newMediumPriority->second)
+    {
+        return newMediumPriority->second < currMediumPriority->second;
+    }
+
+    // If medium priorities are the same, check binding type priorities
+    auto currBindingPriority = bindingPriority.find(currBinding);
+    auto newBindingPriority = bindingPriority.find(newBinding);
+
+    if (currBindingPriority == bindingPriority.end() ||
+        newBindingPriority == bindingPriority.end())
+    {
+        auto& log = getLog();
+        if (log.logLevel >= spdmcpp::LogClass::Level::Error)
+        {
+            log.iprint("binding type priority not found in the map ");
+            log.println("Current Binding: " + currBinding + "(" +
+                        std::to_string(currBindingPriority->second) +
+                        "), New Binding: " + newBinding + "(" +
+                        std::to_string(newBindingPriority->second) + ")");
+        }
+        return false;
+    }
+
+    // If both medium and binding types are same, it indicates that the
+    // inventory objects are recreated. Recreate the responder to refresh the
+    // object.
+    return newBindingPriority->second <= currBindingPriority->second;
 }
 
 void SpdmdApp::discoveryUpdateResponder(const dbus_api::ResponderArgs& respArg)
@@ -257,10 +293,11 @@ void SpdmdApp::discoveryUpdateResponder(const dbus_api::ResponderArgs& respArg)
     else
     {
         // Discovery found recreate if needed
-        if (respArg.medium.has_value() && it->second.medium.has_value())
+        if (!respArg.medium.empty() && !it->second.medium.empty())
         {
-            if (needRecreateResponder(it->second.medium.value(),
-                                      respArg.medium.value()))
+            if (needRecreateResponder(it->second.medium, respArg.medium,
+                                      it->second.bindingType,
+                                      respArg.bindingType))
             {
                 reportNotice("Recreate responder UUID: " + respArg.uuid +
                              " EID: " + std::to_string(respArg.eid));
@@ -311,14 +348,19 @@ void SpdmdApp::createResponder(const dbus_api::ResponderArgs& args)
     }
 #ifdef MCTP_IN_KERNEL
     responders[args.eid] = std::make_unique<dbus_api::Responder>(
-        *this, path, args.eid, args.mctpPath, args.inventoryPath,
-        TransportMedium::None, args.socketPath);
+        *this, path, args.eid, args.mctpPath, args.inventoryPath, args.medium,
+        args.bindingType, args.socketPath);
 #else
-    if (args.medium.has_value())
+    if (!args.medium.empty())
     {
+        const std::string& mediumType =
+            args.medium.empty()
+                ? "xyz.openbmc_project.MCTP.Endpoint.MediaTypes.PCIe"
+                : args.medium;
+
         responders[args.eid] = std::make_unique<dbus_api::Responder>(
             *this, path, args.eid, args.mctpPath, args.inventoryPath,
-            args.medium.value_or(TransportMedium::PCIe), args.socketPath);
+            mediumType, args.bindingType, args.socketPath);
     }
     else
     {

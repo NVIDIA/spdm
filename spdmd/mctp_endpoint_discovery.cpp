@@ -319,7 +319,7 @@ void MctpDiscovery::mctpNewObjectSignal(
 #ifdef DISCOVERY_ONLY_FROM_MCTP_CONTROL
 #ifndef MCTP_IN_KERNEL
     auto mediumType = getMediumType(interfaces);
-    if (!mediumType)
+    if (mediumType.empty())
     {
         auto& log = spdmApp.getLog();
         if (log.logLevel >= LogClass::Level::Error)
@@ -329,6 +329,20 @@ void MctpDiscovery::mctpNewObjectSignal(
         }
         return;
     }
+
+    // Get the binding type from the interfaces
+    auto bindingType = getBindingType(interfaces);
+    if (bindingType.empty())
+    {
+        auto& log = spdmApp.getLog();
+        if (log.logLevel >= LogClass::Level::Error)
+        {
+            log.iprint("Unable to get binding type for EID = ");
+            log.iprintln(eid);
+        }
+        return;
+    }
+
     auto sockPath = getTransportSocket(interfaces);
     if (sockPath.empty())
     {
@@ -343,7 +357,8 @@ void MctpDiscovery::mctpNewObjectSignal(
     tryConnectMCTP(sockPath);
 #else
     auto sockPath = "";
-    auto mediumType = std::nullopt;
+    auto mediumType = "";
+    auto bindingType = "";
 #endif
     dbus_api::ResponderArgs args{};
     if (eid.has_value())
@@ -355,6 +370,7 @@ void MctpDiscovery::mctpNewObjectSignal(
             args = dbus_api::ResponderArgs{std::get<unsigned char>(value),
                                            uuid,
                                            mediumType,
+                                           bindingType,
                                            objPath,
                                            std::move(invPath),
                                            std::move(sockPath)};
@@ -365,6 +381,7 @@ void MctpDiscovery::mctpNewObjectSignal(
                 static_cast<unsigned char>(std::get<unsigned int>(value)),
                 uuid,
                 mediumType,
+                bindingType,
                 objPath,
                 std::move(invPath),
                 std::move(sockPath)};
@@ -383,13 +400,26 @@ void MctpDiscovery::mctpNewObjectSignal(
     }
 #ifndef MCTP_IN_KERNEL
     auto mediumType = getMediumType(interfaces);
-    if (!mediumType)
+    if (mediumType.empty())
     {
         auto& log = spdmApp.getLog();
         if (log.logLevel >= LogClass::Level::Error)
         {
             log.iprint("Unable to get medium type for EID = ");
             log.iprint(eidValue1);
+        }
+        return;
+    }
+
+    // Get the binding type from the interfaces
+    auto bindingType = getBindingType(interfaces);
+    if (bindingType.empty())
+    {
+        auto& log = spdmApp.getLog();
+        if (log.logLevel >= LogClass::Level::Error)
+        {
+            log.iprint("Unable to get binding type for EID = ");
+            log.iprintln(eid);
         }
         return;
     }
@@ -408,16 +438,17 @@ void MctpDiscovery::mctpNewObjectSignal(
     }
 #else
     auto sockPath = "";
-    auto mediumType = std::nullopt;
+    auto mediumType = "";
+    auto bindingType = "";
 #endif
     getInventoryPathAsync(uuid, [this, eid, uuid, objPath, mediumType,
-                                 sockPath, eidValue1](
+                                 bindingType, sockPath, eidValue1](
                                     sdbusplus::message::object_path invPath) {
         if (invPath.filename().empty())
         {
             static constexpr auto confName = "name";
-            auto eidName =
-                spdmApp.getPropertyByEid<const std::string>(eidValue1, confName);
+            auto eidName = spdmApp.getPropertyByEid<const std::string>(
+                eidValue1, confName);
             if (!eidName.has_value())
             {
                 spdmApp.getLog().iprintln(
@@ -432,33 +463,35 @@ void MctpDiscovery::mctpNewObjectSignal(
 #ifndef MCTP_IN_KERNEL
         tryConnectMCTP(sockPath);
 #endif
-    // Then create the Responder
-    dbus_api::ResponderArgs args{};
-    if (eid.has_value())
-    {
-        auto value = eid.value();
+        // Then create the Responder
+        dbus_api::ResponderArgs args{};
+        if (eid.has_value())
+        {
+            auto value = eid.value();
 
-        if (std::holds_alternative<unsigned char>(value))
-        {
-            args = dbus_api::ResponderArgs{std::get<unsigned char>(value),
-                                           uuid,
-                                           mediumType,
-                                           objPath,
-                                           std::move(invPath),
-                                           std::move(sockPath)};
+            if (std::holds_alternative<unsigned char>(value))
+            {
+                args = dbus_api::ResponderArgs{std::get<unsigned char>(value),
+                                               uuid,
+                                               mediumType,
+                                               bindingType,
+                                               objPath,
+                                               std::move(invPath),
+                                               std::move(sockPath)};
+            }
+            else if (std::holds_alternative<unsigned int>(value))
+            {
+                args = dbus_api::ResponderArgs{
+                    static_cast<unsigned char>(std::get<unsigned int>(value)),
+                    uuid,
+                    mediumType,
+                    bindingType,
+                    objPath,
+                    std::move(invPath),
+                    std::move(sockPath)};
+            }
+            spdmApp.discoveryUpdateResponder(args);
         }
-        else if (std::holds_alternative<unsigned int>(value))
-        {
-            args = dbus_api::ResponderArgs{
-                static_cast<unsigned char>(std::get<unsigned int>(value)),
-                uuid,
-                mediumType,
-                objPath,
-                std::move(invPath),
-                std::move(sockPath)};
-        }
-        spdmApp.discoveryUpdateResponder(args);
-    }
     });
 
 #endif // DISCOVERY_ONLY_FROM_MCTP_CONTROL
@@ -490,32 +523,32 @@ void MctpDiscovery::inventoryNewObjectSignal(
                 uuid + '\'');
             return;
         }
-    std::string eidstrValue = "";
-    EidType eid = getEid(mctpObj.interfaces);
-    if (eid.has_value())
-    {
-        auto eidValue = eid.value();
+        std::string eidstrValue = "";
+        EidType eid = getEid(mctpObj.interfaces);
+        if (eid.has_value())
+        {
+            auto eidValue = eid.value();
 
-        if (std::holds_alternative<unsigned char>(eidValue))
-        {
-            eidstrValue = std::to_string(std::get<unsigned char>(eidValue));
+            if (std::holds_alternative<unsigned char>(eidValue))
+            {
+                eidstrValue = std::to_string(std::get<unsigned char>(eidValue));
+            }
+            else if (std::holds_alternative<unsigned int>(eidValue))
+            {
+                eidstrValue = std::to_string(std::get<unsigned int>(eidValue));
+            }
         }
-        else if (std::holds_alternative<unsigned int>(eidValue))
+        if (eid == invalidEid)
         {
-            eidstrValue = std::to_string(std::get<unsigned int>(eidValue));
+            spdmApp.getLog().iprintln(
+                "SPDM inventoryNewObjectSignal couldn't get EID for UUID '"s +
+                uuid + '\'');
+            return;
         }
-    }
-    if (eid == invalidEid)
-    {
-        spdmApp.getLog().iprintln(
-            "SPDM inventoryNewObjectSignal couldn't get EID for UUID '"s +
-            uuid + '\'');
-        return;
-    }
 
 #ifndef MCTP_IN_KERNEL
         auto mediumType = getMediumType(mctpObj.interfaces);
-        if (!mediumType)
+        if (mediumType.empty())
         {
             auto& log = spdmApp.getLog();
             if (log.logLevel >= LogClass::Level::Error)
@@ -528,6 +561,22 @@ void MctpDiscovery::inventoryNewObjectSignal(
             }
             return;
         }
+
+        auto bindingType = getBindingType(mctpObj.interfaces);
+        if (bindingType.empty())
+        {
+            auto& log = spdmApp.getLog();
+            if (log.logLevel >= LogClass::Level::Error)
+            {
+                log.iprint("Unable to get medium type for ");
+                log.iprint(" EID = ");
+                log.iprint(eid);
+                log.iprint(" UUID = ");
+                log.iprintln(uuid);
+            }
+            return;
+        }
+
         auto transpSock = getTransportSocket(mctpObj.interfaces);
         if (transpSock.empty())
         {
@@ -547,34 +596,39 @@ void MctpDiscovery::inventoryNewObjectSignal(
         tryConnectMCTP(transpSock);
 #else
     const auto transpSock = "";
-    auto mediumType = std::nullopt;
+    auto mediumType = "";
+    auto bindingType = "";
 #endif
-    dbus_api::ResponderArgs args{};
-    if (eid.has_value())
-    {
-        auto eidvalue = eid.value();
-        if (std::holds_alternative<unsigned char>(eidvalue))
+        dbus_api::ResponderArgs args{};
+        if (eid.has_value())
         {
-            args = dbus_api::ResponderArgs{std::get<unsigned char>(eidvalue),
-                                           uuid,
-                                           mediumType,
-                                           mctpObj.path,
-                                           objPath,
-                                           std::move(transpSock)};
+            auto eidvalue = eid.value();
+            if (std::holds_alternative<unsigned char>(eidvalue))
+            {
+                args =
+                    dbus_api::ResponderArgs{std::get<unsigned char>(eidvalue),
+                                            uuid,
+                                            mediumType,
+                                            bindingType,
+                                            mctpObj.path,
+                                            objPath,
+                                            std::move(transpSock)};
+            }
+            else if (std::holds_alternative<unsigned int>(eidvalue))
+            {
+                args = dbus_api::ResponderArgs{
+                    static_cast<unsigned char>(
+                        std::get<unsigned int>(eidvalue)),
+                    uuid,
+                    mediumType,
+                    bindingType,
+                    mctpObj.path,
+                    objPath,
+                    std::move(transpSock)};
+            }
+            spdmApp.discoveryUpdateResponder(args);
         }
-        else if (std::holds_alternative<unsigned int>(eidvalue))
-        {
-            args = dbus_api::ResponderArgs{
-                static_cast<unsigned char>(std::get<unsigned int>(eidvalue)),
-                uuid,
-                mediumType,
-                mctpObj.path,
-                objPath,
-                std::move(transpSock)};
-        }
-        spdmApp.discoveryUpdateResponder(args);
-    }
-});
+    });
 }
 #endif
 
@@ -1008,23 +1062,24 @@ void MctpDiscovery::getInventoryPathAsync(
         ifaces);
 }
 
-std::optional<spdmcpp::TransportMedium>
-    MctpDiscovery::getMediumType(const dbus::InterfaceMap& interfaces)
+std::string MctpDiscovery::getMediumType(const dbus::InterfaceMap& interfaces)
 {
     try
     {
-        auto intf = interfaces.find(mctpBindingIntfProperty);
+        auto intf = interfaces.find(mctpEndpointIntfName);
+        std::string mediumType;
         if (intf != interfaces.end())
         {
-            return getInternalMediumType(intf->second,
-                                         mctpBindingIntfPropertyBindType);
+            const auto& properties = intf->second;
+            if (!properties.contains(
+                    std::string(mctpEndpointIntfPropertyMediumType)))
+            {
+                return "xyz.openbmc_project.MCTP.Endpoint.MediaTypes.PCIe";
+            }
+            mediumType = std::get<std::string>(
+                properties.at(std::string(mctpEndpointIntfPropertyMediumType)));
         }
-        intf = interfaces.find(mctpEndpointIntfName);
-        if (intf != interfaces.end())
-        {
-            return getInternalMediumType(intf->second,
-                                         mctpEndpointIntfPropertyMediumType);
-        }
+        return mediumType;
     }
     catch (const std::exception& e)
     {
@@ -1041,63 +1096,44 @@ std::optional<spdmcpp::TransportMedium>
             }
         }
     }
-    return std::nullopt;
+    return {};
 }
 
-std::optional<spdmcpp::TransportMedium> MctpDiscovery::getInternalMediumType(
-    const std::map<std::string, dbus::Value>& properties,
-    std::string_view propName)
+std::string MctpDiscovery::getBindingType(const dbus::InterfaceMap& interfaces)
 {
-    if (!properties.contains(std::string(propName)))
-    {
-        return spdmcpp::TransportMedium::PCIe;
-    }
-    std::string mediumTypeStr;
-
     try
     {
-        mediumTypeStr =
-            std::get<std::string>(properties.at(std::string(propName)));
-        mediumTypeStr =
-            mediumTypeStr.substr(mediumTypeStr.find_last_of('.') + 1);
+        std::string bindingType;
+        auto intf = interfaces.find(mctpBindingIntfProperty);
+        if (intf != interfaces.end())
+        {
+            const auto& properties = intf->second;
+            if (properties.contains(
+                    std::string(mctpBindingIntfPropertyBindType)))
+            {
+                bindingType = std::get<std::string>(
+                    properties.at(mctpBindingIntfPropertyBindType));
+            }
+        }
+        return bindingType;
     }
     catch (const std::exception& e)
     {
-        auto& log = spdmApp.getLog();
-        if (log.logLevel >= LogClass::Level::Error)
-        {
-            log.iprint("Property get exception for: ");
-            log.iprint(std::string(propName));
-            log.iprint(" what: ");
-            log.iprintln(e.what());
-        }
-        return std::nullopt;
-    }
-    if (mediumTypeStr == "PCIe")
-    {
-        return spdmcpp::TransportMedium::PCIe;
-    }
-    if (mediumTypeStr == "SPI")
-    {
-        return spdmcpp::TransportMedium::SPI;
-    }
-    if (mediumTypeStr == "SMBus")
-    {
-        return spdmcpp::TransportMedium::I2C;
-    }
-    if (mediumTypeStr == "USB")
-    {
-        return spdmcpp::TransportMedium::USB;
+        spdmApp.getLog().print(e.what());
     }
     {
         auto& log = spdmApp.getLog();
         if (log.logLevel >= LogClass::Level::Error)
         {
-            log.iprint("Unknown transport medium string: ");
-            log.iprintln(std::move(mediumTypeStr));
+            log.println("Unable to determine binding type. Interfaces path:");
+            for (const auto& [path, _] : interfaces)
+            {
+                log.println(path);
+            }
         }
     }
-    return std::nullopt;
+
+    return {};
 }
 
 void MctpDiscovery::initCsmStatus()

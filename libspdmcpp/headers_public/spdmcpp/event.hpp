@@ -76,7 +76,7 @@ struct EventTimeoutClass : EventClass
     EventTimeoutClass() = default;
 #else
     EventTimeoutClass() = delete;
-    explicit EventTimeoutClass(TransportMedium transportMedium) :
+    explicit EventTimeoutClass(std::string transportMedium) :
         transportMedium(transportMedium)
     {}
 #endif
@@ -87,7 +87,7 @@ struct EventTimeoutClass : EventClass
     EventTimeoutClass& operator=(const EventTimeoutClass&) = delete;
     EventTimeoutClass& operator=(EventTimeoutClass&&) = delete;
 
-    TransportMedium transportMedium;
+    std::string transportMedium;
 };
 
 } // namespace spdmcpp

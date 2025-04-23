@@ -42,6 +42,36 @@ using namespace sdbusplus;
 namespace spdmd
 {
 
+using MctpBinding = std::string;
+
+using MctpMedium = std::string;
+
+using Priority = int;
+
+/**
+ * @brief MCTP Medium priority table ordering by bandwidth
+ */
+static std::unordered_map<MctpMedium, Priority> mediumPriority = {
+    {"xyz.openbmc_project.MCTP.Endpoint.MediaTypes.PCIe", 0},
+    {"xyz.openbmc_project.MCTP.Endpoint.MediaTypes.USB", 1},
+    {"xyz.openbmc_project.MCTP.Endpoint.MediaTypes.SPI", 2},
+    {"xyz.openbmc_project.MCTP.Endpoint.MediaTypes.I3C", 3},
+    {"xyz.openbmc_project.MCTP.Endpoint.MediaTypes.KCS", 4},
+    {"xyz.openbmc_project.MCTP.Endpoint.MediaTypes.Serial", 5},
+    {"xyz.openbmc_project.MCTP.Endpoint.MediaTypes.SMBus", 6}};
+
+/**
+ * @brief MCTP Binding Type priority table ordering by bandwidth
+ */
+static std::unordered_map<MctpBinding, Priority> bindingPriority = {
+    {"xyz.openbmc_project.MCTP.Binding.BindingTypes.PCIe", 0},
+    {"xyz.openbmc_project.MCTP.Binding.BindingTypes.USB", 1},
+    {"xyz.openbmc_project.MCTP.Binding.BindingTypes.SPI", 2},
+    {"xyz.openbmc_project.MCTP.Binding.BindingTypes.I3C", 3},
+    {"xyz.openbmc_project.MCTP.Binding.BindingTypes.KCS", 4},
+    {"xyz.openbmc_project.MCTP.Binding.BindingTypes.Serial", 5},
+    {"xyz.openbmc_project.MCTP.Binding.BindingTypes.SMBus", 6}};
+
 class SpdmdApp : public SpdmdAppContext
 {
   public:
@@ -95,11 +125,30 @@ class SpdmdApp : public SpdmdAppContext
      */
     void createResponder(const dbus_api::ResponderArgs& args);
 
-    /** @brief When responder should be recreated
+    /**
+     * @brief Determines if a responder needs to be recreated based on medium
+     * and binding type priorities
      *
+     * This function implements a priority-based comparison logic for transport
+     * mediums and binding types. The decision to recreate a responder is based
+     * on the following rules:
+     * 1. If the medium types are different, compare their priorities
+     * 2. If the medium priorities are equal, compare the binding type
+     * priorities
+     * 3. A responder is recreated if the new configuration has equal or higher
+     * priority
+     *
+     * @param currMedium Current transport medium type
+     * @param newMedium New transport medium type
+     * @param currBinding Current binding type string
+     * @param newBinding New binding type string
+     * @return true if the responder should be recreated based on priority
+     * comparison
      */
-    static bool needRecreateResponder(spdmcpp::TransportMedium currMedium,
-                                      spdmcpp::TransportMedium newMedium);
+    bool needRecreateResponder(const std::string& currMedium,
+                               const std::string& newMedium,
+                               const std::string& currBinding,
+                               const std::string& newBinding);
 
     /** @brief verbose - debug level for SPDM daemon */
     spdmcpp::LogClass::Level verbose = spdmcpp::LogClass::Level::Emergency;

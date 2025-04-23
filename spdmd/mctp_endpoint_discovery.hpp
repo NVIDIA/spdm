@@ -196,26 +196,20 @@ class MctpDiscovery
     EidType getEid(const std::map<std::string, dbus::Value>& properties);
 
     /**
+     * @brief Extracts binding type value from the object's interfaces
+     *
+     * @param interfaces collection map with interfaces and its properties
+     * @return std::optional<std::string> with binding type or false if failed
+     */
+    std::string getBindingType(const dbus::InterfaceMap& interfaces);
+
+    /**
      * @brief Extracts transport medium value from the object's interfaces
      *
      * @param interfaces collection map with interfaces and its properties
-     * @return std::optional<spdmcpp::TransportMedium> with transport medium or
-     * false if failed
+     * @return std::string with transport medium or empty string if failed
      */
-    std::optional<spdmcpp::TransportMedium>
-        getMediumType(const dbus::InterfaceMap& interfaces);
-
-    /**
-     * @brief Extracts Internal transport medium value from the object's
-     * interfaces
-     *
-     * @param properties collection of properties that comes from proper
-     * interface
-     * @return std::optional<spdmcpp::TransportMedium>
-     */
-    std::optional<spdmcpp::TransportMedium> getInternalMediumType(
-        const std::map<std::string, dbus::Value>& properties,
-        std::string_view propName);
+    std::string getMediumType(const dbus::InterfaceMap& interfaces);
 
     /** @brief Get Transport Unix socket from the endpoint
      *  @param[in] interfaces - Map of interfaces and their properties

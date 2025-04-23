@@ -105,7 +105,7 @@ struct ResponderArgs
 {
     uint8_t eid;
     std::string uuid;
-    spdmcpp::TransportMedium mediumType;
+    std::string mediumType;
 };
 } // namespace dbus_api
 
@@ -170,7 +170,8 @@ class MctpDiscovery
         }
 
         // Extract medium type from interfaces
-        spdmcpp::TransportMedium mediumType = spdmcpp::TransportMedium::PCIe;
+        std::string mediumType =
+            "xyz.openbmc_project.MCTP.Endpoint.MediaTypes.PCIe";
 
         // Create responder args
         dbus_api::ResponderArgs args;
