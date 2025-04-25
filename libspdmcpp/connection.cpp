@@ -954,13 +954,11 @@ RetStat ConnectionClass::tryGetMeasurements()
 
     if (MeasurementIndices[255])
     { // this means we get all measurements at once
-        MeasurementIndices.reset();
         return tryGetMeasurements(255);
     }
     if (MeasurementIndices.any())
     { // this means we get some measurements one by one
         uint8_t idx = getFirstMeasurementIndex();
-        MeasurementIndices.reset(idx);
         return tryGetMeasurements(idx);
     }
     if (Log.logLevel >= spdmcpp::LogClass::Level::Warning)
@@ -977,8 +975,10 @@ RetStat ConnectionClass::tryGetMeasurements(uint8_t idx)
 
     PacketGetMeasurementsRequestVar request;
     request.Min.Header.MessageVersion = MessageVersion;
-    request.Min.Header.Param1 = packetDecodeInfo.GetMeasurementsParam1 = 0x00;
-    if (MeasurementIndices.none() && !skipVerifySignature())
+    requestedMeasurementIdx = idx;
+    const bool isLast =
+        (MeasurementIndices.count() == 1 || MeasurementIndices[255]);
+    if (isLast && !skipVerifySignature())
     {
         // means this is the last getMeasurements, so we set the nonce and
         // request a signature and if skip is not set
@@ -1042,6 +1042,16 @@ RetStat ConnectionClass::handleRecv<PacketMeasurementsResponseVar>()
             }
         }
     }
+    // Reset index if used
+    if (requestedMeasurementIdx == 255)
+    {
+        MeasurementIndices.reset();
+    }
+    else
+    {
+        MeasurementIndices.reset(requestedMeasurementIdx);
+    }
+
     // No more signatures verify or not
     if (MeasurementIndices.none())
     {
@@ -1114,7 +1124,6 @@ RetStat ConnectionClass::handleRecv<PacketMeasurementsResponseVar>()
 
     SPDMCPP_ASSERT(MeasurementIndices.any());
     uint8_t idx = getFirstMeasurementIndex();
-    MeasurementIndices.reset(idx);
     return tryGetMeasurements(idx);
 }
 
