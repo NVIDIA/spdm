@@ -830,6 +830,9 @@ class ConnectionClass : public NonCopyable
     /// Request code for retry if ready
     uint8_t respIfReqCode;
 
+    /// Current measurement index
+    uint8_t requestedMeasurementIdx;
+
     /// Store the last timestamp
     std::chrono::time_point<std::chrono::system_clock> lastSendTimestamp;
 
