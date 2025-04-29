@@ -427,9 +427,9 @@ void MctpDiscovery::inventoryNewObjectSignal(
         return;
     }
 
+#ifndef MCTP_IN_KERNEL
     auto mediumType = getMediumType(mctp.interfaces);
 
-#ifndef MCTP_IN_KERNEL
     if (!mediumType)
     {
         auto& log = spdmApp.getLog();
