@@ -761,6 +761,7 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
 
     if (cert.empty())
     { // first chunk so reserve space for what's expected to come
+        cert.shrink_to_fit();
         cert.reserve(resp.Min.PortionLength + resp.Min.RemainderLength);
     }
     { // store chunk data
