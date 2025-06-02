@@ -361,20 +361,24 @@ spdmcpp::RetStat Responder::handleEventForRefresh(spdmcpp::EventClass& ev)
         updateCertificatesInfo();
         status(SPDMStatus::GettingMeasurements);
     }
+    else if (connection.hasInfo(ConnectionInfoEnum::DIGESTS))
+    {
+        status(SPDMStatus::GettingCertificates);
+    }
     else if (connection.hasInfo(ConnectionInfoEnum::ALGORITHMS))
     {
         updateAlgorithmsInfo();
-        status(SPDMStatus::GettingCertificates);
+        status(SPDMStatus::GettingDigest);
     }
     else if (connection.hasInfo(ConnectionInfoEnum::CAPABILITIES))
     {
         updateCapabilities();
-        status(SPDMStatus::GettingCertificates);
+        status(SPDMStatus::GettingAlgorithms);
     }
     else if (connection.hasInfo(ConnectionInfoEnum::CHOOSEN_VERSION))
     {
         updateVersionInfo();
-        status(SPDMStatus::GettingCertificates);
+        status(SPDMStatus::GettingCapabilities);
     }
     return rs;
 }
@@ -400,9 +404,7 @@ void Responder::refresh(uint8_t slotIndex, std::vector<uint8_t> nonc,
         return;
     }
 
-    // Need to first set initializing, because otherwise setting an error status
-    // would not trigger a signal if the previous refresh set the same error.
-    status(SPDMStatus::Initializing);
+    status(SPDMStatus::GettingVersion);
 
     if (slotIndex >= ConnectionClass::slotNum)
     {
