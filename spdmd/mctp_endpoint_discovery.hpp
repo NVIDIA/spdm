@@ -130,8 +130,13 @@ class MctpDiscovery
     static constexpr auto mctpEndpointIntfPropertySupportedMessageTypes =
         "SupportedMessageTypes";
 
+    /** @brief SPDM responder inventory interface name */
     static constexpr auto inventorySPDMResponderIntfName =
         "xyz.openbmc_project.Inventory.Item.SPDMResponder";
+
+    /** @brief SPDM responder inventory base path */
+    static constexpr auto inventorySPDMResponderBasePath =
+        "/xyz/openbmc_project/inventory/system/chassis/";
 
     /** @brief Common d-bus interface, property UUID */
     static constexpr auto uuidIntfName = "xyz.openbmc_project.Common.UUID";

@@ -41,7 +41,9 @@ MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
     bus(spdmApp.getConn()), spdmApp(spdmApp)
 #ifndef DISCOVERY_ONLY_FROM_MCTP_CONTROL
     ,
-    inventoryMatch(bus, sdbusplus::bus::match::rules::interfacesAdded("/"),
+    inventoryMatch(bus,
+                   sdbusplus::bus::match::rules::interfacesAddedAtPath(
+                       inventorySPDMResponderBasePath),
                    [this](sdbusplus::message::message& msg) {
                        sdbusplus::message::object_path objPath;
                        dbus::InterfaceMap interfaces;
@@ -338,7 +340,7 @@ void MctpDiscovery::mctpNewObjectSignal(
         if (log.logLevel >= LogClass::Level::Error)
         {
             log.iprint("Unable to get binding type for EID = ");
-            log.iprintln(eid);
+            log.iprintln(eidValue1);
         }
         return;
     }
@@ -419,7 +421,7 @@ void MctpDiscovery::mctpNewObjectSignal(
         if (log.logLevel >= LogClass::Level::Error)
         {
             log.iprint("Unable to get binding type for EID = ");
-            log.iprintln(eid);
+            log.iprintln(eidValue1);
         }
         return;
     }
@@ -570,7 +572,7 @@ void MctpDiscovery::inventoryNewObjectSignal(
             {
                 log.iprint("Unable to get medium type for ");
                 log.iprint(" EID = ");
-                log.iprint(eid);
+                log.iprint(eidstrValue);
                 log.iprint(" UUID = ");
                 log.iprintln(uuid);
             }
