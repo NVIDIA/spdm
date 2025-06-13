@@ -37,9 +37,9 @@ MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
     bus(spdmApp.getBus()), spdmApp(spdmApp)
 #ifndef DISCOVERY_ONLY_FROM_MCTP_CONTROL
     ,
-    inventoryMatch(spdmApp.getBus(),
-                   sdbusplus::bus::match::rules::interfacesAdded(
-                       inventoryService.getPath()),
+    inventoryMatch(bus,
+                   sdbusplus::bus::match::rules::interfacesAddedAtPath(
+                       inventorySPDMResponderBasePath),
                    [this](sdbusplus::message::message& msg) {
                        sdbusplus::message::object_path objPath;
                        dbus::InterfaceMap interfaces;
