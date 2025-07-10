@@ -277,7 +277,6 @@ void testConnectionFlow(BaseAsymAlgoFlags asymAlgo, BaseHashAlgoFlags hashAlgo)
         PacketCapabilitiesResponse resp;
         resp.Header.MessageVersion = MessageVersionEnum::SPDM_1_1;
         resp.Flags = ResponderCapabilitiesFlags::CERT_CAP |
-                     ResponderCapabilitiesFlags::CHAL_CAP |
                      ResponderCapabilitiesFlags::MEAS_CAP_10;
 
         auto rs = fix.push(resp, MessageHashEnum::M);
@@ -417,46 +416,7 @@ void testConnectionFlow(BaseAsymAlgoFlags asymAlgo, BaseHashAlgoFlags hashAlgo)
         rs = fix.handleRecv();
         ASSERT_EQ(rs, RetStat::OK);
     }
-    {
-        PacketChallengeRequest req;
-        auto rs = fix.interpret(req, MessageHashEnum::M);
-        ASSERT_EQ(rs, RetStat::OK);
 
-        PacketChallengeAuthResponseVar resp;
-        resp.Min.Header.MessageVersion = MessageVersionEnum::SPDM_1_1;
-        resp.Min.Header.Param2 = 1;
-        fillPseudoRandom(resp.Nonce);
-
-        resp.CertChainHashVector = digestResp.Digests[0];
-
-        resp.MeasurementSummaryHashVector.resize(info.BaseHashSize);
-        fillPseudoRandom(resp.MeasurementSummaryHashVector);
-
-        {
-            resp.finalize();
-            auto& hc = fix.getHash(MessageHashEnum::M);
-            {
-                std::vector<uint8_t> buf;
-                ASSERT_EQ(packetEncode(resp, buf), RetStat::OK);
-                ASSERT_EQ(hc.update(buf), RetStat::OK);
-            }
-            std::vector<uint8_t> hash;
-            hc.hashFinish(hash);
-
-            log.iprint("TEST M1/M2 hash: ");
-            log.println(hash);
-
-            ASSERT_MBEDTLS_0(
-                computeSignature(&pkctx, resp.SignatureVector, hash));
-        }
-
-        resp.finalize();
-
-        rs = fix.push(resp);
-        ASSERT_EQ(rs, RetStat::OK);
-        rs = fix.handleRecv();
-        ASSERT_EQ(rs, RetStat::OK);
-    }
     {
         PacketGetMeasurementsRequestVar req;
         auto rs = fix.interpret(req, MessageHashEnum::L);

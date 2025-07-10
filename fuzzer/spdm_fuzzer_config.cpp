@@ -103,12 +103,7 @@ std::ostream& operator<<(std::ostream& out, const WrapperConfig& config)
             << WrapperConfig::thr2proc(config.fuseThrRespMessages.certificate)
             << "%" << std::endl;
     }
-    if (config.fuseThrRespMessages.challengeAuth.enabled)
-    {
-        out << "\tChallenge auth. resp "
-            << WrapperConfig::thr2proc(config.fuseThrRespMessages.challengeAuth)
-            << "%" << std::endl;
-    }
+
     if (config.fuseThrRespMessages.measurements.enabled)
     {
         out << "\tMeasurements resp.   "

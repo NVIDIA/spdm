@@ -446,15 +446,6 @@ spdmcpp::RetStat SpdmTool::handleRecv<PacketMeasurementsResponseVar>(
     return rs;
 }
 
-template <>
-spdmcpp::RetStat SpdmTool::handleRecv<PacketChallengeAuthResponseVar>(
-    std::vector<uint8_t>& buf)
-{
-    PacketChallengeAuthResponseVar resp;
-    auto rs = interpretResponse(buf, resp, packetDecodeInfo);
-    return rs;
-}
-
 // SPDM tool main loop
 auto SpdmTool::runComm() -> bool
 {
@@ -674,9 +665,6 @@ auto SpdmTool::parseResp(std::vector<uint8_t>& buf) -> spdmcpp::RetStat
                 break;
             case PacketCertificateResponseVar::requestResponseCode:
                 rs = handleRecv<PacketCertificateResponseVar>(buf);
-                break;
-            case PacketChallengeAuthResponseVar::requestResponseCode:
-                rs = handleRecv<PacketChallengeAuthResponseVar>(buf);
                 break;
             case PacketMeasurementsResponseVar::requestResponseCode:
                 rs = handleRecv<PacketMeasurementsResponseVar>(buf);

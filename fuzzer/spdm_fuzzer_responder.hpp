@@ -118,8 +118,6 @@ class FuzzingResponder
     bool fuzzResponseMessageAlgorithms(PacketAlgorithmsResponseVar& msg);
     bool fuzzResponseMessageDigest(PacketDigestsResponseVar& msg);
     bool fuzzResponseMessageCertificate(PacketCertificateResponseVar& msg);
-    bool fuzzResponseMessageChallengeAuth(PacketChallengeAuthResponseVar& msg);
-
     bool fuzzResponseMessageMeasurements(PacketMeasurementsResponseVar& msg);
     bool fuzzPacketMeasurementBlockVar(struct PacketMeasurementBlockVar& val,
                                        bool doAlter);
