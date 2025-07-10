@@ -180,7 +180,6 @@ void SpdmWrapperApp::setupCli(int argc, char** argv)
         double algorithms{0};
         double digests{0};
         double certificate{0};
-        double challengeAuth{0};
         double measurements{0};
     } doFuseResponseMessages;
 
@@ -207,91 +206,6 @@ void SpdmWrapperApp::setupCli(int argc, char** argv)
 
     app.add_option("--fRespCertificate", doFuseResponseMessages.certificate,
                    "Prob. of altering resp. msg. Certificate (0-100)")
-        ->check(CLI::Range(0.0, 100.0));
-
-    struct
-    {
-        double nonce{0};
-        double hashChain{0};
-        double hashChainLen{0};
-        double hashChainVal{0};
-        double measurementSummary{0};
-        double measurementSummaryLen{0};
-        double measurementSummaryVal{0};
-        double opaque{0};
-        double opaqueLen{0};
-        double opaqueVal{0};
-        double signature{0};
-        double signatureLen{0};
-        double signatureVal{0};
-    } fuseRespChallengeAuthentication;
-
-    app.add_option(
-           "--fRespChallengeAuth", doFuseResponseMessages.challengeAuth,
-           "Prob. of altering resp. msg. Challenge Authentication (0-100)")
-        ->check(CLI::Range(0.0, 100.0));
-    app.add_option(
-           "--fRespChallengeAuthNonce", fuseRespChallengeAuthentication.nonce,
-           "Prob. of altering resp. msg. Challenge Authentication Nonce data (0-100)")
-        ->check(CLI::Range(0.0, 100.0));
-    app.add_option(
-           "--fRespChallengeAuthHashChain",
-           fuseRespChallengeAuthentication.hashChain,
-           "Prob. of altering resp. msg. Challenge Authentication Hash chain (0-100)")
-        ->check(CLI::Range(0.0, 100.0));
-    app.add_option(
-           "--fRespChallengeAuthHashChainLen",
-           fuseRespChallengeAuthentication.hashChainLen,
-           "Prob. of altering resp. msg. Challenge Authentication: Length of hash chain (0-100)")
-        ->check(CLI::Range(0.0, 100.0));
-    app.add_option(
-           "--fRespChallengeAuthHashChainVal",
-           fuseRespChallengeAuthentication.hashChainVal,
-           "Prob. of altering resp. msg. Challenge Authentication: Single item of hash chain (0-100)")
-        ->check(CLI::Range(0.0, 100.0));
-    app.add_option(
-           "--fRespChallengeAuthMeasurementSummary",
-           fuseRespChallengeAuthentication.measurementSummary,
-           "Prob. of altering resp. msg. Challenge Authentication: Measurement summary (0-100)")
-        ->check(CLI::Range(0.0, 100.0));
-    app.add_option(
-           "--fRespChallengeAuthMeasurementSummaryLen",
-           fuseRespChallengeAuthentication.measurementSummaryLen,
-           "Prob. of altering resp. msg. Challenge Authentication: length of measurement summary (0-100)")
-        ->check(CLI::Range(0.0, 100.0));
-    app.add_option(
-           "--fRespChallengeAuthMeasurementSummaryVal",
-           fuseRespChallengeAuthentication.measurementSummaryVal,
-           "Prob. of altering resp. msg. Challenge Authentication: single item of measurement summary (0-100)")
-        ->check(CLI::Range(0.0, 100.0));
-    app.add_option(
-           "--fRespChallengeAuthOpaque", fuseRespChallengeAuthentication.opaque,
-           "Prob. of altering resp. msg. Challenge Authentication: Opaque (0-100)")
-        ->check(CLI::Range(0.0, 100.0));
-    app.add_option(
-           "--fRespChallengeAuthOpaqueLen",
-           fuseRespChallengeAuthentication.opaqueLen,
-           "Prob. of altering resp. msg. Challenge Authentication: length of opaque data (0-100)")
-        ->check(CLI::Range(0.0, 100.0));
-    app.add_option(
-           "--fRespChallengeAuthOpaqueVal",
-           fuseRespChallengeAuthentication.opaqueVal,
-           "Prob. of altering resp. msg. Challenge Authentication: single item of opaque data (0-100)")
-        ->check(CLI::Range(0.0, 100.0));
-    app.add_option(
-           "--fRespChallengeAuthSignature",
-           fuseRespChallengeAuthentication.signature,
-           "Prob. of altering resp. msg. Challenge Authentication: Signature (0-100)")
-        ->check(CLI::Range(0.0, 100.0));
-    app.add_option(
-           "--fRespChallengeAuthSignatureLen",
-           fuseRespChallengeAuthentication.signatureLen,
-           "Prob. of altering resp. msg. Challenge Authentication: length of signature (0-100)")
-        ->check(CLI::Range(0.0, 100.0));
-    app.add_option(
-           "--fRespChallengeAuthSignatureVal",
-           fuseRespChallengeAuthentication.signatureVal,
-           "Prob. of altering resp. msg. Challenge Authentication: single item of signature (0-100)")
         ->check(CLI::Range(0.0, 100.0));
 
     struct
@@ -447,8 +361,7 @@ void SpdmWrapperApp::setupCli(int argc, char** argv)
             WrapperConfig::proc2thr(doFuseResponseMessages.all);
         config.fuseThrRespMessages.certificate =
             WrapperConfig::proc2thr(doFuseResponseMessages.all);
-        config.fuseThrRespMessages.challengeAuth =
-            WrapperConfig::proc2thr(doFuseResponseMessages.all);
+
         config.fuseThrRespMessages.measurements =
             WrapperConfig::proc2thr(doFuseResponseMessages.all);
     }
@@ -490,80 +403,6 @@ void SpdmWrapperApp::setupCli(int argc, char** argv)
             WrapperConfig::proc2thr(doFuseResponseMessages.certificate);
     }
 
-    // Options for fuzzing response challenge authentication message
-    if (doFuseResponseMessages.challengeAuth > 0)
-    {
-        config.fuseThrRespMessages.challengeAuth =
-            WrapperConfig::proc2thr(doFuseResponseMessages.challengeAuth);
-    }
-    if (fuseRespChallengeAuthentication.nonce > 0)
-    {
-        config.fuseRespChallengeAuthentication.nonce =
-            WrapperConfig::proc2thr(fuseRespChallengeAuthentication.nonce);
-    }
-    if (fuseRespChallengeAuthentication.hashChain > 0)
-    {
-        config.fuseRespChallengeAuthentication.hashChain =
-            WrapperConfig::proc2thr(fuseRespChallengeAuthentication.hashChain);
-    }
-    config.fuseRespChallengeAuthentication.hashChainLen =
-        WrapperConfig::proc2thr(fuseRespChallengeAuthentication.hashChainLen);
-    if (fuseRespChallengeAuthentication.hashChainVal > 0)
-    {
-        config.fuseRespChallengeAuthentication.hashChainVal =
-            WrapperConfig::proc2thr(
-                fuseRespChallengeAuthentication.hashChainVal);
-    }
-    if (fuseRespChallengeAuthentication.measurementSummary > 0)
-    {
-        config.fuseRespChallengeAuthentication.measurementSummary =
-            WrapperConfig::proc2thr(
-                fuseRespChallengeAuthentication.measurementSummary);
-    }
-    if (fuseRespChallengeAuthentication.measurementSummaryLen > 0)
-    {
-        config.fuseRespChallengeAuthentication.measurementSummaryLen =
-            WrapperConfig::proc2thr(
-                fuseRespChallengeAuthentication.measurementSummaryLen);
-    }
-    if (fuseRespChallengeAuthentication.measurementSummaryVal > 0)
-    {
-        config.fuseRespChallengeAuthentication.measurementSummaryVal =
-            WrapperConfig::proc2thr(
-                fuseRespChallengeAuthentication.measurementSummaryVal);
-    }
-    if (fuseRespChallengeAuthentication.opaque > 0)
-    {
-        config.fuseRespChallengeAuthentication.opaque =
-            WrapperConfig::proc2thr(fuseRespChallengeAuthentication.opaque);
-    }
-    if (fuseRespChallengeAuthentication.opaqueLen > 0)
-    {
-        config.fuseRespChallengeAuthentication.opaqueLen =
-            WrapperConfig::proc2thr(fuseRespChallengeAuthentication.opaqueLen);
-    }
-    if (fuseRespChallengeAuthentication.opaqueVal > 0)
-    {
-        config.fuseRespChallengeAuthentication.opaqueVal =
-            WrapperConfig::proc2thr(fuseRespChallengeAuthentication.opaqueVal);
-    }
-    if (fuseRespChallengeAuthentication.signature > 0)
-    {
-        config.fuseRespChallengeAuthentication.signature =
-            WrapperConfig::proc2thr(fuseRespChallengeAuthentication.signature);
-    }
-    if (fuseRespChallengeAuthentication.signatureLen > 0)
-    {
-        config.fuseRespChallengeAuthentication.signatureLen =
-            WrapperConfig::proc2thr(
-                fuseRespChallengeAuthentication.signatureLen);
-    }
-    if (fuseRespChallengeAuthentication.signatureVal > 0)
-    {
-        config.fuseRespChallengeAuthentication.signatureVal =
-            WrapperConfig::proc2thr(
-                fuseRespChallengeAuthentication.signatureVal);
-    }
     // Options for fuzzing response measurements message
     if (doFuseResponseMessages.measurements > 0)
     {

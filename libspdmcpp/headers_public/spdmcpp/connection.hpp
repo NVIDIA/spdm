@@ -442,9 +442,6 @@ class ConnectionClass : public NonCopyable
     [[nodiscard]] RetStat tryGetMeasurements();
     [[nodiscard]] RetStat tryGetMeasurements(uint8_t idx);
 
-    [[nodiscard]] RetStat tryChallengeIfSupported();
-    [[nodiscard]] RetStat tryChallenge();
-
     template <class T>
     [[nodiscard]] RetStat handleRecv();
     [[nodiscard]] RetStat handleRecv(EventReceiveClass& event);

@@ -90,7 +90,6 @@ struct PacketDecodeInfo
 {
     uint16_t BaseHashSize = 0;
     uint16_t SignatureSize = 0;
-    uint8_t ChallengeParam2 = 0;
     uint8_t GetMeasurementsParam1 = 0;
 };
 
@@ -117,7 +116,6 @@ struct PacketDecodeInfo
 
 // separator for clang-format ordering
 
-#include "internal/request/packet_challenge_request.hpp"
 #include "internal/request/packet_get_capabilities_1_0_request.hpp"
 #include "internal/request/packet_get_capabilities_request.hpp"
 #include "internal/request/packet_get_certificate_request.hpp"
@@ -132,7 +130,6 @@ struct PacketDecodeInfo
 #include "internal/response/packet_algorithms_response.hpp"
 #include "internal/response/packet_capabilities_response.hpp"
 #include "internal/response/packet_certificate_response.hpp"
-#include "internal/response/packet_challenge_auth_response.hpp"
 #include "internal/response/packet_digests_response.hpp"
 #include "internal/response/packet_error_response.hpp"
 #include "internal/response/packet_measurements_response.hpp"

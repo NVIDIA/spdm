@@ -287,9 +287,6 @@ TEST(packet_pseudorandom_decode_encode, static_size)
     EXPECT_TRUE(packetPseudorandomDecodeEncode<PacketDigestsResponseMin>());
     EXPECT_TRUE(packetPseudorandomDecodeEncode<PacketGetCertificateRequest>());
     EXPECT_TRUE(packetPseudorandomDecodeEncode<PacketCertificateResponseMin>());
-    EXPECT_TRUE(packetPseudorandomDecodeEncode<PacketChallengeRequest>());
-    EXPECT_TRUE(
-        packetPseudorandomDecodeEncode<PacketChallengeAuthResponseMin>());
 
     EXPECT_TRUE(
         packetPseudorandomDecodeEncode<PacketGetMeasurementsRequestMin>());
@@ -392,63 +389,6 @@ TEST(packet_pseudorandom_encode_decode, PacketCertificateResponseVar)
     EXPECT_EQ(p.finalize(), RetStat::OK);
 
     EXPECT_TRUE(packetEncodeDecode(p));
-}
-
-TEST(packet_pseudorandom_encode_decode, PacketChallengeAuthResponseVar)
-{
-    PacketDecodeInfo info;
-    info.ChallengeParam2 = 0;
-    info.BaseHashSize = 32;
-    info.SignatureSize = 48;
-
-    PacketChallengeAuthResponseVar p;
-
-    fillPseudoRandomPacket(p.Min);
-
-    p.CertChainHashVector.resize(info.BaseHashSize);
-    fillPseudoRandom(p.CertChainHashVector);
-
-    fillPseudoRandom(p.Nonce);
-
-    p.OpaqueDataVector.resize(127);
-    fillPseudoRandom(p.OpaqueDataVector);
-
-    p.SignatureVector.resize(info.SignatureSize);
-    fillPseudoRandom(p.SignatureVector);
-
-    EXPECT_EQ(p.finalize(), RetStat::OK);
-
-    EXPECT_TRUE(packetEncodeDecode(p, info));
-}
-
-TEST(packet_pseudorandom_encode_decode, PacketChallengeAuthResponseVar_1)
-{
-    PacketDecodeInfo info;
-    info.ChallengeParam2 = 1;
-    info.BaseHashSize = 32;
-    info.SignatureSize = 48;
-
-    PacketChallengeAuthResponseVar p;
-
-    fillPseudoRandomPacket(p.Min);
-
-    p.CertChainHashVector.resize(info.BaseHashSize);
-    fillPseudoRandom(p.CertChainHashVector);
-
-    fillPseudoRandom(p.Nonce);
-
-    p.MeasurementSummaryHashVector.resize(info.BaseHashSize);
-    fillPseudoRandom(p.MeasurementSummaryHashVector);
-
-    p.OpaqueDataVector.resize(127);
-    fillPseudoRandom(p.OpaqueDataVector);
-
-    p.SignatureVector.resize(info.SignatureSize);
-    fillPseudoRandom(p.SignatureVector);
-
-    EXPECT_EQ(p.finalize(), RetStat::OK);
-
-    EXPECT_TRUE(packetEncodeDecode(p, info));
 }
 
 TEST(packet_pseudorandom_encode_decode, PacketGetMeasurementsRequestVar)

@@ -65,26 +65,9 @@ class WrapperConfig
         Threshold algorithms{false, 0};
         Threshold digests{false, 0};
         Threshold certificate{false, 0};
-        Threshold challengeAuth{false, 0};
         Threshold measurements{false, 0};
     } fuseThrRespMessages;
 
-    struct
-    {
-        Threshold nonce{false, 0};
-        Threshold hashChain{false, 0};
-        Threshold hashChainLen{false, 0};
-        Threshold hashChainVal{false, 0};
-        Threshold measurementSummary{false, 0};
-        Threshold measurementSummaryLen{false, 0};
-        Threshold measurementSummaryVal{false, 0};
-        Threshold opaque{false, 0};
-        Threshold opaqueLen{false, 0};
-        Threshold opaqueVal{false, 0};
-        Threshold signature{false, 0};
-        Threshold signatureLen{false, 0};
-        Threshold signatureVal{false, 0};
-    } fuseRespChallengeAuthentication;
     struct
     {
         Threshold nonce{false, 0};

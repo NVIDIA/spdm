@@ -639,7 +639,7 @@ RetStat ConnectionClass::handleRecv<PacketAlgorithmsResponseVar>()
 
     if (skipCertificate())
     {
-        rs = tryChallengeIfSupported();
+        rs = tryGetMeasurements();
     }
     else
     {
@@ -704,7 +704,7 @@ RetStat ConnectionClass::handleRecv<PacketDigestsResponseVar>()
     appendRecvToBuf(BufEnum::B);
     if (skipCert)
     {
-        rs = tryChallengeIfSupported();
+        rs = tryGetMeasurements();
         SPDMCPP_LOG_TRACE_RS(Log, rs);
     }
     else
@@ -824,7 +824,7 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
         // rs = verifyCertificateChain(slot);
         // SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
         slot.markInfo(SlotInfoEnum::CERTIFICATES);
-        rs = tryChallengeIfSupported();
+        rs = tryGetMeasurements();
     }
     SPDMCPP_LOG_TRACE_RS(Log, rs);
     return rs;
@@ -845,91 +845,6 @@ RetStat ConnectionClass::tryGetCertificate(SlotIdx idx)
 
     auto rs = tryGetCertificateChunk(idx);
     SPDMCPP_LOG_TRACE_RS(Log, rs);
-    return rs;
-}
-
-RetStat ConnectionClass::tryChallengeIfSupported()
-{
-    if (!(responderCapabilitiesFlags & ResponderCapabilitiesFlags::CHAL_CAP))
-    {
-        return tryGetMeasurements();
-    }
-    return tryChallenge();
-}
-
-RetStat ConnectionClass::tryChallenge()
-{
-    SPDMCPP_LOG_TRACE_FUNC(Log);
-    SPDMCPP_ASSERT(MessageVersion != MessageVersionEnum::UNKNOWN);
-
-    PacketChallengeRequest request;
-    request.Header.MessageVersion = MessageVersion;
-    request.Header.Param1 = CertificateSlotIdx;
-    request.Header.Param2 = packetDecodeInfo.ChallengeParam2 = 0xFF;
-    // 		request.Header.Param2 = packetDecodeInfo.ChallengeParam2 = 1;
-    fillRandom(request.Nonce);
-
-    auto rs = sendRequestSetupResponse<PacketChallengeAuthResponseVar>(
-        request, BufEnum::C, Timings.getT2());
-    SPDMCPP_LOG_TRACE_RS(Log, rs);
-    return rs;
-}
-
-template <>
-RetStat ConnectionClass::handleRecv<PacketChallengeAuthResponseVar>()
-{
-    PacketChallengeAuthResponseVar resp;
-    auto rs = interpretResponse(resp, packetDecodeInfo);
-    SPDMCPP_CONNECTION_RS_ERROR_RETURN_WITH_VERSION(rs);
-
-    appendToBuf(BufEnum::C, &ResponseBuffer[ResponseBufferSPDMOffset],
-                ResponseBuffer.size() - ResponseBufferSPDMOffset -
-                    packetDecodeInfo.SignatureSize);
-
-    {
-        std::vector<uint8_t> hash;
-        {
-            HashClass ha;
-            ha.setup(getSignatureHashEnum());
-
-            for (std::vector<uint8_t>& buf : Bufs)
-            {
-                if (!buf.empty())
-                {
-                    if (rs = ha.update(buf); rs != RetStat::OK)
-                    {
-                        return rs;
-                    }
-                }
-            }
-            ha.hashFinish(hash);
-        }
-        Log.iprint("computed m2 hash = ");
-        Log.println(hash);
-
-        Log.iprint("resp.SignatureVector = ");
-        Log.println(resp.SignatureVector);
-        {
-            int ret = verifySignature(Slots[CertificateSlotIdx].getLeafCert(),
-                                      resp.SignatureVector, hash);
-            SPDMCPP_LOG_TRACE_RS(Log, ret);
-            if (!ret)
-            {
-                if (Log.logLevel >= spdmcpp::LogClass::Level::Informational)
-                {
-                    Log.iprintln(
-                        "challenge_auth_response SIGNATURE verify PASSED!");
-                }
-            }
-            else
-            {
-                mbedtlsPrintErrorLine(Log, "verifySignature()", ret);
-                return RetStat::ERROR_AUTHENTICATION_FAILED;
-            }
-        }
-        rs = tryGetMeasurements();
-        SPDMCPP_LOG_TRACE_RS(Log, rs);
-    }
     return rs;
 }
 
@@ -1298,7 +1213,6 @@ RetStat ConnectionClass::handleRecv(EventReceiveClass& event)
             DTYPE(PacketAlgorithmsResponseVar)
             DTYPE(PacketDigestsResponseVar)
             DTYPE(PacketCertificateResponseVar)
-            DTYPE(PacketChallengeAuthResponseVar)
             DTYPE(PacketMeasurementsResponseVar)
             default:
                 if (Log.logLevel >= spdmcpp::LogClass::Level::Error) {
