@@ -8,6 +8,7 @@ Restart=always
 Type=dbus
 WatchdogSec=60s
 BusName=xyz.openbmc_project.SPDM
+ExecStartPre=/usr/bin/sleep 30
 ExecStart=/usr/bin/spdmd
 
 [Install]
