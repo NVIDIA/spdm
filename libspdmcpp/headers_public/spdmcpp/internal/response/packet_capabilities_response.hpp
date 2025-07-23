@@ -36,8 +36,7 @@ struct PacketCapabilitiesResponse
     PacketCapabilitiesResponse() = default;
     PacketCapabilitiesResponse(uint8_t ctExponent,
                                ResponderCapabilitiesFlags flags) :
-        CTExponent(ctExponent),
-        Flags(flags)
+        CTExponent(ctExponent), Flags(flags)
     {}
 
     void printMl(LogClass& log) const

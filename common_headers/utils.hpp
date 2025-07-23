@@ -109,8 +109,7 @@ struct ServiceHelper
      */
     constexpr ServiceHelper(const char* aPath, const char* anInterface,
                             const char* adefaultService = nullptr) :
-        path(aPath),
-        interface(anInterface), defaultService(adefaultService)
+        path(aPath), interface(anInterface), defaultService(adefaultService)
     {}
 
     /**

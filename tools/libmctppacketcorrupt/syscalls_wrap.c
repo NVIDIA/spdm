@@ -327,4 +327,3 @@ int _iosys_epoll_ctl(int epfd, int op, int fd, struct epoll_event* event)
     return ret;
 }
 __asm__(".symver _iosys_epoll_ctl,epoll_ctl@GLIBC_2.4");
-

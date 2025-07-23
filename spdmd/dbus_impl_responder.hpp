@@ -71,8 +71,8 @@ class MctpTransportClass : public spdmcpp::MctpTransportClass
   public:
     MctpTransportClass(uint8_t eid, Responder& resp, std::string medium,
                        spdmcpp::LogClass& logIn) :
-        spdmcpp::MctpTransportClass(eid),
-        transportMedium(std::move(medium)), responder(resp), log(logIn)
+        spdmcpp::MctpTransportClass(eid), transportMedium(std::move(medium)),
+        responder(resp), log(logIn)
     {}
     ~MctpTransportClass() override = default;
 

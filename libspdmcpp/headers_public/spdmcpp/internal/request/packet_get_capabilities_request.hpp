@@ -36,8 +36,7 @@ struct PacketGetCapabilitiesRequest
     PacketGetCapabilitiesRequest() = default;
     PacketGetCapabilitiesRequest(uint8_t ctExponent,
                                  RequesterCapabilitiesFlags flags) :
-        CTExponent(ctExponent),
-        Flags(flags)
+        CTExponent(ctExponent), Flags(flags)
     {}
 
     void printMl(LogClass& log) const

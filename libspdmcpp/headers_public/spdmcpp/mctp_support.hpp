@@ -285,8 +285,7 @@ class MctpIoClass : public IOClass
         }
 
         // NOLINTNEXTLINE cppcoreguidelines-avoid-c-arrays
-        struct sockaddr_un addr
-        {};
+        struct sockaddr_un addr{};
         addr.sun_family = AF_UNIX;
         // NOLINTNEXTLINE cppcoreguidelines-pro-bounds-array-to-pointer-decay
         memcpy(addr.sun_path, path.data(), path.length());

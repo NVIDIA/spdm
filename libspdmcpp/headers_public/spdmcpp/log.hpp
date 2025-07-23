@@ -325,9 +325,7 @@ class TraceHelper
         Log.indent();
     }
     TraceHelper(LogClass& log, const std::string& func, const std::string& file,
-                uint32_t line) :
-        Log(log),
-        Function(func + "() BLOCK")
+                uint32_t line) : Log(log), Function(func + "() BLOCK")
     {
         Log.iprint(Function);
         Log.print(" START: @ ");

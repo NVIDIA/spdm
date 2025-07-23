@@ -55,8 +55,7 @@ class FixtureIOClass : public spdmcpp::IOClass
     FixtureIOClass(std::string_view logName,
                    std::list<std::vector<uint8_t>>& readQueue,
                    std::list<std::vector<uint8_t>>& writeQueue) :
-        readQueue(readQueue),
-        writeQueue(writeQueue)
+        readQueue(readQueue), writeQueue(writeQueue)
     {
         if (!logName.empty())
         {

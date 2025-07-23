@@ -61,9 +61,9 @@ class FuzzingResponder
                      const PredefinedResponses& predefinedResponses,
                      BaseAsymAlgoFlags asymAlgo, BaseHashAlgoFlags hashAlgo,
                      std::istream& str = std::cin) :
-        io(io),
-        trans(trans), config(config), predefinedResponses(predefinedResponses),
-        log(std::cout), asymAlgo(asymAlgo), hashAlgo(hashAlgo), str(str)
+        io(io), trans(trans), config(config),
+        predefinedResponses(predefinedResponses), log(std::cout),
+        asymAlgo(asymAlgo), hashAlgo(hashAlgo), str(str)
     {
         mbedtls_pk_init(&pkctx);
         mbedtls_x509_crt_init(&caCert);

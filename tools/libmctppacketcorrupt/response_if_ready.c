@@ -143,4 +143,3 @@ int corrupt_pkt_mod_error_resp_fake_recv(int sockfd, corrupt_context* ctx,
     }
     return 0;
 }
-

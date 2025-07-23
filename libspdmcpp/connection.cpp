@@ -106,8 +106,7 @@ auto calcResponseIfReadyWaitTimeMs(uint8_t RTDExp, uint8_t RTDM)
 
 ConnectionClass::ConnectionClass(const ContextClass& cont, LogClass& log,
                                  uint8_t eid, std::string sockPath) :
-    context(cont),
-    Log(log), sockPath(std::move(sockPath)), m_eid(eid)
+    context(cont), Log(log), sockPath(std::move(sockPath)), m_eid(eid)
 {
     resetConnection();
 }
