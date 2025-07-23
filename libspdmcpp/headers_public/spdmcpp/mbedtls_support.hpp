@@ -357,7 +357,7 @@ inline std::vector<std::string> getKeyUsage(LogClass& log,
 
     for (const auto& [flag, name] : keyUsageMap)
     {
-        if ((cert->key_usage & flag) != 0)
+        if (mbedtls_x509_crt_check_key_usage(cert, flag) == 0)
         {
             usage.push_back(std::string(name));
         }
