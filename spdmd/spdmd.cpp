@@ -22,11 +22,15 @@
 #include "spdmd_app.hpp"
 #include "spdmd_version.hpp"
 
-#include <bits/stdc++.h>
-
 #include <CLI/CLI.hpp>
 
+#include <algorithm>
+#include <chrono>
+#include <iostream>
+#include <memory>
+#include <stdexcept>
 #include <string>
+#include <vector>
 
 using namespace std;
 using namespace spdmd;
@@ -344,8 +348,8 @@ void SpdmdApp::createResponder(const dbus_api::ResponderArgs& args)
     }
 #ifdef MCTP_IN_KERNEL
     responders[args.eid] = std::make_unique<dbus_api::Responder>(
-        *this, path, args.eid, args.mctpPath, args.inventoryPath,
-        TransportMedium::None, args.socketPath);
+        *this, path, args.eid, args.mctpPath, args.inventoryPath, args.medium,
+        args.bindingType, args.socketPath);
 #else
 
     if (!args.medium.empty())
