@@ -319,7 +319,6 @@ void MctpDiscovery::mctpNewObjectSignal(
     std::string uuid = getUUID(interfaces);
 
 #ifdef DISCOVERY_ONLY_FROM_MCTP_CONTROL
-#ifndef MCTP_IN_KERNEL
     auto mediumType = getMediumType(interfaces);
     if (mediumType.empty())
     {
@@ -344,7 +343,7 @@ void MctpDiscovery::mctpNewObjectSignal(
         }
         return;
     }
-
+#ifndef MCTP_IN_KERNEL
     auto sockPath = getTransportSocket(interfaces);
     if (sockPath.empty())
     {
@@ -359,8 +358,6 @@ void MctpDiscovery::mctpNewObjectSignal(
     tryConnectMCTP(sockPath);
 #else
     auto sockPath = "";
-    auto mediumType = "";
-    auto bindingType = "";
 #endif
     dbus_api::ResponderArgs args{};
     if (eid.has_value())
@@ -400,7 +397,6 @@ void MctpDiscovery::mctpNewObjectSignal(
             std::string(objPath) + '\'');
         return;
     }
-#ifndef MCTP_IN_KERNEL
     auto mediumType = getMediumType(interfaces);
     if (mediumType.empty())
     {
@@ -425,7 +421,7 @@ void MctpDiscovery::mctpNewObjectSignal(
         }
         return;
     }
-
+#ifndef MCTP_IN_KERNEL
     auto sockPath = getTransportSocket(interfaces);
     if (sockPath.empty())
     {
@@ -440,8 +436,6 @@ void MctpDiscovery::mctpNewObjectSignal(
     }
 #else
     auto sockPath = "";
-    auto mediumType = "";
-    auto bindingType = "";
 #endif
     getInventoryPathAsync(uuid, [this, eid, uuid, objPath, mediumType,
                                  bindingType, sockPath, eidValue1](
@@ -548,7 +542,6 @@ void MctpDiscovery::inventoryNewObjectSignal(
             return;
         }
 
-#ifndef MCTP_IN_KERNEL
         auto mediumType = getMediumType(mctpObj.interfaces);
         if (mediumType.empty())
         {
@@ -579,6 +572,7 @@ void MctpDiscovery::inventoryNewObjectSignal(
             return;
         }
 
+#ifndef MCTP_IN_KERNEL
         auto transpSock = getTransportSocket(mctpObj.interfaces);
         if (transpSock.empty())
         {
@@ -598,8 +592,6 @@ void MctpDiscovery::inventoryNewObjectSignal(
         tryConnectMCTP(transpSock);
 #else
      const auto transpSock = "";
-     auto mediumType = "";
-     auto bindingType = "";
 #endif
         dbus_api::ResponderArgs args{};
         if (eid.has_value())
