@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+#include "config.h"
+
 #include "spdm_tool.hpp"
 
 #include "enumerate_endpoints.hpp"
@@ -683,12 +685,18 @@ auto SpdmTool::connectMctp() -> void
 {
     EnumerateEndpoints enumerate(m_eid);
     auto& respInfo = enumerate.getRespondersInfo();
-    if (respInfo.empty() || respInfo.back().sockPath.empty())
+    if (respInfo.empty())
+    {
+        throw std::logic_error("Unable to get responders info");
+    }
+
+#ifndef MCTP_IN_KERNEL
+    const auto& responder = respInfo.back();
+    if (responder.sockPath.empty())
     {
         throw std::logic_error("Unable to get transport socket");
     }
-#ifndef MCTP_IN_KERNEL
-    const auto& unixSock = respInfo.back().sockPath;
+    const auto& unixSock = responder.sockPath;
     if (!mctpIO.createSocket(unixSock))
     {
         using namespace std::string_literals;
@@ -786,7 +794,7 @@ auto SpdmTool::parseCertChain(std::vector<uint8_t>& vec, std::string& out)
         {
             auto s = &vec[off];
             auto p = s;
-            ret = mbedtls_asn1_get_tag(&p, &vec[vec.size()], &asn1Len,
+            ret = mbedtls_asn1_get_tag(&p, vec.data() + vec.size(), &asn1Len,
                                        MBEDTLS_ASN1_CONSTRUCTED |
                                            MBEDTLS_ASN1_SEQUENCE);
             if (ret)
@@ -824,13 +832,11 @@ auto SpdmTool::run() -> bool
     bool ret{};
     do
     {
-#ifndef MCTP_IN_KERNEL
         ret = runEnumerate();
         if (!ret)
         {
             break;
         }
-#endif
         ret = runComm();
         if (!ret)
         {

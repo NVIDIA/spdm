@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+#include "config.h"
+
 #include "enumerate_endpoints.hpp"
 
 #include "enumerate_utils.hpp"
@@ -87,8 +89,12 @@ auto EnumerateEndpoints::exploreMctpItem(
 {
     if (const auto eid = getEid(ifc); eid)
     {
+#ifdef MCTP_IN_KERNEL
+        ResponderInfo info{*getEid(ifc), path, getUUID(ifc), ""};
+#else
         ResponderInfo info{*getEid(ifc), path, getUUID(ifc),
                            getUnixSocketAddress(ifc)};
+#endif
         respInfos.emplace_back(info);
     }
 }
@@ -121,19 +127,20 @@ auto EnumerateEndpoints::getEid(
         return std::nullopt;
     }
     std::optional<size_t> eid;
+    const auto& eidProperty = properties.at(mctpEndpointIntfPropertyEid);
     try
     {
-        eid = std::get<uint32_t>(properties.at(mctpEndpointIntfPropertyEid));
-    }
-    catch (const std::bad_variant_access& e)
-    {
-        try
+        if (auto uint32eid = std::get_if<unsigned int>(&eidProperty))
         {
-            eid = std::get<size_t>(properties.at(mctpEndpointIntfPropertyEid));
+            eid = *uint32eid;
         }
-        catch (const std::bad_variant_access& e1)
-        {}
+        else if (auto uint8eid = std::get_if<unsigned char>(&eidProperty))
+        {
+            eid = *uint8eid;
+        }
     }
+    catch (const std::exception& e)
+    {}
     if (eid.has_value())
     {
         try
@@ -255,7 +262,7 @@ auto EnumerateEndpoints::getMCTPServices(sdbusplus::bus::bus& bus, int m_eid)
     }
     catch (const sdbusplus::exception_t& e)
     {
-        std::cerr << "Error: Failed to get all bus interfaces" << e.what()
+        std::cerr << "Error: Failed to get all bus interfaces:" << e.what()
                   << std::endl;
     }
     return devServices;

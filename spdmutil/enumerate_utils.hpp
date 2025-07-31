@@ -16,6 +16,8 @@
  */
 
 #pragma once
+#include "config.h"
+
 #include <sdbusplus/bus/match.hpp>
 #include <sdbusplus/utility/dedup_variant.hpp>
 
