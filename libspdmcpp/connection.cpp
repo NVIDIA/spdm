@@ -744,6 +744,7 @@ RetStat ConnectionClass::tryGetCertificateChunk(SlotIdx slotidx)
 template <>
 RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
 {
+    static constexpr auto numCertRetries = 3U;
     PacketCertificateResponseVar resp;
     auto rs = interpretResponse(resp);
     SPDMCPP_CONNECTION_RS_ERROR_RETURN_WITH_VERSION(rs);
@@ -756,7 +757,25 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
     if (resp.Min.PortionLength > getResponseBufferRef().size())
     {
         rs = RetStat::ERROR_CERTIFICATE_CHAIN_SIZE_INVALID;
-        SPDMCPP_CONNECTION_RS_ERROR_RETURN_WITH_VERSION(rs);
+        if (retryCertCount < numCertRetries)
+        {
+            ++retryCertCount;
+            if (Log.logLevel >= LogClass::Level::Error)
+            {
+                Log.print("Try retry certificate (invalid chunk size) ");
+                Log.print(retryCertCount);
+                Log.print("/");
+                Log.print(numCertRetries);
+                Log.println("...");
+            }
+            rs = tryGetCertificate(idx);
+            SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+            return rs;
+        }
+        else
+        {
+            SPDMCPP_CONNECTION_RS_ERROR_RETURN_WITH_VERSION(rs);
+        }
     }
 
     if (cert.empty())
@@ -789,7 +808,6 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
     // parse chain and store in the respective SlotClass
     rs = parseCertChain(slot, cert);
 
-    static constexpr auto numCertRetries = 3U;
     if (isError(rs))
     {
         if (retryCertCount < numCertRetries)
