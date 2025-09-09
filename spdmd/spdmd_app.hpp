@@ -164,7 +164,7 @@ class SpdmdApp : public SpdmdAppContext
     std::unique_ptr<boost::asio::posix::stream_descriptor> afMctpEvent;
 
     /** @brief Array of all responder objects, managed by SPDM daemon */
-    std::vector<std::unique_ptr<dbus_api::Responder>> responders;
+    std::vector<std::shared_ptr<dbus_api::Responder>> responders;
     /** @brief Discovery responders by UUID map*/
     std::map<std::string, dbus_api::ResponderArgs> resp_discovery;
 

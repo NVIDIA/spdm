@@ -352,7 +352,7 @@ void SpdmdApp::createResponder(const dbus_api::ResponderArgs& args)
                 ? "xyz.openbmc_project.MCTP.Endpoint.MediaTypes.PCIe"
                 : args.medium;
 
-        responders[args.eid] = std::make_unique<dbus_api::Responder>(
+        responders[args.eid] = std::make_shared<dbus_api::Responder>(
             *this, path, args.eid, args.mctpPath, args.inventoryPath,
             mediumType, args.bindingType, args.socketPath);
     }

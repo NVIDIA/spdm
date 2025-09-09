@@ -639,8 +639,15 @@ void Responder::setSerialNumberAsync(const std::vector<uint8_t>& serialData)
     auto& conn = appContext.getConn();
 
     conn.async_method_call(
-        [this, path, propertyInterface, propertyName, propertyValue](
-            boost::system::error_code ec, sdbusplus::message::message& msg) {
+        [this, weakSelf{weak_from_this()}, path, propertyInterface,
+         propertyName, propertyValue](boost::system::error_code ec,
+                                      sdbusplus::message::message& msg) {
+            auto self = weakSelf.lock();
+            if (!self)
+            {
+                // this has already been destroyed
+                return;
+            }
             auto& log = getLog();
             std::map<std::string, std::vector<std::string>> mapperResponse;
 
@@ -687,7 +694,13 @@ void Responder::setSerialNumberAsync(const std::vector<uint8_t>& serialData)
 
             auto& conn = appContext.getConn();
             conn.async_method_call(
-                [this, path](boost::system::error_code ecSet) {
+                [this, weakSelf, path](boost::system::error_code ecSet) {
+                    auto self = weakSelf.lock();
+                    if (!self)
+                    {
+                        // this has already been destroyed
+                        return;
+                    }
                     auto& log = getLog();
                     if (ecSet)
                     {
