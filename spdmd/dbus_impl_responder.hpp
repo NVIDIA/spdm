@@ -108,7 +108,9 @@ using ResponderIntf = sdbusplus::server::object::object<
  *  @details A concrete implementation for the
  *  xyz.openbmc_project.SPDM.Responder DBus APIs.
  */
-class Responder : public ResponderIntf, std::enable_shared_from_this<Responder>
+class Responder :
+    public ResponderIntf,
+    public std::enable_shared_from_this<Responder>
 {
   public:
     Responder() = delete;
