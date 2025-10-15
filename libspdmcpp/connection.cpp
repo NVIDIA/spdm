@@ -157,6 +157,7 @@ RetStat ConnectionClass::refreshMeasurementsInternal()
     stateEnabled = true;
     retryPktCount = 0;
     retryGetVersionCount = 0;
+    CombinedMeasurementTranscript.clear();
     auto rs = tryGetVersion();
     SPDMCPP_LOG_TRACE_RS(Log, rs);
     return rs;
@@ -182,6 +183,7 @@ void ConnectionClass::resetConnection()
     MeasurementsSignature.clear();
     MeasurementNonce.fill(0);
     MeasurementIndices.reset();
+    CombinedMeasurementTranscript.clear();
 
     for (auto& s : Slots)
     {
@@ -386,7 +388,8 @@ RetStat ConnectionClass::handleRecv<PacketVersionResponseVar>()
     // the version response should have 1.0 in the header according to
     // DSP0274_1.1.1 page 34
     if (resp.Min.Header.MessageVersion != MessageVersionEnum::SPDM_1_0 &&
-        resp.Min.Header.MessageVersion != MessageVersionEnum::SPDM_1_1)
+        resp.Min.Header.MessageVersion != MessageVersionEnum::SPDM_1_1 &&
+        resp.Min.Header.MessageVersion != MessageVersionEnum::SPDM_1_2)
     {
         rs = RetStat::ERROR_INVALID_HEADER_VERSION;
         SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
@@ -478,6 +481,11 @@ RetStat ConnectionClass::tryGetCapabilities()
         request.Header.MessageVersion = MessageVersion;
 
         request.Flags = RequesterCapabilitiesFlags::NIL;
+        if (MessageVersion >= MessageVersionEnum::SPDM_1_2)
+        {
+            request.DataTransferSize = spdmDefaultDataTransferSize;
+            request.MaxSPDMmsgSize = spdmDefaultMaxSpdmMsgSize;
+        }
 
         rs = sendRequestSetupResponse<PacketCapabilitiesResponse>(
             request, BufEnum::A, Timings.getT1());
@@ -1019,16 +1027,55 @@ RetStat ConnectionClass::handleRecv<PacketMeasurementsResponseVar>()
 #if 0
         HashL1L2.hashFinish(hash);
 #else
-        hashBuf(hash, getSignatureHashEnum(), BufEnum::L);
-#endif
-        if (Log.logLevel >= spdmcpp::LogClass::Level::Informational)
+        if (MessageVersion >= MessageVersionEnum::SPDM_1_2)
         {
+            // SPDM 1.2+: Hash(VCA || Measurements)
+            hashMultipleBufs(hash, getSignatureHashEnum(),
+                             {BufEnum::A, BufEnum::L});
+        }
+        else
+        {
+            // SPDM 1.0/1.1: Hash(Measurements only)
+            hashBuf(hash, getSignatureHashEnum(), BufEnum::L);
+        }
+#endif
+        if (Log.logLevel >= spdmcpp::LogClass::Level::Debug)
+        {
+            if (MessageVersion >= MessageVersionEnum::SPDM_1_2)
+            {
+                Log.iprint(
+                    "SPDM 1.2: VCA included in measurement transcript. ");
+                Log.iprint("Buffer A size = ");
+                Log.print(refBuf(BufEnum::A).size());
+                Log.iprint(", Buffer L size = ");
+                Log.println(refBuf(BufEnum::L).size());
+                Log.iprint("Buffer A (VCA) hex: ");
+                Log.println(refBuf(BufEnum::A));
+                Log.iprint("Buffer L (Measurements) hex: ");
+                Log.println(refBuf(BufEnum::L));
+            }
             Log.iprint("computed l2 hash = ");
             Log.println(hash);
         }
-        auto ret = verifySignature(Slots[CertificateSlotIdx].getLeafCert(),
-                                   resp.SignatureVector, hash);
+        std::vector<uint8_t> signature_verification_hash;
+
+        if (MessageVersion >= MessageVersionEnum::SPDM_1_2)
+        {
+            auto context_data = buildSpdm12SignatureContext(
+                SPDM_MEASUREMENTS_SIGN_CONTEXT, false, hash);
+            signature_verification_hash.resize(hash.size());
+            hashBuf(signature_verification_hash, getSignatureHashEnum(),
+                    context_data);
+        }
+        else
+        {
+            signature_verification_hash = hash;
+        }
+        auto ret =
+            verifySignature(Slots[CertificateSlotIdx].getLeafCert(),
+                            resp.SignatureVector, signature_verification_hash);
         SPDMCPP_LOG_TRACE_RS(Log, ret);
+
         if (!ret)
         {
             if (Log.logLevel >= spdmcpp::LogClass::Level::Informational)

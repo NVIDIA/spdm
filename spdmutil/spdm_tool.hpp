@@ -110,6 +110,8 @@ class SpdmTool
     std::optional<spdmcpp::PacketAlgorithmsResponseVar> algoResp;
     //! Need enumerate
     bool needEnumEps{};
+    spdmcpp::MessageVersionEnum negotiatedVersion{
+        spdmcpp::MessageVersionEnum::SPDM_1_1};
 };
 
 //! Prepare request

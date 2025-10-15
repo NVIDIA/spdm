@@ -88,9 +88,11 @@ auto SpdmTool::parseArgs(int argc, char** argv) -> int
     auto getMeas = app.add_subcommand("get-meas", "Get measurements command");
     // Version subcommand config
     VerCmd ver;
-    getVer->add_option("--ver", ver.ver, "Version specs")
+    getVer
+        ->add_option("--ver", ver.ver,
+                     "Version specs (0x11=SPDM1.1, 0x12=SPDM1.2)")
         ->check(CLI::Range(0x00, 0xff))
-        ->default_str("0x10");
+        ->default_str("0x11");
     // Get capabilities
     CapabCmd capab;
     getCapab->add_option("--flags", capab.flags, "Capabilities flags")
@@ -100,6 +102,15 @@ auto SpdmTool::parseArgs(int argc, char** argv) -> int
         ->add_option("--exponent", capab.ctExponent, "Capabilities exponent")
         ->check(CLI::Range(0x00, 0xFF))
         ->default_str("0x00");
+    getCapab
+        ->add_option("--data-transfer-size", capab.dataTransferSize,
+                     "SPDM 1.2: Maximum buffer size for receiving messages")
+        ->default_str(std::to_string(spdmDefaultDataTransferSize));
+    getCapab
+        ->add_option(
+            "--max-spdm-msg-size", capab.maxSpdmMsgSize,
+            "SPDM 1.2: Maximum size for reassembling Large SPDM messages")
+        ->default_str(std::to_string(spdmDefaultMaxSpdmMsgSize));
 
     // Negotiate algorithm
     NegAlgoCmd algo;
@@ -255,8 +266,11 @@ spdmcpp::RetStat
 {
     PacketVersionResponseVar resp;
     auto rs = interpretResponse(buf, resp);
+
     if (isError(rs))
     {
+        std::cout << " Version Response returned error, exiting handler"
+                  << std::endl;
         jsonGen["GetVersion"] = {{"ResponseCode", get_cstr(rs)}};
         return rs;
     }
@@ -264,10 +278,25 @@ spdmcpp::RetStat
     svers.reserve(resp.VersionNumberEntries.size());
     for (const auto& ver : resp.VersionNumberEntries)
     {
-        svers.push_back(verToString(ver));
+        std::string verStr = verToString(ver);
+        svers.push_back(verStr);
     }
-    jsonGen["GetVersion"] = {{"SPDMVersion", svers},
-                             {"ResponseCode", get_cstr(rs)}};
+
+    negotiatedVersion = MessageVersionEnum::SPDM_1_1; // Default
+    for (const auto& ver : resp.VersionNumberEntries)
+    {
+        auto verEnum = ver.getMessageVersion();
+        if (static_cast<uint8_t>(verEnum) >
+            static_cast<uint8_t>(negotiatedVersion))
+        {
+            negotiatedVersion = verEnum;
+        }
+    }
+
+    jsonGen["GetVersion"] = {
+        {"SPDMVersion", svers},
+        {"NegotiatedVersion", verToString(negotiatedVersion)},
+        {"ResponseCode", get_cstr(rs)}};
     return rs;
 }
 
@@ -287,6 +316,11 @@ spdmcpp::RetStat
         {"CTExponent", resp.CTExponent},
         {"Capabilities", capFlagsToStr(resp.Flags)},
         {"ResponseCode", get_cstr(rs)}};
+    if (resp.Header.MessageVersion >= MessageVersionEnum::SPDM_1_2)
+    {
+        jsonGen["GetCapabilities"]["DataTransferSize"] = resp.DataTransferSize;
+        jsonGen["GetCapabilities"]["MaxSPDMmsgSize"] = resp.MaxSPDMmsgSize;
+    }
     return rs;
 }
 
@@ -490,8 +524,19 @@ auto SpdmTool::runComm() -> bool
                         req.Header.MessageVersion =
                             MessageVersionEnum::SPDM_1_0;
                     }
+                    else if (arg.ver == 0x11)
+                    {
+                        req.Header.MessageVersion =
+                            MessageVersionEnum::SPDM_1_1;
+                    }
+                    else if (arg.ver == 0x12)
+                    {
+                        req.Header.MessageVersion =
+                            MessageVersionEnum::SPDM_1_2;
+                    }
                     else
                     {
+                        // Default to SPDM 1.1 for backward compatibility
                         req.Header.MessageVersion =
                             MessageVersionEnum::SPDM_1_1;
                     }
@@ -499,17 +544,21 @@ auto SpdmTool::runComm() -> bool
                 },
                 [&sendBuf, &rs, this](const CapabCmd& arg) {
                     PacketGetCapabilitiesRequest req{};
-                    req.Header.MessageVersion = MessageVersionEnum::SPDM_1_1;
+                    req.Header.MessageVersion = negotiatedVersion;
                     req.Flags =
                         static_cast<RequesterCapabilitiesFlags>(arg.flags);
                     req.CTExponent = arg.ctExponent;
+                    if (negotiatedVersion >= MessageVersionEnum::SPDM_1_2)
+                    {
+                        req.DataTransferSize = arg.dataTransferSize;
+                        req.MaxSPDMmsgSize = arg.maxSpdmMsgSize;
+                    }
                     rs = prepareRequest(req, sendBuf);
                 },
                 [&sendBuf, &rs, this](const NegAlgoCmd& arg) {
                     PacketNegotiateAlgorithmsRequestVar req{};
                     req.Min.Length = 32;
-                    req.Min.Header.MessageVersion =
-                        MessageVersionEnum::SPDM_1_1;
+                    req.Min.Header.MessageVersion = negotiatedVersion;
                     req.Min.MeasurementSpecification = 0x01;
                     req.Min.BaseAsymAlgo =
                         static_cast<BaseAsymAlgoFlags>(arg.baseAsymAlgo);
@@ -519,7 +568,7 @@ auto SpdmTool::runComm() -> bool
                 },
                 [&sendBuf, &rs, this](const CertCmd& arg) {
                     PacketGetCertificateRequest req{};
-                    req.Header.MessageVersion = MessageVersionEnum::SPDM_1_1;
+                    req.Header.MessageVersion = negotiatedVersion;
                     req.Header.Param1 = arg.slot;
                     certSlot = arg.slot;
                     if (arg.needChain())
@@ -537,8 +586,7 @@ auto SpdmTool::runComm() -> bool
                 },
                 [&sendBuf, &rs, this](const MeasCmd& arg) {
                     PacketGetMeasurementsRequestVar req{};
-                    req.Min.Header.MessageVersion =
-                        MessageVersionEnum::SPDM_1_1;
+                    req.Min.Header.MessageVersion = negotiatedVersion;
                     req.Min.Header.Param1 =
                         packetDecodeInfo.GetMeasurementsParam1 = arg.attributes;
                     req.Min.Header.Param2 = arg.blockIndex;
@@ -548,7 +596,7 @@ auto SpdmTool::runComm() -> bool
                 },
                 [&sendBuf, &rs, this](const DigestCmd&) {
                     PacketGetDigestsRequest req;
-                    req.Header.MessageVersion = MessageVersionEnum::SPDM_1_1;
+                    req.Header.MessageVersion = negotiatedVersion;
                     rs = prepareRequest(req, sendBuf);
                 }},
             *v);
@@ -557,7 +605,7 @@ auto SpdmTool::runComm() -> bool
             if (wholeCert)
             {
                 PacketGetCertificateRequest req{};
-                req.Header.MessageVersion = MessageVersionEnum::SPDM_1_1;
+                req.Header.MessageVersion = negotiatedVersion;
                 req.Header.Param1 = certSlot;
                 req.Offset = certBuf.size();
                 req.Length = std::numeric_limits<uint16_t>::max();

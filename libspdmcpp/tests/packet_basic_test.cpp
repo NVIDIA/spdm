@@ -278,8 +278,6 @@ TEST(packet_pseudorandom_decode_encode, static_size)
         packetPseudorandomDecodeEncodeBasic<PacketMeasurementBlockMin>());
 
     EXPECT_TRUE(packetPseudorandomDecodeEncode<PacketVersionResponseMin>());
-    EXPECT_TRUE(packetPseudorandomDecodeEncode<PacketGetCapabilitiesRequest>());
-    EXPECT_TRUE(packetPseudorandomDecodeEncode<PacketCapabilitiesResponse>());
     EXPECT_TRUE(
         packetPseudorandomDecodeEncode<PacketNegotiateAlgorithmsRequestMin>());
     EXPECT_TRUE(packetPseudorandomDecodeEncode<PacketAlgorithmsResponseMin>());

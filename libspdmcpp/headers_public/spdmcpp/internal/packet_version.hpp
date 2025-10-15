@@ -70,6 +70,8 @@ struct PacketVersionNumber
                         return MessageVersionEnum::SPDM_1_0;
                     case 1:
                         return MessageVersionEnum::SPDM_1_1;
+                    case 2:
+                        return MessageVersionEnum::SPDM_1_2;
                 }
         }
         return MessageVersionEnum::UNKNOWN;

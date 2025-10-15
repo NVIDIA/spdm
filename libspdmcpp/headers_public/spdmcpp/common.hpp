@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include "assert.hpp"
 #include "log.hpp"
 #include "packet.hpp"
 #include "retstat.hpp"
@@ -41,6 +42,62 @@ using timeout_ms_t = uint64_t; /// in units of 1 milli second
 constexpr timeout_ms_t timeoutMsInfinite =
     std::numeric_limits<timeout_ms_t>::max();
 constexpr timeout_ms_t timeoutMsMaximum = timeoutMsInfinite - 1;
+
+// SPDM 1.2 Constants
+constexpr uint32_t spdmMinDataTransferSize12 = 42; // Minimum per spec
+constexpr uint32_t spdmDefaultDataTransferSize =
+    64 * 1024; // Default buffer size (64K)
+constexpr uint32_t spdmDefaultMaxSpdmMsgSize =
+    64 * 1024; // Default max message size (64K)
+
+inline constexpr const char* SPDM_VERSION_1_2_SIGNING_PREFIX =
+    "dmtf-spdm-v1.2.*"; // 16 characters
+inline constexpr size_t SPDM_SIGNING_CONTEXT_PREFIX_REPEAT_COUNT = 4;
+inline constexpr size_t SPDM_COMBINED_PREFIX_SIZE = 100;
+inline constexpr const char* SPDM_MEASUREMENTS_SIGN_CONTEXT =
+    "measurements signing"; // -> "responder-measurements signing"
+inline constexpr const char* SPDM_RESPONDER_PREFIX = "responder-";
+inline constexpr const char* SPDM_REQUESTER_PREFIX = "requester-";
+
+/** @brief Build SPDM 1.2 signature context for verification
+ *  @param[in] context - Base context string (e.g., "measurements signing")
+ *  @param[in] is_requester - true if requester signing, false if responder
+ *  @param[in] hash - The hash to be signed (data_to_be_signed)
+ *  @return Combined buffer per SPDM 1.2.1 spec Section 15
+ */
+inline std::vector<uint8_t>
+    buildSpdm12SignatureContext(const char* context, bool is_requester,
+                                const std::vector<uint8_t>& hash)
+{
+    std::vector<uint8_t> context_data;
+    const size_t prefix_len = std::strlen(SPDM_VERSION_1_2_SIGNING_PREFIX);
+    const size_t spdm_prefix_total =
+        prefix_len * SPDM_SIGNING_CONTEXT_PREFIX_REPEAT_COUNT; // 64
+    const char* role_prefix =
+        is_requester ? SPDM_REQUESTER_PREFIX : SPDM_RESPONDER_PREFIX;
+    const size_t role_prefix_len = std::strlen(role_prefix);
+    const size_t context_len = std::strlen(context);
+    const size_t spdm_context_len = role_prefix_len + context_len;
+    const size_t zero_pad_size =
+        SPDM_COMBINED_PREFIX_SIZE - spdm_prefix_total - 1 - spdm_context_len;
+
+    context_data.reserve(SPDM_COMBINED_PREFIX_SIZE + hash.size());
+
+    for (size_t i = 0; i < SPDM_SIGNING_CONTEXT_PREFIX_REPEAT_COUNT; ++i)
+    {
+        context_data.insert(context_data.end(), SPDM_VERSION_1_2_SIGNING_PREFIX,
+                            SPDM_VERSION_1_2_SIGNING_PREFIX + prefix_len);
+    }
+    context_data.push_back(0x00);
+    context_data.insert(context_data.end(), zero_pad_size, 0x00);
+    context_data.insert(context_data.end(), role_prefix,
+                        role_prefix + role_prefix_len);
+    context_data.insert(context_data.end(), context, context + context_len);
+    SPDMCPP_ASSERT(context_data.size() == SPDM_COMBINED_PREFIX_SIZE);
+    context_data.insert(context_data.end(), hash.begin(), hash.end());
+
+    return context_data;
+}
 
 /** @struct NonCopyable
  *  @brief Helper class for deleting copy ops

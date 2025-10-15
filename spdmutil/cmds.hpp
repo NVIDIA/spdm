@@ -16,6 +16,8 @@
  */
 
 #pragma once
+#include <spdmcpp/common.hpp>
+
 #include <cstdint>
 #include <variant>
 
@@ -32,6 +34,9 @@ struct CapabCmd
 {
     uint32_t flags{0};
     uint8_t ctExponent{0};
+    // SPDM 1.2 fields
+    uint32_t dataTransferSize{spdmcpp::spdmDefaultDataTransferSize};
+    uint32_t maxSpdmMsgSize{spdmcpp::spdmDefaultMaxSpdmMsgSize};
 };
 
 // Negotiate algorithm arguments

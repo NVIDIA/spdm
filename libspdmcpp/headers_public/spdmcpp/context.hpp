@@ -48,6 +48,7 @@ class ContextClass
     {
         SupportedVersions.push_back(MessageVersionEnum::SPDM_1_0);
         SupportedVersions.push_back(MessageVersionEnum::SPDM_1_1);
+        SupportedVersions.push_back(MessageVersionEnum::SPDM_1_2);
         std::sort(SupportedVersions.begin(), SupportedVersions.end(),
                   std::greater());
     }

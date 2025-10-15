@@ -105,6 +105,7 @@ ENUM_START(MessageVersionEnum, uint8_t)
 ENUM_VALUE(MessageVersionEnum, UNKNOWN, 0)
 ENUM_VALUE(MessageVersionEnum, SPDM_1_0, 0x10)
 ENUM_VALUE(MessageVersionEnum, SPDM_1_1, 0x11)
+ENUM_VALUE(MessageVersionEnum, SPDM_1_2, 0x12)
 ENUM_END()
 
 // WARNING when changing REMEMBER to MODIFY isRequest and isResponse

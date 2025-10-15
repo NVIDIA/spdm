@@ -59,7 +59,16 @@ RetStat ConnectionClass::sendRequest(const T& packet, BufEnum bufidx)
     if (bufidx != BufEnum::NUM)
     {
         size_t off = lay.getEndOffset();
-        appendToBuf(bufidx, &buf[off], buf.size() - off);
+
+        if (!stateEnabled && bufidx == BufEnum::A)
+        {
+            // if stateEnabled is false means last request was a Version
+            // request, don't add Version request again
+        }
+        else
+        {
+            appendToBuf(bufidx, &buf[off], buf.size() - off);
+        }
     }
 
     if (transport)

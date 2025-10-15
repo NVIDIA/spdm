@@ -377,12 +377,33 @@ class ConnectionClass : public NonCopyable
     }
     /** @brief The buffer containing measurements communication, used for
      * computing the L1/L2 hash
-     *  @details Contains all the GET_MEASUREMENTS requests and corresponding
-     * MEASUREMENTS responses
+     *  @details For SPDM 1.2+: Contains VCA (Buffer A) + all GET_MEASUREMENTS
+     *           requests and MEASUREMENTS responses (Buffer L)
+     *           For SPDM 1.1 and earlier: Contains only GET_MEASUREMENTS
+     * requests and MEASUREMENTS responses (Buffer L)
      */
     const std::vector<uint8_t>& getSignedMeasurementsBuffer() const
     {
-        return refBuf(BufEnum::L);
+
+        CombinedMeasurementTranscript.clear();
+
+        if (MessageVersion >= MessageVersionEnum::SPDM_1_2)
+        {
+            const auto& bufA = refBuf(BufEnum::A);
+            const auto& bufL = refBuf(BufEnum::L);
+            CombinedMeasurementTranscript.reserve(bufA.size() + bufL.size());
+            CombinedMeasurementTranscript.insert(
+                CombinedMeasurementTranscript.end(), bufA.begin(), bufA.end());
+            CombinedMeasurementTranscript.insert(
+                CombinedMeasurementTranscript.end(), bufL.begin(), bufL.end());
+        }
+        else
+        {
+            const auto& bufL = refBuf(BufEnum::L);
+            CombinedMeasurementTranscript.assign(bufL.begin(), bufL.end());
+        }
+
+        return CombinedMeasurementTranscript;
     }
     /** @brief The L1/L2 hash of the measurements, as returned by
      * getSignedMeasurementsBuffer()
@@ -688,6 +709,38 @@ class ConnectionClass : public NonCopyable
         HashClass::compute(hash, hashtype, refBuf(bufidx));
     }
 
+    /** @brief Calculates hash over a raw buffer
+     *  @param[out] hash - The computed hash
+     *  @param[in] hashtype - The hash algorithm to use
+     *  @param[in] data - The data buffer to hash
+     */
+    void hashBuf(std::vector<uint8_t>& hash, HashEnum hashtype,
+                 const std::vector<uint8_t>& data) const
+    {
+        HashClass::compute(hash, hashtype, data);
+    }
+
+    /** @brief Calculates hash over multiple concatenated buffers
+     *  @param[out] hash - The computed hash
+     *  @param[in] hashtype - The hash algorithm to use
+     *  @param[in] bufIndices - Vector of buffer indices to hash in order
+     */
+    void hashMultipleBufs(std::vector<uint8_t>& hash, HashEnum hashtype,
+                          const std::vector<BufEnum>& bufIndices) const
+    {
+        HashClass hc;
+        hc.setup(hashtype);
+        for (const auto& bufidx : bufIndices)
+        {
+            const auto& buf = refBuf(bufidx);
+            if (!buf.empty())
+            {
+                hc.update(buf.data(), buf.size());
+            }
+        }
+        hc.hashFinish(hash);
+    }
+
     /** @brief Low-level helper metheod
      */
     void appendToBuf(BufEnum bufidx, uint8_t* data, size_t size)
@@ -727,6 +780,13 @@ class ConnectionClass : public NonCopyable
      * value passed to refreshMeasurements, or a random value
      */
     nonce_array_32 MeasurementNonce{};
+
+    /** @brief Storage for combined measurement transcript (VCA + Measurements)
+     *  @details For SPDM 1.2+, contains Buffer A (VCA) + Buffer L
+     * (Measurements) For SPDM 1.1 and earlier, contains only Buffer L
+     * (Measurements) Built on-demand by getSignedMeasurementsBuffer()
+     */
+    mutable std::vector<uint8_t> CombinedMeasurementTranscript;
 
     /** @brief A bitmask of the requested measurements as passed to
      * refreshMeasurements
