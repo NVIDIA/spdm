@@ -21,7 +21,8 @@
 #include "common.hpp"
 
 #include <arpa/inet.h>
-#include <libmctp-externals.h>
+#include <linux/if_arp.h>
+#include <linux/mctp.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/un.h>
@@ -35,6 +36,12 @@
 #include <limits>
 #include <vector>
 
+// MCTP tag type and constants (avoiding dependency on libmctp-externals.h)
+// Note: MCTP_TAG_OWNER is already defined in <linux/mctp.h>
+using mctp_tag_t = uint8_t;
+constexpr mctp_tag_t MCTP_TAG_SPDM = 1;
+
+#define MCTP_TYPE_SPDM 5
 namespace spdmcpp
 {
 // these are for use with the mctp-demux-daemon
