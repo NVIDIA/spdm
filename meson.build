@@ -53,12 +53,27 @@ conf_h_dep = declare_dependency(
 
 comp = meson.get_compiler('cpp')
 
-crypto_deps = declare_dependency(
-    dependencies: [
-        comp.find_library('mbedcrypto'),
-        comp.find_library('mbedx509'),
-    ],
+# Try to find mbedcrypto and mbedx509 as system libraries first,
+# otherwise fall back to building from subproject
+mbedcrypto_dep = dependency(
+    'mbedcrypto',
+    required: false,
+    fallback: ['mbedtls', 'mbedcrypto_dep'],
 )
+if not mbedcrypto_dep.found()
+    mbedcrypto_dep = comp.find_library('mbedcrypto')
+endif
+
+mbedx509_dep = dependency(
+    'mbedx509',
+    required: false,
+    fallback: ['mbedtls', 'mbedx509_dep'],
+)
+if not mbedx509_dep.found()
+    mbedx509_dep = comp.find_library('mbedx509')
+endif
+
+crypto_deps = declare_dependency(dependencies: [mbedcrypto_dep, mbedx509_dep])
 
 sdbusplus = dependency('sdbusplus', fallback: ['sdbusplus', 'sdbusplus_dep'])
 phosphor_dbus_interfaces = dependency(
