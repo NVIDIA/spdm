@@ -236,11 +236,18 @@ bool SpdmdApp::needRecreateResponder(const std::string& currMedium,
         auto& log = getLog();
         if (log.logLevel >= spdmcpp::LogClass::Level::Error)
         {
-            log.iprint("medium type priority not found in the map");
-            log.println("Current Medium: " + currMedium + "(" +
-                        std::to_string(currMediumPriority->second) +
-                        "), New Medium: " + newMedium + "(" +
-                        std::to_string(newMediumPriority->second) + ")");
+            log.iprintln("medium type priority not found in the map");
+            std::string currInfo =
+                "Current Medium: " + currMedium +
+                (currMediumPriority != mediumPriority.end()
+                     ? "(" + std::to_string(currMediumPriority->second) + ")"
+                     : "(not found)");
+            std::string newInfo =
+                ", New Medium: " + newMedium +
+                (newMediumPriority != mediumPriority.end()
+                     ? "(" + std::to_string(newMediumPriority->second) + ")"
+                     : "(not found)");
+            log.println(currInfo + newInfo);
         }
         return false;
     }
@@ -262,11 +269,18 @@ bool SpdmdApp::needRecreateResponder(const std::string& currMedium,
         auto& log = getLog();
         if (log.logLevel >= spdmcpp::LogClass::Level::Error)
         {
-            log.iprint("binding type priority not found in the map ");
-            log.println("Current Binding: " + currBinding + "(" +
-                        std::to_string(currBindingPriority->second) +
-                        "), New Binding: " + newBinding + "(" +
-                        std::to_string(newBindingPriority->second) + ")");
+            log.iprintln("binding type priority not found in the map");
+            std::string currInfo =
+                "Current Binding: " + currBinding +
+                (currBindingPriority != bindingPriority.end()
+                     ? "(" + std::to_string(currBindingPriority->second) + ")"
+                     : "(not found)");
+            std::string newInfo =
+                ", New Binding: " + newBinding +
+                (newBindingPriority != bindingPriority.end()
+                     ? "(" + std::to_string(newBindingPriority->second) + ")"
+                     : "(not found)");
+            log.println(currInfo + newInfo);
         }
         return false;
     }
