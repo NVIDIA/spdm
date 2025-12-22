@@ -657,12 +657,25 @@ auto SpdmTool::parseResp(std::vector<uint8_t>& buf) -> spdmcpp::RetStat
     MessageVersionEnum version{};
     RequestResponseEnum code{};
     TransportClass::LayerState lay{};
-    auto rs = transport->decode(buf, lay);
-    if (isError(rs))
+    size_t responseBufferSPDMOffset{};
+    auto rs = RetStat::OK;
+
+    if (transport)
     {
-        return rs;
+        rs = transport->decode(buf, lay);
+        if (isError(rs))
+        {
+            return rs;
+        }
+        responseBufferSPDMOffset = lay.getEndOffset();
     }
-    auto responseBufferSPDMOffset = lay.getEndOffset();
+    else
+    {
+        if (log.logLevel >= spdmcpp::LogClass::Level::Error)
+        {
+            log.iprintln("Transport not initialized");
+        }
+    }
     if (buf.size() - responseBufferSPDMOffset < sizeof(PacketMessageHeader))
     {
         return RetStat::ERROR_BUFFER_TOO_SMALL;
