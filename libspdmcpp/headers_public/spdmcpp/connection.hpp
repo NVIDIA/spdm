@@ -126,7 +126,7 @@ class TimingClass
                              // TODO likely needs to be CLI configurable?!
                              // openbmc in qemu is extremely slow
     static constexpr timeout_ms_t sT1 =
-        54000; // WAR with 60s T1, till spdm requester moves to async D-Bus
+        24000; // WAR with 30s T1, till spdm requester moves to async D-Bus
                // calls.
 
     timeout_ms_t CT = 0;
