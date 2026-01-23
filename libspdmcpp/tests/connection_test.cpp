@@ -509,4 +509,332 @@ TEST(Connection, FullFlow_ECDSA_521_SHA_512)
     testConnectionFlow(BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P521,
                        BaseHashAlgoFlags::TPM_ALG_SHA_512);
 }
+
+enum class Spdm12MeasurementsFault : uint8_t
+{
+    None = 0,
+    CorruptSignature,
+    WrongSignatureSize,
+    CorruptMeasurementPayload,
+};
+
+void testConnectionFlow_SPDM12(
+    BaseAsymAlgoFlags asymAlgo, BaseHashAlgoFlags hashAlgo,
+    Spdm12MeasurementsFault fault = Spdm12MeasurementsFault::None)
+{
+    ConnectionFixture fix;
+
+    fix.Connection.refreshMeasurements(0);
+
+    LogClass& log = fix.Connection.getLog();
+    PacketAlgorithmsResponseVar algoResp;
+    algoResp.Min.Header.MessageVersion = MessageVersionEnum::SPDM_1_2;
+
+    algoResp.Min.BaseAsymAlgo = asymAlgo;
+    algoResp.Min.BaseHashAlgo = hashAlgo;
+    algoResp.Min.MeasurementHashAlgo =
+        MeasurementHashAlgoFlags::TPM_ALG_SHA_512;
+
+    ASSERT_EQ(countBits(algoResp.Min.BaseAsymAlgo), 1);
+    ASSERT_EQ(countBits(algoResp.Min.BaseHashAlgo), 1);
+
+    fix.getHash(MessageHashEnum::L).setup(toHash(algoResp.Min.BaseHashAlgo));
+    fix.getHash(MessageHashEnum::M).setup(toHash(algoResp.Min.BaseHashAlgo));
+
+    {
+        PacketGetVersionRequest req;
+        auto rs = fix.interpret(req, MessageHashEnum::M);
+        ASSERT_EQ(rs, RetStat::OK);
+    }
+    {
+        PacketVersionResponseVar resp;
+        resp.Min.Header.MessageVersion = MessageVersionEnum::SPDM_1_0;
+        PacketVersionNumber ver;
+        ver.setMajor(1);
+        ver.setMinor(2);
+        resp.VersionNumberEntries.push_back(ver);
+        auto rs = fix.push(resp, MessageHashEnum::M);
+        ASSERT_EQ(rs, RetStat::OK);
+        rs = fix.handleRecv();
+        ASSERT_EQ(rs, RetStat::OK);
+    }
+    {
+        PacketGetCapabilitiesRequest req;
+        auto rs = fix.interpret(req, MessageHashEnum::M);
+        ASSERT_EQ(rs, RetStat::OK);
+    }
+    {
+        PacketCapabilitiesResponse resp;
+        resp.Header.MessageVersion = MessageVersionEnum::SPDM_1_2;
+        resp.Flags = ResponderCapabilitiesFlags::CERT_CAP |
+                     ResponderCapabilitiesFlags::MEAS_CAP_10;
+
+        auto rs = fix.push(resp, MessageHashEnum::M);
+        ASSERT_EQ(rs, RetStat::OK);
+        rs = fix.handleRecv();
+        ASSERT_EQ(rs, RetStat::OK);
+    }
+    {
+        PacketNegotiateAlgorithmsRequestVar req;
+        auto rs = fix.interpret(req, MessageHashEnum::M);
+        ASSERT_EQ(rs, RetStat::OK);
+    }
+
+    PacketDecodeInfo info;
+    int fsize = getHashSize(algoResp.Min.BaseHashAlgo);
+    ASSERT_NE(fsize, invalidFlagSize);
+    info.BaseHashSize = fsize;
+    fsize = getSignatureSize(algoResp.Min.BaseAsymAlgo);
+    ASSERT_NE(fsize, invalidFlagSize);
+    info.SignatureSize = fsize;
+
+    mbedtls_pk_context pkctx;
+    mbedtls_pk_init(&pkctx);
+
+    mbedtls_x509_crt caCert;
+    mbedtls_x509_crt_init(&caCert);
+    {
+        ASSERT_MBEDTLS_0(mbedtls_pk_setup(
+            &pkctx, mbedtls_pk_info_from_type(MBEDTLS_PK_ECKEY)));
+        auto* ctx = mbedtls_pk_ec(pkctx);
+        ASSERT_MBEDTLS_0(mbedtls_ecdsa_genkey(
+            ctx, toMbedtlsGroupID(toSignature(algoResp.Min.BaseAsymAlgo)), fRng,
+            nullptr));
+    }
+    {
+        mbedtls_x509write_cert ctx;
+        mbedtls_x509write_crt_init(&ctx);
+
+        mbedtls_x509write_crt_set_version(&ctx, 3 - 1);
+        mbedtls_x509write_crt_set_issuer_key(&ctx, &pkctx);
+        mbedtls_x509write_crt_set_subject_key(&ctx, &pkctx);
+        mbedtls_x509write_crt_set_issuer_name(&ctx, "CN=CA,O=mbed TLS,C=UK");
+
+        mbedtls_x509write_crt_set_validity(&ctx, "20010101000000",
+                                           "20301231235959");
+
+        mbedtls_x509write_crt_set_md_alg(
+            &ctx, toMbedtls(toHash(algoResp.Min.BaseHashAlgo)));
+
+        std::vector<uint8_t> buf;
+        buf.resize(1024);
+        std::fill(buf.begin(), buf.end(), 0);
+
+        int ret = mbedtls_x509write_crt_der(&ctx, buf.data(), buf.size(), fRng,
+                                            nullptr);
+        std::vector<uint8_t> bufDer(std::prev(buf.end(), ret), std::end(buf));
+        if (ret < 0)
+        {
+            mbedtlsPrintErrorLine(log, "mbedtls_x509write_crt_der()", ret);
+        }
+
+        ASSERT_MBEDTLS_0(mbedtls_x509_crt_parse_der(
+            &caCert, &*std::prev(buf.end(), ret), ret));
+
+        mbedtls_x509write_crt_free(&ctx);
+    }
+
+    {
+        auto rs = fix.push(algoResp, MessageHashEnum::M);
+        ASSERT_EQ(rs, RetStat::OK);
+        rs = fix.handleRecv();
+        ASSERT_EQ(rs, RetStat::OK);
+    }
+
+    {
+        PacketGetDigestsRequest req;
+        auto rs = fix.interpret(req, MessageHashEnum::M);
+        ASSERT_EQ(rs, RetStat::OK);
+    }
+
+    PacketDigestsResponseVar digestResp;
+    digestResp.Min.Header.MessageVersion = MessageVersionEnum::SPDM_1_2;
+    PacketCertificateResponseVar certResp;
+    certResp.Min.Header.MessageVersion = MessageVersionEnum::SPDM_1_2;
+
+    {
+        std::vector<uint8_t>& certBuf = certResp.CertificateVector;
+        certBuf.resize(sizeof(PacketCertificateChain));
+
+        std::vector<uint8_t> rootCert(caCert.raw.len);
+        // NOLINTNEXTLINE cppcoreguidelines-pro-bounds-pointer-arithmetic
+        std::copy(caCert.raw.p, caCert.raw.p + caCert.raw.len,
+                  rootCert.begin());
+
+        std::vector<uint8_t> rootCertHash;
+        HashClass::compute(rootCertHash, toHash(algoResp.Min.BaseHashAlgo),
+                           rootCert);
+
+        digestResp.Digests[0] = rootCertHash;
+
+        std::copy(rootCertHash.begin(), rootCertHash.end(),
+                  std::back_inserter(certBuf));
+        std::copy(rootCert.begin(), rootCert.end(),
+                  std::back_inserter(certBuf));
+        {
+            PacketCertificateChain chain;
+            chain.Length = certBuf.size();
+            size_t off = 0;
+            ASSERT_EQ(packetEncodeInternal(chain, certBuf, off), RetStat::OK);
+        }
+        std::vector<uint8_t>& digest = digestResp.Digests[0];
+        digest.resize(info.BaseHashSize);
+        HashClass::compute(digest, toHash(algoResp.Min.BaseHashAlgo), certBuf);
+    }
+
+    {
+        digestResp.finalize();
+
+        auto rs = fix.push(digestResp, MessageHashEnum::M);
+        ASSERT_EQ(rs, RetStat::OK);
+        rs = fix.handleRecv();
+        ASSERT_EQ(rs, RetStat::OK);
+    }
+    {
+        PacketGetCertificateRequest req;
+        auto rs = fix.interpret(req, MessageHashEnum::M);
+        ASSERT_EQ(rs, RetStat::OK);
+    }
+    {
+        certResp.finalize();
+
+        auto rs = fix.push(certResp, MessageHashEnum::M);
+        ASSERT_EQ(rs, RetStat::OK);
+        rs = fix.handleRecv();
+        ASSERT_EQ(rs, RetStat::OK);
+    }
+
+    {
+        PacketGetMeasurementsRequestVar req;
+        auto rs = fix.interpret(req, MessageHashEnum::L);
+        ASSERT_EQ(rs, RetStat::OK);
+
+        EXPECT_EQ(req.Min.Header.Param1, 1);
+        EXPECT_EQ(req.Min.Header.Param2, 0xFF);
+        EXPECT_EQ(req.SlotIDParam, 0);
+
+        PacketMeasurementsResponseVar resp;
+        resp.Min.Header.MessageVersion = MessageVersionEnum::SPDM_1_2;
+
+        // prepare measurements
+        {
+            PacketMeasurementBlockVar block;
+            block.Min.Index = 1;
+            block.Min.MeasurementSpecification = 1;
+            {
+                PacketMeasurementFieldVar field;
+                field.Min.Type = 0x80;
+                field.ValueVector.resize(127);
+                fillPseudoRandom(field.ValueVector);
+
+                ASSERT_EQ(field.finalize(), RetStat::OK);
+                ASSERT_EQ(packetEncode(field, block.MeasurementVector),
+                          RetStat::OK);
+            }
+            ASSERT_EQ(block.finalize(), RetStat::OK);
+            resp.MeasurementBlockVector.emplace_back(block);
+        }
+
+        fillPseudoRandom(resp.Nonce);
+        {
+            resp.finalize();
+            auto& hc = fix.getHash(MessageHashEnum::L);
+            {
+                std::vector<uint8_t> buf;
+                ASSERT_EQ(packetEncode(resp, buf), RetStat::OK);
+                ASSERT_EQ(hc.update(buf), RetStat::OK);
+            }
+            std::vector<uint8_t> hash;
+            hc.hashFinish(hash);
+
+            auto context_data = buildSpdm12SignatureContext(
+                SPDM_MEASUREMENTS_SIGN_CONTEXT, false, hash);
+            std::vector<uint8_t> signature_hash;
+            HashClass::compute(signature_hash,
+                               toHash(algoResp.Min.BaseHashAlgo), context_data);
+
+            ASSERT_MBEDTLS_0(
+                computeSignature(&pkctx, resp.SignatureVector, signature_hash));
+            switch (fault)
+            {
+                case Spdm12MeasurementsFault::None:
+                    break;
+                case Spdm12MeasurementsFault::CorruptSignature:
+                    ASSERT_FALSE(resp.SignatureVector.empty());
+                    resp.SignatureVector[resp.SignatureVector.size() / 2] ^=
+                        0xA5U;
+                    break;
+                case Spdm12MeasurementsFault::WrongSignatureSize:
+                    ASSERT_GE(resp.SignatureVector.size(), 4U);
+                    resp.SignatureVector.resize(resp.SignatureVector.size() -
+                                                2U);
+                    break;
+                case Spdm12MeasurementsFault::CorruptMeasurementPayload:
+                {
+                    ASSERT_FALSE(resp.MeasurementBlockVector.empty());
+                    auto& mv =
+                        resp.MeasurementBlockVector.front().MeasurementVector;
+                    ASSERT_FALSE(mv.empty());
+                    mv[mv.size() / 3] ^= 0x3CU;
+                    break;
+                }
+            }
+        }
+
+        ASSERT_EQ(resp.finalize(), RetStat::OK);
+
+        rs = fix.push(resp);
+        ASSERT_EQ(rs, RetStat::OK);
+        rs = fix.handleRecv();
+        if (fault == Spdm12MeasurementsFault::None)
+        {
+            ASSERT_EQ(rs, RetStat::OK);
+        }
+    }
+
+    if (fault != Spdm12MeasurementsFault::None)
+    {
+        EXPECT_FALSE(fix.Connection.hasInfo(ConnectionInfoEnum::MEASUREMENTS))
+            << "Malformed measurements / attestation (SPDM 1.2) must not mark "
+               "MEASUREMENTS";
+    }
+
+    mbedtls_x509_crt_free(&caCert);
+    mbedtls_pk_free(&pkctx);
+}
+
+TEST(Connection, FullFlow_SPDM12_ECDSA_256_SHA_256)
+{
+    testConnectionFlow_SPDM12(BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P256,
+                              BaseHashAlgoFlags::TPM_ALG_SHA_256);
+}
+
+TEST(Connection, FullFlow_SPDM12_ECDSA_256_SHA_384)
+{
+    testConnectionFlow_SPDM12(BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P256,
+                              BaseHashAlgoFlags::TPM_ALG_SHA_384);
+}
+
+TEST(Connection, FullFlow_SPDM12_InvalidMeasurementSignature)
+{
+    testConnectionFlow_SPDM12(BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P256,
+                              BaseHashAlgoFlags::TPM_ALG_SHA_256,
+                              Spdm12MeasurementsFault::CorruptSignature);
+}
+
+TEST(Connection, FullFlow_SPDM12_WrongMeasurementSignatureSize)
+{
+    testConnectionFlow_SPDM12(BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P256,
+                              BaseHashAlgoFlags::TPM_ALG_SHA_256,
+                              Spdm12MeasurementsFault::WrongSignatureSize);
+}
+
+TEST(Connection, FullFlow_SPDM12_CorruptMeasurementPayload)
+{
+    testConnectionFlow_SPDM12(
+        BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P256,
+        BaseHashAlgoFlags::TPM_ALG_SHA_256,
+        Spdm12MeasurementsFault::CorruptMeasurementPayload);
+}
+
 #endif

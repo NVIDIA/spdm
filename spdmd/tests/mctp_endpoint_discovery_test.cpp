@@ -590,7 +590,6 @@ TEST_F(MctpDiscoveryTest, InvalidUUIDForInventory)
     // Reset flag
     callbackCalled = false;
 
-    // Test with valid UUID
     discovery->getInventoryPathWithErrorHandling(
         "11111111-2222-3333-4444-555555555555",
         [&callbackCalled](std::optional<sdbusplus::message::object_path> path) {
@@ -673,4 +672,518 @@ TEST_F(MctpDiscoveryTest, MultipleEndpointsWithSameUUID)
     discovery->mctpNewObjectSignal(objPath1, interfaces1);
     discovery->mctpNewObjectSignal(objPath2, interfaces2);
 }
+
+TEST_F(MctpDiscoveryTest, BindingTypeEdgeCases)
+{
+    std::unique_ptr<MctpDiscovery> discovery =
+        std::make_unique<MctpDiscovery>(*mockApp);
+
+    EXPECT_EQ(discovery->parseBindingType(""), spdmcpp::TransportMedium::PCIe);
+
+    EXPECT_EQ(discovery->parseBindingType(
+                  "xyz.openbmc_project.MCTP.Binding.Types.Unknown"),
+              spdmcpp::TransportMedium::PCIe);
+
+    EXPECT_EQ(discovery->parseBindingType(
+                  "xyz.openbmc_project.MCTP.Binding.Types.PC"),
+              spdmcpp::TransportMedium::PCIe);
+}
+
+TEST_F(MctpDiscoveryTest, UUIDExtractionFromInterfaces)
+{
+    std::unique_ptr<MctpDiscovery> discovery =
+        std::make_unique<MctpDiscovery>(*mockApp);
+
+    dbus::InterfaceMap interfaces;
+    std::map<std::string, dbus::Value> uuidProps;
+    std::string testUuid = "12345678-1234-5678-1234-567812345678";
+    uuidProps["UUID"] = testUuid;
+    interfaces["xyz.openbmc_project.MCTP.UUID"] = uuidProps;
+
+    EXPECT_TRUE(discovery->isValidUuid(testUuid));
+}
+
+TEST_F(MctpDiscoveryTest, EIDExtractionEdgeCases)
+{
+    std::unique_ptr<MctpDiscovery> discovery =
+        std::make_unique<MctpDiscovery>(*mockApp);
+
+    EXPECT_EQ(discovery->extractEidFromPath(sdbusplus::message::object_path(
+                  "/xyz/openbmc_project/mctp/endpoint/0")),
+              0);
+
+    EXPECT_EQ(discovery->extractEidFromPath(sdbusplus::message::object_path(
+                  "/xyz/openbmc_project/mctp/endpoint/254")),
+              254);
+
+    EXPECT_EQ(discovery->extractEidFromPath(sdbusplus::message::object_path(
+                  "/xyz/openbmc_project/mctp/endpoint/")),
+              0);
+
+    EXPECT_EQ(discovery->extractEidFromPath(sdbusplus::message::object_path(
+                  "/xyz/openbmc_project/mctp/endpoint/invalid")),
+              0);
+}
+
+TEST_F(MctpDiscoveryTest, MediumTypeMissingProperty)
+{
+    std::unique_ptr<MctpDiscovery> discovery =
+        std::make_unique<MctpDiscovery>(*mockApp);
+
+    sdbusplus::message::object_path objPath(
+        "/xyz/openbmc_project/mctp/endpoint/1");
+    dbus::InterfaceMap interfaces;
+
+    std::map<std::string, dbus::Value> endpointProps;
+    endpointProps["EID"] = static_cast<uint32_t>(42);
+    interfaces["xyz.openbmc_project.MCTP.Endpoint"] = endpointProps;
+
+    std::map<std::string, dbus::Value> uuidProps;
+    uuidProps["UUID"] = std::string("11111111-2222-3333-4444-555555555555");
+    interfaces["xyz.openbmc_project.MCTP.UUID"] = uuidProps;
+
+    std::map<std::string, dbus::Value> bindingProps;
+    bindingProps["BindingType"] =
+        std::string("xyz.openbmc_project.MCTP.Binding.BindingTypes.PCIe");
+    interfaces["xyz.openbmc_project.MCTP.Binding"] = bindingProps;
+
+    EXPECT_CALL(*mockApp, connectMCTP("/tmp/mctp.sock")).WillOnce(Return(true));
+    EXPECT_CALL(*mockApp, discoveryUpdateResponder(testing::_)).Times(1);
+
+    discovery->mctpNewObjectSignal(objPath, interfaces);
+}
+
+TEST_F(MctpDiscoveryTest, BindingTypeMissingInterface)
+{
+    std::unique_ptr<MctpDiscovery> discovery =
+        std::make_unique<MctpDiscovery>(*mockApp);
+
+    sdbusplus::message::object_path objPath(
+        "/xyz/openbmc_project/mctp/endpoint/1");
+    dbus::InterfaceMap interfaces;
+
+    std::map<std::string, dbus::Value> endpointProps;
+    endpointProps["EID"] = static_cast<uint32_t>(42);
+    endpointProps["MediumType"] =
+        std::string("xyz.openbmc_project.MCTP.Endpoint.MediaTypes.USB");
+    interfaces["xyz.openbmc_project.MCTP.Endpoint"] = endpointProps;
+
+    std::map<std::string, dbus::Value> uuidProps;
+    uuidProps["UUID"] = std::string("11111111-2222-3333-4444-555555555555");
+    interfaces["xyz.openbmc_project.MCTP.UUID"] = uuidProps;
+
+    EXPECT_CALL(*mockApp, connectMCTP("/tmp/mctp.sock")).WillOnce(Return(true));
+    EXPECT_CALL(*mockApp, discoveryUpdateResponder(testing::_)).Times(1);
+
+    discovery->mctpNewObjectSignal(objPath, interfaces);
+}
+
+TEST_F(MctpDiscoveryTest, MediumTypeMissingInterface)
+{
+    std::unique_ptr<MctpDiscovery> discovery =
+        std::make_unique<MctpDiscovery>(*mockApp);
+
+    sdbusplus::message::object_path objPath(
+        "/xyz/openbmc_project/mctp/endpoint/1");
+    dbus::InterfaceMap interfaces;
+
+    std::map<std::string, dbus::Value> uuidProps;
+    uuidProps["UUID"] = std::string("11111111-2222-3333-4444-555555555555");
+    interfaces["xyz.openbmc_project.MCTP.UUID"] = uuidProps;
+
+    std::map<std::string, dbus::Value> bindingProps;
+    bindingProps["BindingType"] =
+        std::string("xyz.openbmc_project.MCTP.Binding.BindingTypes.PCIe");
+    interfaces["xyz.openbmc_project.MCTP.Binding"] = bindingProps;
+
+    EXPECT_CALL(*mockApp, connectMCTP("/tmp/mctp.sock")).WillOnce(Return(true));
+    EXPECT_CALL(*mockApp, discoveryUpdateResponder(testing::_)).Times(1);
+
+    discovery->mctpNewObjectSignal(objPath, interfaces);
+}
+
+TEST_F(MctpDiscoveryTest, AllMediumAndBindingCombinations)
+{
+    std::vector<std::string> allMediumTypes = {
+        "xyz.openbmc_project.MCTP.Endpoint.MediaTypes.PCIe",
+        "xyz.openbmc_project.MCTP.Endpoint.MediaTypes.USB",
+        "xyz.openbmc_project.MCTP.Endpoint.MediaTypes.SPI",
+        "xyz.openbmc_project.MCTP.Endpoint.MediaTypes.I3C",
+        "xyz.openbmc_project.MCTP.Endpoint.MediaTypes.KCS",
+        "xyz.openbmc_project.MCTP.Endpoint.MediaTypes.Serial",
+        "xyz.openbmc_project.MCTP.Endpoint.MediaTypes.SMBus"};
+
+    std::vector<std::string> allBindingTypes = {
+        "xyz.openbmc_project.MCTP.Binding.BindingTypes.PCIe",
+        "xyz.openbmc_project.MCTP.Binding.BindingTypes.USB",
+        "xyz.openbmc_project.MCTP.Binding.BindingTypes.SPI",
+        "xyz.openbmc_project.MCTP.Binding.BindingTypes.I3C",
+        "xyz.openbmc_project.MCTP.Binding.BindingTypes.KCS",
+        "xyz.openbmc_project.MCTP.Binding.BindingTypes.Serial",
+        "xyz.openbmc_project.MCTP.Binding.BindingTypes.SMBus"};
+
+    std::unique_ptr<MctpDiscovery> discovery =
+        std::make_unique<MctpDiscovery>(*mockApp);
+
+    int testCount = 0;
+    for (const auto& mediumType : allMediumTypes)
+    {
+        for (const auto& bindingType : allBindingTypes)
+        {
+            sdbusplus::message::object_path objPath(
+                "/xyz/openbmc_project/mctp/endpoint/" +
+                std::to_string(testCount));
+            dbus::InterfaceMap interfaces;
+
+            std::map<std::string, dbus::Value> endpointProps;
+            endpointProps["EID"] = static_cast<uint32_t>(testCount % 254 + 1);
+            endpointProps["MediumType"] = mediumType;
+            interfaces["xyz.openbmc_project.MCTP.Endpoint"] = endpointProps;
+
+            // Add UUID
+            std::map<std::string, dbus::Value> uuidProps;
+            uuidProps["UUID"] = std::string("11111111-2222-3333-4444-") +
+                                std::to_string(550000000000 + testCount);
+            interfaces["xyz.openbmc_project.MCTP.UUID"] = uuidProps;
+
+            std::map<std::string, dbus::Value> bindingProps;
+            bindingProps["BindingType"] = bindingType;
+            interfaces["xyz.openbmc_project.MCTP.Binding"] = bindingProps;
+
+            EXPECT_CALL(*mockApp, connectMCTP("/tmp/mctp.sock"))
+                .WillOnce(Return(true));
+            EXPECT_CALL(*mockApp, discoveryUpdateResponder(testing::_))
+                .Times(1);
+
+            discovery->mctpNewObjectSignal(objPath, interfaces);
+
+            testCount++;
+        }
+    }
+
+    EXPECT_EQ(testCount, 49);
+}
+
+TEST_F(MctpDiscoveryTest, BindingTypePropertyMissing)
+{
+    std::unique_ptr<MctpDiscovery> discovery =
+        std::make_unique<MctpDiscovery>(*mockApp);
+
+    sdbusplus::message::object_path objPath(
+        "/xyz/openbmc_project/mctp/endpoint/1");
+    dbus::InterfaceMap interfaces;
+
+    std::map<std::string, dbus::Value> endpointProps;
+    endpointProps["EID"] = static_cast<uint32_t>(42);
+    endpointProps["MediumType"] =
+        std::string("xyz.openbmc_project.MCTP.Endpoint.MediaTypes.PCIe");
+    interfaces["xyz.openbmc_project.MCTP.Endpoint"] = endpointProps;
+
+    std::map<std::string, dbus::Value> uuidProps;
+    uuidProps["UUID"] = std::string("11111111-2222-3333-4444-555555555555");
+    interfaces["xyz.openbmc_project.MCTP.UUID"] = uuidProps;
+
+    std::map<std::string, dbus::Value> bindingProps;
+    bindingProps["SomeOtherProperty"] = std::string("value");
+    interfaces["xyz.openbmc_project.MCTP.Binding"] = bindingProps;
+
+    EXPECT_CALL(*mockApp, connectMCTP("/tmp/mctp.sock")).WillOnce(Return(true));
+    EXPECT_CALL(*mockApp, discoveryUpdateResponder(testing::_)).Times(1);
+
+    discovery->mctpNewObjectSignal(objPath, interfaces);
+}
+
+TEST_F(MctpDiscoveryTest, SameMediumDifferentBindings)
+{
+    std::unique_ptr<MctpDiscovery> discovery =
+        std::make_unique<MctpDiscovery>(*mockApp);
+
+    std::vector<std::string> bindings = {
+        "xyz.openbmc_project.MCTP.Binding.BindingTypes.PCIe",
+        "xyz.openbmc_project.MCTP.Binding.BindingTypes.USB",
+        "xyz.openbmc_project.MCTP.Binding.BindingTypes.SPI"};
+
+    int eid = 1;
+    for (const auto& binding : bindings)
+    {
+        sdbusplus::message::object_path objPath(
+            "/xyz/openbmc_project/mctp/endpoint/" + std::to_string(eid));
+        dbus::InterfaceMap interfaces;
+
+        std::map<std::string, dbus::Value> endpointProps;
+        endpointProps["EID"] = static_cast<uint32_t>(eid);
+        endpointProps["MediumType"] =
+            std::string("xyz.openbmc_project.MCTP.Endpoint.MediaTypes.PCIe");
+        interfaces["xyz.openbmc_project.MCTP.Endpoint"] = endpointProps;
+
+        std::map<std::string, dbus::Value> uuidProps;
+        uuidProps["UUID"] = std::string("11111111-2222-3333-4444-55555555555") +
+                            std::to_string(eid);
+        interfaces["xyz.openbmc_project.MCTP.UUID"] = uuidProps;
+
+        std::map<std::string, dbus::Value> bindingProps;
+        bindingProps["BindingType"] = binding;
+        interfaces["xyz.openbmc_project.MCTP.Binding"] = bindingProps;
+
+        EXPECT_CALL(*mockApp, connectMCTP("/tmp/mctp.sock"))
+            .WillOnce(Return(true));
+        EXPECT_CALL(*mockApp, discoveryUpdateResponder(testing::_)).Times(1);
+
+        discovery->mctpNewObjectSignal(objPath, interfaces);
+        eid++;
+    }
+}
+
+TEST_F(MctpDiscoveryTest, SameBindingDifferentMediums)
+{
+    std::unique_ptr<MctpDiscovery> discovery =
+        std::make_unique<MctpDiscovery>(*mockApp);
+
+    std::vector<std::string> mediums = {
+        "xyz.openbmc_project.MCTP.Endpoint.MediaTypes.PCIe",
+        "xyz.openbmc_project.MCTP.Endpoint.MediaTypes.USB",
+        "xyz.openbmc_project.MCTP.Endpoint.MediaTypes.SPI"};
+
+    int eid = 1;
+    for (const auto& medium : mediums)
+    {
+        sdbusplus::message::object_path objPath(
+            "/xyz/openbmc_project/mctp/endpoint/" + std::to_string(eid));
+        dbus::InterfaceMap interfaces;
+
+        std::map<std::string, dbus::Value> endpointProps;
+        endpointProps["EID"] = static_cast<uint32_t>(eid);
+        endpointProps["MediumType"] = medium;
+        interfaces["xyz.openbmc_project.MCTP.Endpoint"] = endpointProps;
+
+        std::map<std::string, dbus::Value> uuidProps;
+        uuidProps["UUID"] = std::string("11111111-2222-3333-4444-55555555555") +
+                            std::to_string(eid);
+        interfaces["xyz.openbmc_project.MCTP.UUID"] = uuidProps;
+
+        std::map<std::string, dbus::Value> bindingProps;
+        bindingProps["BindingType"] =
+            std::string("xyz.openbmc_project.MCTP.Binding.BindingTypes.PCIe");
+        interfaces["xyz.openbmc_project.MCTP.Binding"] = bindingProps;
+
+        EXPECT_CALL(*mockApp, connectMCTP("/tmp/mctp.sock"))
+            .WillOnce(Return(true));
+        EXPECT_CALL(*mockApp, discoveryUpdateResponder(testing::_)).Times(1);
+
+        discovery->mctpNewObjectSignal(objPath, interfaces);
+        eid++;
+    }
+}
+
+TEST_F(MctpDiscoveryTest, MediumTypeWrongVariantType)
+{
+    std::unique_ptr<MctpDiscovery> discovery =
+        std::make_unique<MctpDiscovery>(*mockApp);
+
+    sdbusplus::message::object_path objPath(
+        "/xyz/openbmc_project/mctp/endpoint/1");
+    dbus::InterfaceMap interfaces;
+
+    std::map<std::string, dbus::Value> endpointProps;
+    endpointProps["EID"] = static_cast<uint32_t>(42);
+    endpointProps["MediumType"] = static_cast<uint32_t>(12345); // Wrong type!
+    interfaces["xyz.openbmc_project.MCTP.Endpoint"] = endpointProps;
+
+    std::map<std::string, dbus::Value> uuidProps;
+    uuidProps["UUID"] = std::string("11111111-2222-3333-4444-555555555555");
+    interfaces["xyz.openbmc_project.MCTP.UUID"] = uuidProps;
+
+    std::map<std::string, dbus::Value> bindingProps;
+    bindingProps["BindingType"] =
+        std::string("xyz.openbmc_project.MCTP.Binding.BindingTypes.PCIe");
+    interfaces["xyz.openbmc_project.MCTP.Binding"] = bindingProps;
+
+    EXPECT_CALL(*mockApp, connectMCTP("/tmp/mctp.sock")).WillOnce(Return(true));
+    EXPECT_CALL(*mockApp, discoveryUpdateResponder(testing::_)).Times(1);
+
+    discovery->mctpNewObjectSignal(objPath, interfaces);
+}
+
+TEST_F(MctpDiscoveryTest, BindingTypeWrongVariantType)
+{
+    std::unique_ptr<MctpDiscovery> discovery =
+        std::make_unique<MctpDiscovery>(*mockApp);
+
+    sdbusplus::message::object_path objPath(
+        "/xyz/openbmc_project/mctp/endpoint/1");
+    dbus::InterfaceMap interfaces;
+
+    std::map<std::string, dbus::Value> endpointProps;
+    endpointProps["EID"] = static_cast<uint32_t>(42);
+    endpointProps["MediumType"] =
+        std::string("xyz.openbmc_project.MCTP.Endpoint.MediaTypes.PCIe");
+    interfaces["xyz.openbmc_project.MCTP.Endpoint"] = endpointProps;
+
+    std::map<std::string, dbus::Value> uuidProps;
+    uuidProps["UUID"] = std::string("11111111-2222-3333-4444-555555555555");
+    interfaces["xyz.openbmc_project.MCTP.UUID"] = uuidProps;
+
+    std::map<std::string, dbus::Value> bindingProps;
+    bindingProps["BindingType"] = static_cast<uint32_t>(54321); // Wrong type!
+    interfaces["xyz.openbmc_project.MCTP.Binding"] = bindingProps;
+
+    EXPECT_CALL(*mockApp, connectMCTP("/tmp/mctp.sock")).WillOnce(Return(true));
+    EXPECT_CALL(*mockApp, discoveryUpdateResponder(testing::_)).Times(1);
+
+    discovery->mctpNewObjectSignal(objPath, interfaces);
+}
+
+TEST_F(MctpDiscoveryTest, I2CMediumType)
+{
+    std::unique_ptr<MctpDiscovery> discovery =
+        std::make_unique<MctpDiscovery>(*mockApp);
+
+    sdbusplus::message::object_path objPath(
+        "/xyz/openbmc_project/mctp/endpoint/1");
+    dbus::InterfaceMap interfaces;
+
+    std::map<std::string, dbus::Value> endpointProps;
+    endpointProps["EID"] = static_cast<uint32_t>(42);
+    endpointProps["MediumType"] =
+        std::string("xyz.openbmc_project.MCTP.Endpoint.MediaTypes.I2C");
+    interfaces["xyz.openbmc_project.MCTP.Endpoint"] = endpointProps;
+
+    std::map<std::string, dbus::Value> uuidProps;
+    uuidProps["UUID"] = std::string("11111111-2222-3333-4444-555555555555");
+    interfaces["xyz.openbmc_project.MCTP.UUID"] = uuidProps;
+
+    std::map<std::string, dbus::Value> bindingProps;
+    bindingProps["BindingType"] =
+        std::string("xyz.openbmc_project.MCTP.Binding.BindingTypes.I3C");
+    interfaces["xyz.openbmc_project.MCTP.Binding"] = bindingProps;
+
+    EXPECT_CALL(*mockApp, connectMCTP("/tmp/mctp.sock")).WillOnce(Return(true));
+    EXPECT_CALL(*mockApp, discoveryUpdateResponder(testing::_)).Times(1);
+
+    discovery->mctpNewObjectSignal(objPath, interfaces);
+}
+
+TEST_F(MctpDiscoveryTest, UUIDFormatVariations)
+{
+    std::unique_ptr<MctpDiscovery> discovery =
+        std::make_unique<MctpDiscovery>(*mockApp);
+
+    EXPECT_TRUE(discovery->isValidUuid("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"));
+    EXPECT_TRUE(discovery->isValidUuid("AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE"));
+    EXPECT_TRUE(discovery->isValidUuid("AaAaAaAa-BbBb-CcCc-DdDd-EeEeEeEeEeEe"));
+    EXPECT_TRUE(discovery->isValidUuid("12345678-90ab-cdef-1234-567890abcdef"));
+    EXPECT_FALSE(discovery->isValidUuid("12345678-90ab-cdef-1234-567890abcde"));
+    EXPECT_FALSE(
+        discovery->isValidUuid("12345678-90ab-cdef-1234-567890abcdef0"));
+    EXPECT_FALSE(discovery->isValidUuid("1234567890abcdef1234567890abcdef"));
+    EXPECT_FALSE(
+        discovery->isValidUuid("123456789-0ab-cdef-1234-567890abcdef"));
+}
+
+TEST_F(MctpDiscoveryTest, EIDExtractionBoundaryValues)
+{
+    std::unique_ptr<MctpDiscovery> discovery =
+        std::make_unique<MctpDiscovery>(*mockApp);
+
+    EXPECT_EQ(discovery->extractEidFromPath(sdbusplus::message::object_path(
+                  "/xyz/openbmc_project/mctp/endpoint/1")),
+              1);
+    EXPECT_EQ(discovery->extractEidFromPath(sdbusplus::message::object_path(
+                  "/xyz/openbmc_project/mctp/endpoint/127")),
+              127);
+    EXPECT_EQ(discovery->extractEidFromPath(sdbusplus::message::object_path(
+                  "/xyz/openbmc_project/mctp/endpoint/255")),
+              255);
+    EXPECT_EQ(discovery->extractEidFromPath(sdbusplus::message::object_path(
+                  "/xyz/openbmc_project/mctp/endpoint/42/")),
+              0);
+    EXPECT_EQ(discovery->extractEidFromPath(sdbusplus::message::object_path(
+                  "/xyz/openbmc_project/mctp/endpoint")),
+              0);
+}
+
+TEST_F(MctpDiscoveryTest, MultipleMediumTypesInSequence)
+{
+    std::unique_ptr<MctpDiscovery> discovery =
+        std::make_unique<MctpDiscovery>(*mockApp);
+
+    std::vector<std::pair<std::string, std::string>> combinations = {
+        {"xyz.openbmc_project.MCTP.Endpoint.MediaTypes.KCS",
+         "xyz.openbmc_project.MCTP.Binding.BindingTypes.KCS"},
+        {"xyz.openbmc_project.MCTP.Endpoint.MediaTypes.Serial",
+         "xyz.openbmc_project.MCTP.Binding.BindingTypes.Serial"},
+        {"xyz.openbmc_project.MCTP.Endpoint.MediaTypes.SMBus",
+         "xyz.openbmc_project.MCTP.Binding.BindingTypes.SMBus"},
+        {"xyz.openbmc_project.MCTP.Endpoint.MediaTypes.I3C",
+         "xyz.openbmc_project.MCTP.Binding.BindingTypes.I3C"}};
+
+    int eid = 10;
+    for (const auto& [medium, binding] : combinations)
+    {
+        sdbusplus::message::object_path objPath(
+            "/xyz/openbmc_project/mctp/endpoint/" + std::to_string(eid));
+        dbus::InterfaceMap interfaces;
+
+        std::map<std::string, dbus::Value> endpointProps;
+        endpointProps["EID"] = static_cast<uint32_t>(eid);
+        endpointProps["MediumType"] = medium;
+        interfaces["xyz.openbmc_project.MCTP.Endpoint"] = endpointProps;
+
+        std::map<std::string, dbus::Value> uuidProps;
+        uuidProps["UUID"] = std::string("11111111-2222-3333-4444-5555555555") +
+                            std::to_string(eid);
+        interfaces["xyz.openbmc_project.MCTP.UUID"] = uuidProps;
+
+        std::map<std::string, dbus::Value> bindingProps;
+        bindingProps["BindingType"] = binding;
+        interfaces["xyz.openbmc_project.MCTP.Binding"] = bindingProps;
+
+        EXPECT_CALL(*mockApp, connectMCTP("/tmp/mctp.sock"))
+            .WillOnce(Return(true));
+        EXPECT_CALL(*mockApp, discoveryUpdateResponder(testing::_)).Times(1);
+
+        discovery->mctpNewObjectSignal(objPath, interfaces);
+        eid++;
+    }
+}
+
+TEST_F(MctpDiscoveryTest, MultipleConnectionFailures)
+{
+    std::unique_ptr<MctpDiscovery> discovery =
+        std::make_unique<MctpDiscovery>(*mockApp);
+
+    for (int i = 1; i <= 3; ++i)
+    {
+        sdbusplus::message::object_path objPath(
+            "/xyz/openbmc_project/mctp/endpoint/" + std::to_string(i));
+        dbus::InterfaceMap interfaces;
+
+        std::map<std::string, dbus::Value> uuidProps;
+        uuidProps["UUID"] = std::string("11111111-2222-3333-4444-5555555555") +
+                            std::to_string(i);
+        interfaces["xyz.openbmc_project.MCTP.UUID"] = uuidProps;
+
+        EXPECT_CALL(*mockApp, connectMCTP("/tmp/mctp.sock"))
+            .WillOnce(Return(false));
+        EXPECT_CALL(*mockApp, discoveryUpdateResponder(testing::_)).Times(0);
+
+        discovery->mctpNewObjectSignal(objPath, interfaces);
+    }
+}
+
+TEST_F(MctpDiscoveryTest, EmptyInterfacesMap)
+{
+    std::unique_ptr<MctpDiscovery> discovery =
+        std::make_unique<MctpDiscovery>(*mockApp);
+
+    sdbusplus::message::object_path objPath(
+        "/xyz/openbmc_project/mctp/endpoint/1");
+    dbus::InterfaceMap interfaces;
+
+    EXPECT_CALL(*mockApp, connectMCTP("/tmp/mctp.sock")).WillOnce(Return(true));
+    EXPECT_CALL(*mockApp, discoveryUpdateResponder(testing::_)).Times(1);
+
+    discovery->mctpNewObjectSignal(objPath, interfaces);
+}
+
 } // namespace spdmd

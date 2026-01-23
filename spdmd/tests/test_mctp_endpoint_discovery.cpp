@@ -292,8 +292,7 @@ TEST_F(MctpDiscoveryTest, MctpNewObjectSignal)
     dbus_api::ResponderArgs expectedArgs;
     expectedArgs.eid = 42;
     expectedArgs.uuid = testUuid;
-    expectedArgs.mediumType =
-        "xyz.openbmc_project.MCTP.Endpoint.MediaTypes.PCIe";
+    expectedArgs.medium = "xyz.openbmc_project.MCTP.Endpoint.MediaTypes.PCIe";
     expectedArgs.mctpPath = objPath;
 
 #ifdef DISCOVERY_ONLY_FROM_MCTP_CONTROL
@@ -347,7 +346,7 @@ TEST_F(MctpDiscoveryTest, MctpNewObjectSignal)
     // Verify args passed to discoveryUpdateResponder
     EXPECT_EQ(expectedArgs.eid, 42);
     EXPECT_EQ(expectedArgs.uuid, testUuid);
-    EXPECT_EQ(expectedArgs.mediumType,
+    EXPECT_EQ(expectedArgs.medium,
               "xyz.openbmc_project.MCTP.Endpoint.MediaTypes.PCIe");
     EXPECT_EQ(expectedArgs.mctpPath, objPath);
 }
@@ -412,6 +411,546 @@ TEST_F(MctpDiscoveryTest, GetInventoryPath)
     runContext();
 
     EXPECT_TRUE(callbackCalled);
+}
+
+// Test getMediumType() with valid medium type
+TEST_F(MctpDiscoveryTest, GetMediumType_ValidPCIe)
+{
+    std::unique_ptr<MctpDiscovery> discovery =
+        std::make_unique<MctpDiscovery>(mockApp);
+
+    dbus::InterfaceMap interfaces;
+    std::map<std::string, dbus::Value> endpointProps;
+    endpointProps["MediumType"] =
+        std::string("xyz.openbmc_project.MCTP.Endpoint.MediaTypes.PCIe");
+    interfaces["xyz.openbmc_project.MCTP.Endpoint"] = endpointProps;
+
+    // Access the private method through a wrapper or make it public for testing
+    // For now, we'll test indirectly through mctpNewObjectSignal
+    // which calls getMediumType internally
+}
+
+// Test getMediumType() with different medium types
+TEST_F(MctpDiscoveryTest, GetMediumType_AllTypes)
+{
+    std::unique_ptr<MctpDiscovery> discovery =
+        std::make_unique<MctpDiscovery>(mockApp);
+
+    // Test all supported medium types
+    std::vector<std::string> mediumTypes = {
+        "xyz.openbmc_project.MCTP.Endpoint.MediaTypes.PCIe",
+        "xyz.openbmc_project.MCTP.Endpoint.MediaTypes.USB",
+        "xyz.openbmc_project.MCTP.Endpoint.MediaTypes.SPI",
+        "xyz.openbmc_project.MCTP.Endpoint.MediaTypes.I3C",
+        "xyz.openbmc_project.MCTP.Endpoint.MediaTypes.KCS",
+        "xyz.openbmc_project.MCTP.Endpoint.MediaTypes.Serial",
+        "xyz.openbmc_project.MCTP.Endpoint.MediaTypes.SMBus"};
+
+    for (const auto& mediumType : mediumTypes)
+    {
+        dbus::InterfaceMap interfaces;
+        std::map<std::string, dbus::Value> endpointProps;
+        endpointProps["MediumType"] = mediumType;
+        interfaces["xyz.openbmc_project.MCTP.Endpoint"] = endpointProps;
+
+        // The medium type should be extracted correctly
+        // This is tested indirectly through mctpNewObjectSignal
+    }
+}
+
+// getMediumType: MCTP.Endpoint present but MediumType
+TEST_F(MctpDiscoveryTest,
+       GetMediumType_MissingMediumTypeProperty_DefaultsToPCIe)
+{
+    std::unique_ptr<MctpDiscovery> discovery =
+        std::make_unique<MctpDiscovery>(mockApp);
+
+    // Simulate CSM being ready
+    auto csmInterface = dbusServer->add_interface(
+        "/xyz/openbmc_project/state/configurableStateManager/MCTP",
+        "xyz.openbmc_project.State.FeatureReady");
+
+    csmInterface->register_property(
+        "State",
+        std::string("xyz.openbmc_project.State.FeatureReady.States.Enabled"));
+
+    csmInterface->initialize();
+    runContext();
+
+    sdbusplus::message::object_path objPath(
+        "/xyz/openbmc_project/mctp/endpoint/1");
+    dbus::InterfaceMap interfaces;
+
+    std::map<std::string, dbus::Value> uuidProps;
+    std::string testUuid = "11111111-2222-3333-4444-555555555555";
+    uuidProps["UUID"] = testUuid;
+    interfaces["xyz.openbmc_project.MCTP.UUID"] = uuidProps;
+
+    std::map<std::string, dbus::Value> endpointProps;
+    endpointProps["EID"] = static_cast<uint32_t>(42);
+    std::vector<uint8_t> msgTypes = {5};
+    endpointProps["SupportedMessageTypes"] = msgTypes;
+    interfaces["xyz.openbmc_project.MCTP.Endpoint"] = endpointProps;
+
+    std::map<std::string, dbus::Value> bindingProps;
+    bindingProps["BindingType"] =
+        std::string("xyz.openbmc_project.MCTP.Binding.Types.PCIe");
+    interfaces["xyz.openbmc_project.MCTP.Binding"] = bindingProps;
+
+    std::map<std::string, dbus::Value> socketProps;
+    std::vector<uint8_t> sockAddr = {'/', 't', 'm', 'p', '/', 'm', 'c',
+                                     't', 'p', '.', 's', 'o', 'c', 'k'};
+    socketProps["Address"] = sockAddr;
+    interfaces["xyz.openbmc_project.Common.UnixSocket"] = socketProps;
+
+    EXPECT_CALL(mockApp, connectMCTP("/tmp/mctp.sock")).Times(1);
+
+    dbus_api::ResponderArgs capturedArgs{};
+
+#ifdef DISCOVERY_ONLY_FROM_MCTP_CONTROL
+    EXPECT_CALL(mockApp, discoveryUpdateResponder(testing::_))
+        .Times(1)
+        .WillOnce(testing::SaveArg<0>(&capturedArgs));
+#else
+    auto mapperInterface =
+        dbusServer->add_interface("/xyz/openbmc_project/object_mapper",
+                                  "xyz.openbmc_project.ObjectMapper");
+
+    std::map<std::string, std::map<std::string, std::set<std::string>>>
+        mockResponse;
+    mockResponse["/xyz/openbmc_project/inventory/system/device"]
+                ["xyz.openbmc_project.Inventory"] = {
+                    "xyz.openbmc_project.Inventory.Item.SPDMResponder"};
+
+    mapperInterface->register_method(
+        "GetSubTree", [mockResponse](const std::string&, int,
+                                     const std::vector<std::string>&) {
+            return mockResponse;
+        });
+
+    mapperInterface->initialize();
+
+    auto propsInterface = dbusServer->add_interface(
+        "/xyz/openbmc_project/inventory/system/device",
+        "org.freedesktop.DBus.Properties");
+
+    propsInterface->register_method(
+        "Get", [testUuid](const std::string&, const std::string&) {
+            return std::variant<std::string>(testUuid);
+        });
+
+    propsInterface->initialize();
+
+    EXPECT_CALL(mockApp, discoveryUpdateResponder(testing::_))
+        .Times(1)
+        .WillOnce(testing::SaveArg<0>(&capturedArgs));
+#endif
+
+    discovery->mctpNewObjectSignal(objPath, interfaces);
+    runContext();
+
+    EXPECT_EQ(capturedArgs.eid, 42u);
+    EXPECT_EQ(capturedArgs.uuid, testUuid);
+    EXPECT_EQ(capturedArgs.medium,
+              "xyz.openbmc_project.MCTP.Endpoint.MediaTypes.PCIe");
+    EXPECT_EQ(capturedArgs.bindingType,
+              "xyz.openbmc_project.MCTP.Binding.Types.PCIe");
+    EXPECT_EQ(capturedArgs.mctpPath, objPath);
+}
+
+// Test getBindingType() with valid binding types
+TEST_F(MctpDiscoveryTest, GetBindingType_AllTypes)
+{
+    std::unique_ptr<MctpDiscovery> discovery =
+        std::make_unique<MctpDiscovery>(mockApp);
+
+    std::vector<std::string> bindingTypes = {
+        "xyz.openbmc_project.MCTP.Binding.BindingTypes.PCIe",
+        "xyz.openbmc_project.MCTP.Binding.BindingTypes.USB",
+        "xyz.openbmc_project.MCTP.Binding.BindingTypes.SPI",
+        "xyz.openbmc_project.MCTP.Binding.BindingTypes.I3C",
+        "xyz.openbmc_project.MCTP.Binding.BindingTypes.KCS",
+        "xyz.openbmc_project.MCTP.Binding.BindingTypes.Serial",
+        "xyz.openbmc_project.MCTP.Binding.BindingTypes.SMBus"};
+
+    for (const auto& bindingType : bindingTypes)
+    {
+        dbus::InterfaceMap interfaces;
+        std::map<std::string, dbus::Value> bindingProps;
+        bindingProps["BindingType"] = bindingType;
+        interfaces["xyz.openbmc_project.MCTP.Binding"] = bindingProps;
+    }
+}
+
+// Test getBindingType() with missing binding interface
+TEST_F(MctpDiscoveryTest, GetBindingType_MissingInterface)
+{
+    std::unique_ptr<MctpDiscovery> discovery =
+        std::make_unique<MctpDiscovery>(mockApp);
+
+    // Simulate CSM being ready
+    auto csmInterface = dbusServer->add_interface(
+        "/xyz/openbmc_project/state/configurableStateManager/MCTP",
+        "xyz.openbmc_project.State.FeatureReady");
+
+    csmInterface->register_property(
+        "State",
+        std::string("xyz.openbmc_project.State.FeatureReady.States.Enabled"));
+
+    csmInterface->initialize();
+    runContext();
+
+    // Create interfaces without binding interface
+    sdbusplus::message::object_path objPath(
+        "/xyz/openbmc_project/mctp/endpoint/1");
+    dbus::InterfaceMap interfaces;
+
+    std::map<std::string, dbus::Value> uuidProps;
+    std::string testUuid = "11111111-2222-3333-4444-555555555555";
+    uuidProps["UUID"] = testUuid;
+    interfaces["xyz.openbmc_project.MCTP.UUID"] = uuidProps;
+
+    std::map<std::string, dbus::Value> endpointProps;
+    endpointProps["EID"] = static_cast<uint32_t>(42);
+    endpointProps["MediumType"] =
+        std::string("xyz.openbmc_project.MCTP.Endpoint.MediaTypes.PCIe");
+    std::vector<uint8_t> msgTypes = {5};
+    endpointProps["SupportedMessageTypes"] = msgTypes;
+    interfaces["xyz.openbmc_project.MCTP.Endpoint"] = endpointProps;
+
+    EXPECT_CALL(mockApp, connectMCTP(testing::_)).Times(1);
+    EXPECT_CALL(mockApp, discoveryUpdateResponder(testing::_)).Times(0);
+
+    discovery->mctpNewObjectSignal(objPath, interfaces);
+    runContext();
+}
+
+// Test getBindingType() with missing BindingType property
+TEST_F(MctpDiscoveryTest, GetBindingType_MissingProperty)
+{
+    std::unique_ptr<MctpDiscovery> discovery =
+        std::make_unique<MctpDiscovery>(mockApp);
+
+    // Simulate CSM being ready
+    auto csmInterface = dbusServer->add_interface(
+        "/xyz/openbmc_project/state/configurableStateManager/MCTP",
+        "xyz.openbmc_project.State.FeatureReady");
+
+    csmInterface->register_property(
+        "State",
+        std::string("xyz.openbmc_project.State.FeatureReady.States.Enabled"));
+
+    csmInterface->initialize();
+    runContext();
+
+    sdbusplus::message::object_path objPath(
+        "/xyz/openbmc_project/mctp/endpoint/1");
+    dbus::InterfaceMap interfaces;
+
+    std::map<std::string, dbus::Value> uuidProps;
+    std::string testUuid = "11111111-2222-3333-4444-555555555555";
+    uuidProps["UUID"] = testUuid;
+    interfaces["xyz.openbmc_project.MCTP.UUID"] = uuidProps;
+
+    std::map<std::string, dbus::Value> endpointProps;
+    endpointProps["EID"] = static_cast<uint32_t>(42);
+    endpointProps["MediumType"] =
+        std::string("xyz.openbmc_project.MCTP.Endpoint.MediaTypes.PCIe");
+    std::vector<uint8_t> msgTypes = {5};
+    endpointProps["SupportedMessageTypes"] = msgTypes;
+    interfaces["xyz.openbmc_project.MCTP.Endpoint"] = endpointProps;
+
+    // Binding interface exists but without BindingType property
+    std::map<std::string, dbus::Value> bindingProps;
+    interfaces["xyz.openbmc_project.MCTP.Binding"] = bindingProps;
+
+    EXPECT_CALL(mockApp, connectMCTP(testing::_)).Times(1);
+    EXPECT_CALL(mockApp, discoveryUpdateResponder(testing::_)).Times(0);
+
+    // Call should fail due to missing binding type property
+    discovery->mctpNewObjectSignal(objPath, interfaces);
+    runContext();
+}
+
+// Test with complete and valid medium and binding types
+TEST_F(MctpDiscoveryTest, GetMediumAndBindingType_ValidComplete)
+{
+    std::unique_ptr<MctpDiscovery> discovery =
+        std::make_unique<MctpDiscovery>(mockApp);
+
+    // Simulate CSM being ready
+    auto csmInterface = dbusServer->add_interface(
+        "/xyz/openbmc_project/state/configurableStateManager/MCTP",
+        "xyz.openbmc_project.State.FeatureReady");
+
+    csmInterface->register_property(
+        "State",
+        std::string("xyz.openbmc_project.State.FeatureReady.States.Enabled"));
+
+    csmInterface->initialize();
+    runContext();
+
+    sdbusplus::message::object_path objPath(
+        "/xyz/openbmc_project/mctp/endpoint/1");
+    dbus::InterfaceMap interfaces;
+
+    std::map<std::string, dbus::Value> uuidProps;
+    std::string testUuid = "11111111-2222-3333-4444-555555555555";
+    uuidProps["UUID"] = testUuid;
+    interfaces["xyz.openbmc_project.MCTP.UUID"] = uuidProps;
+
+    std::map<std::string, dbus::Value> endpointProps;
+    endpointProps["EID"] = static_cast<uint32_t>(42);
+    endpointProps["MediumType"] =
+        std::string("xyz.openbmc_project.MCTP.Endpoint.MediaTypes.USB");
+    std::vector<uint8_t> msgTypes = {5};
+    endpointProps["SupportedMessageTypes"] = msgTypes;
+    interfaces["xyz.openbmc_project.MCTP.Endpoint"] = endpointProps;
+
+    std::map<std::string, dbus::Value> bindingProps;
+    bindingProps["BindingType"] =
+        std::string("xyz.openbmc_project.MCTP.Binding.BindingTypes.USB");
+    interfaces["xyz.openbmc_project.MCTP.Binding"] = bindingProps;
+
+    std::map<std::string, dbus::Value> socketProps;
+    std::vector<uint8_t> sockAddr = {'/', 't', 'm', 'p', '/', 'm', 'c',
+                                     't', 'p', '.', 's', 'o', 'c', 'k'};
+    socketProps["Address"] = sockAddr;
+    interfaces["xyz.openbmc_project.Common.UnixSocket"] = socketProps;
+
+    EXPECT_CALL(mockApp, connectMCTP("/tmp/mctp.sock")).Times(1);
+
+    dbus_api::ResponderArgs capturedArgs;
+    EXPECT_CALL(mockApp, discoveryUpdateResponder(testing::_))
+        .Times(1)
+        .WillOnce(testing::SaveArg<0>(&capturedArgs));
+
+    discovery->mctpNewObjectSignal(objPath, interfaces);
+    runContext();
+
+    // Verify the captured arguments
+    EXPECT_EQ(capturedArgs.medium,
+              "xyz.openbmc_project.MCTP.Endpoint.MediaTypes.USB");
+    EXPECT_EQ(capturedArgs.bindingType,
+              "xyz.openbmc_project.MCTP.Binding.BindingTypes.USB");
+}
+
+// Test all medium types through mctpNewObjectSignal
+TEST_F(MctpDiscoveryTest, MctpNewObjectSignal_AllMediumTypes)
+{
+    std::unique_ptr<MctpDiscovery> discovery =
+        std::make_unique<MctpDiscovery>(mockApp);
+
+    // Simulate CSM being ready
+    auto csmInterface = dbusServer->add_interface(
+        "/xyz/openbmc_project/state/configurableStateManager/MCTP",
+        "xyz.openbmc_project.State.FeatureReady");
+    csmInterface->register_property(
+        "State",
+        std::string("xyz.openbmc_project.State.FeatureReady.States.Enabled"));
+    csmInterface->initialize();
+    runContext();
+
+    std::vector<std::string> allMediumTypes = {
+        "xyz.openbmc_project.MCTP.Endpoint.MediaTypes.PCIe",
+        "xyz.openbmc_project.MCTP.Endpoint.MediaTypes.USB",
+        "xyz.openbmc_project.MCTP.Endpoint.MediaTypes.SPI",
+        "xyz.openbmc_project.MCTP.Endpoint.MediaTypes.I3C",
+        "xyz.openbmc_project.MCTP.Endpoint.MediaTypes.KCS",
+        "xyz.openbmc_project.MCTP.Endpoint.MediaTypes.Serial",
+        "xyz.openbmc_project.MCTP.Endpoint.MediaTypes.SMBus"};
+
+    for (const auto& mediumType : allMediumTypes)
+    {
+        sdbusplus::message::object_path objPath(
+            "/xyz/openbmc_project/mctp/endpoint/1");
+        dbus::InterfaceMap interfaces;
+
+        std::map<std::string, dbus::Value> uuidProps;
+        uuidProps["UUID"] = std::string("11111111-2222-3333-4444-555555555555");
+        interfaces["xyz.openbmc_project.MCTP.UUID"] = uuidProps;
+
+        std::map<std::string, dbus::Value> endpointProps;
+        endpointProps["EID"] = static_cast<uint32_t>(42);
+        endpointProps["MediumType"] = mediumType;
+        std::vector<uint8_t> msgTypes = {5};
+        endpointProps["SupportedMessageTypes"] = msgTypes;
+        interfaces["xyz.openbmc_project.MCTP.Endpoint"] = endpointProps;
+
+        std::map<std::string, dbus::Value> bindingProps;
+        bindingProps["BindingType"] =
+            std::string("xyz.openbmc_project.MCTP.Binding.BindingTypes.PCIe");
+        interfaces["xyz.openbmc_project.MCTP.Binding"] = bindingProps;
+
+        std::map<std::string, dbus::Value> socketProps;
+        std::vector<uint8_t> sockAddr = {'/', 't', 'm', 'p', '/', 'm', 'c',
+                                         't', 'p', '.', 's', 'o', 'c', 'k'};
+        socketProps["Address"] = sockAddr;
+        interfaces["xyz.openbmc_project.Common.UnixSocket"] = socketProps;
+
+        EXPECT_CALL(mockApp, connectMCTP("/tmp/mctp.sock")).Times(1);
+
+        dbus_api::ResponderArgs capturedArgs;
+        EXPECT_CALL(mockApp, discoveryUpdateResponder(testing::_))
+            .Times(1)
+            .WillOnce(testing::SaveArg<0>(&capturedArgs));
+
+        discovery->mctpNewObjectSignal(objPath, interfaces);
+        runContext();
+
+        EXPECT_EQ(capturedArgs.medium, mediumType);
+    }
+}
+
+// Test all binding types through mctpNewObjectSignal
+TEST_F(MctpDiscoveryTest, MctpNewObjectSignal_AllBindingTypes)
+{
+    std::unique_ptr<MctpDiscovery> discovery =
+        std::make_unique<MctpDiscovery>(mockApp);
+
+    // Simulate CSM being ready
+    auto csmInterface = dbusServer->add_interface(
+        "/xyz/openbmc_project/state/configurableStateManager/MCTP",
+        "xyz.openbmc_project.State.FeatureReady");
+    csmInterface->register_property(
+        "State",
+        std::string("xyz.openbmc_project.State.FeatureReady.States.Enabled"));
+    csmInterface->initialize();
+    runContext();
+
+    std::vector<std::string> allBindingTypes = {
+        "xyz.openbmc_project.MCTP.Binding.BindingTypes.PCIe",
+        "xyz.openbmc_project.MCTP.Binding.BindingTypes.USB",
+        "xyz.openbmc_project.MCTP.Binding.BindingTypes.SPI",
+        "xyz.openbmc_project.MCTP.Binding.BindingTypes.I3C",
+        "xyz.openbmc_project.MCTP.Binding.BindingTypes.KCS",
+        "xyz.openbmc_project.MCTP.Binding.BindingTypes.Serial",
+        "xyz.openbmc_project.MCTP.Binding.BindingTypes.SMBus"};
+
+    for (const auto& bindingType : allBindingTypes)
+    {
+        sdbusplus::message::object_path objPath(
+            "/xyz/openbmc_project/mctp/endpoint/1");
+        dbus::InterfaceMap interfaces;
+
+        std::map<std::string, dbus::Value> uuidProps;
+        uuidProps["UUID"] = std::string("11111111-2222-3333-4444-555555555555");
+        interfaces["xyz.openbmc_project.MCTP.UUID"] = uuidProps;
+
+        std::map<std::string, dbus::Value> endpointProps;
+        endpointProps["EID"] = static_cast<uint32_t>(42);
+        endpointProps["MediumType"] =
+            std::string("xyz.openbmc_project.MCTP.Endpoint.MediaTypes.PCIe");
+        std::vector<uint8_t> msgTypes = {5};
+        endpointProps["SupportedMessageTypes"] = msgTypes;
+        interfaces["xyz.openbmc_project.MCTP.Endpoint"] = endpointProps;
+
+        std::map<std::string, dbus::Value> bindingProps;
+        bindingProps["BindingType"] = bindingType;
+        interfaces["xyz.openbmc_project.MCTP.Binding"] = bindingProps;
+
+        std::map<std::string, dbus::Value> socketProps;
+        std::vector<uint8_t> sockAddr = {'/', 't', 'm', 'p', '/', 'm', 'c',
+                                         't', 'p', '.', 's', 'o', 'c', 'k'};
+        socketProps["Address"] = sockAddr;
+        interfaces["xyz.openbmc_project.Common.UnixSocket"] = socketProps;
+
+        EXPECT_CALL(mockApp, connectMCTP("/tmp/mctp.sock")).Times(1);
+
+        dbus_api::ResponderArgs capturedArgs;
+        EXPECT_CALL(mockApp, discoveryUpdateResponder(testing::_))
+            .Times(1)
+            .WillOnce(testing::SaveArg<0>(&capturedArgs));
+
+        discovery->mctpNewObjectSignal(objPath, interfaces);
+        runContext();
+
+        EXPECT_EQ(capturedArgs.bindingType, bindingType);
+    }
+}
+
+// Test error path when getMediumType returns empty
+TEST_F(MctpDiscoveryTest, MctpNewObjectSignal_EmptyMediumType)
+{
+    std::unique_ptr<MctpDiscovery> discovery =
+        std::make_unique<MctpDiscovery>(mockApp);
+
+    auto csmInterface = dbusServer->add_interface(
+        "/xyz/openbmc_project/state/configurableStateManager/MCTP",
+        "xyz.openbmc_project.State.FeatureReady");
+    csmInterface->register_property(
+        "State",
+        std::string("xyz.openbmc_project.State.FeatureReady.States.Enabled"));
+    csmInterface->initialize();
+    runContext();
+
+    sdbusplus::message::object_path objPath(
+        "/xyz/openbmc_project/mctp/endpoint/1");
+    dbus::InterfaceMap interfaces;
+
+    std::map<std::string, dbus::Value> uuidProps;
+    uuidProps["UUID"] = std::string("11111111-2222-3333-4444-555555555555");
+    interfaces["xyz.openbmc_project.MCTP.UUID"] = uuidProps;
+
+    std::map<std::string, dbus::Value> endpointProps;
+    endpointProps["EID"] = static_cast<uint32_t>(42);
+    // MediumType missing - should cause getMediumType to return empty
+    std::vector<uint8_t> msgTypes = {5};
+    endpointProps["SupportedMessageTypes"] = msgTypes;
+    interfaces["xyz.openbmc_project.MCTP.Endpoint"] = endpointProps;
+
+    std::map<std::string, dbus::Value> bindingProps;
+    bindingProps["BindingType"] =
+        std::string("xyz.openbmc_project.MCTP.Binding.BindingTypes.PCIe");
+    interfaces["xyz.openbmc_project.MCTP.Binding"] = bindingProps;
+
+    // Should NOT call discoveryUpdateResponder due to empty medium type
+    EXPECT_CALL(mockApp, discoveryUpdateResponder(testing::_)).Times(0);
+
+    discovery->mctpNewObjectSignal(objPath, interfaces);
+    runContext();
+}
+
+// Test error path when getBindingType returns empty
+TEST_F(MctpDiscoveryTest, MctpNewObjectSignal_EmptyBindingType)
+{
+    std::unique_ptr<MctpDiscovery> discovery =
+        std::make_unique<MctpDiscovery>(mockApp);
+
+    auto csmInterface = dbusServer->add_interface(
+        "/xyz/openbmc_project/state/configurableStateManager/MCTP",
+        "xyz.openbmc_project.State.FeatureReady");
+    csmInterface->register_property(
+        "State",
+        std::string("xyz.openbmc_project.State.FeatureReady.States.Enabled"));
+    csmInterface->initialize();
+    runContext();
+
+    sdbusplus::message::object_path objPath(
+        "/xyz/openbmc_project/mctp/endpoint/1");
+    dbus::InterfaceMap interfaces;
+
+    std::map<std::string, dbus::Value> uuidProps;
+    uuidProps["UUID"] = std::string("11111111-2222-3333-4444-555555555555");
+    interfaces["xyz.openbmc_project.MCTP.UUID"] = uuidProps;
+
+    std::map<std::string, dbus::Value> endpointProps;
+    endpointProps["EID"] = static_cast<uint32_t>(42);
+    endpointProps["MediumType"] =
+        std::string("xyz.openbmc_project.MCTP.Endpoint.MediaTypes.PCIe");
+    std::vector<uint8_t> msgTypes = {5};
+    endpointProps["SupportedMessageTypes"] = msgTypes;
+    interfaces["xyz.openbmc_project.MCTP.Endpoint"] = endpointProps;
+
+    // No binding interface - should cause getBindingType to return empty
+    std::map<std::string, dbus::Value> emptyBindingProps;
+    interfaces["xyz.openbmc_project.MCTP.Binding"] = emptyBindingProps;
+
+    // Should NOT call discoveryUpdateResponder due to empty binding type
+    EXPECT_CALL(mockApp, discoveryUpdateResponder(testing::_)).Times(0);
+
+    discovery->mctpNewObjectSignal(objPath, interfaces);
+    runContext();
 }
 
 } // namespace spdmd

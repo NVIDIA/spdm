@@ -18,12 +18,14 @@
 #include "test_helpers.hpp"
 
 #include <spdmcpp/assert.hpp>
+#include <spdmcpp/common.hpp>
 #include <spdmcpp/helpers.hpp>
 #include <spdmcpp/packet.hpp>
 
 #include <array>
 #include <cstring>
 #include <random>
+#include <string>
 #include <vector>
 
 #include <gmock/gmock.h>
@@ -36,6 +38,57 @@
 #ifndef __clang__
 
 using namespace spdmcpp;
+
+/** Mirrors layout in buildSpdm12SignatureContext() — first 100 bytes + hash. */
+static void expectBuildSpdm12SignatureContextLayout(
+    const std::vector<uint8_t>& result, const char* context, bool is_requester,
+    const std::vector<uint8_t>& hash)
+{
+    const size_t prefix_len = std::strlen(SPDM_VERSION_1_2_SIGNING_PREFIX);
+    const size_t spdm_prefix_total =
+        prefix_len * SPDM_SIGNING_CONTEXT_PREFIX_REPEAT_COUNT;
+    const char* role_prefix =
+        is_requester ? SPDM_REQUESTER_PREFIX : SPDM_RESPONDER_PREFIX;
+    const size_t role_prefix_len = std::strlen(role_prefix);
+    const size_t context_len = std::strlen(context);
+    const size_t spdm_context_len = role_prefix_len + context_len;
+    const size_t zero_pad_size =
+        SPDM_COMBINED_PREFIX_SIZE - spdm_prefix_total - 1 - spdm_context_len;
+
+    ASSERT_EQ(result.size(), SPDM_COMBINED_PREFIX_SIZE + hash.size());
+    ASSERT_EQ(spdm_prefix_total + 1 + zero_pad_size + spdm_context_len,
+              SPDM_COMBINED_PREFIX_SIZE);
+
+    for (size_t r = 0; r < SPDM_SIGNING_CONTEXT_PREFIX_REPEAT_COUNT; ++r)
+    {
+        const size_t off = r * prefix_len;
+        ASSERT_EQ(std::memcmp(result.data() + off,
+                              SPDM_VERSION_1_2_SIGNING_PREFIX, prefix_len),
+                  0)
+            << "SPDM signing prefix repeat " << r;
+    }
+
+    ASSERT_EQ(result[spdm_prefix_total], 0x00);
+
+    for (size_t i = 0; i < zero_pad_size; ++i)
+    {
+        ASSERT_EQ(result[spdm_prefix_total + 1 + i], 0x00) << "zero pad " << i;
+    }
+
+    const size_t role_off = spdm_prefix_total + 1 + zero_pad_size;
+    ASSERT_EQ(
+        std::memcmp(result.data() + role_off, role_prefix, role_prefix_len), 0);
+    ASSERT_EQ(std::memcmp(result.data() + role_off + role_prefix_len, context,
+                          context_len),
+              0);
+
+    if (!hash.empty())
+    {
+        ASSERT_EQ(std::memcmp(result.data() + SPDM_COMBINED_PREFIX_SIZE,
+                              hash.data(), hash.size()),
+                  0);
+    }
+}
 
 // clang-format off
 
@@ -507,4 +560,392 @@ TEST(packet_pseudorandom_encode_decode, PacketMeasurementsResponseVar_1)
 
     EXPECT_TRUE(packetEncodeDecode(p, info));
 }
+
+TEST(packet_spdm12_encode_decode, PacketGetCapabilitiesRequest_SPDM12)
+{
+    LogClass log(std::cerr);
+    PacketGetCapabilitiesRequest p;
+    p.Header.MessageVersion = MessageVersionEnum::SPDM_1_2;
+    p.CTExponent = 5;
+    p.Flags = RequesterCapabilitiesFlags::CERT_CAP;
+    p.DataTransferSize = 1024;
+    p.MaxSPDMmsgSize = 4096;
+
+    std::vector<uint8_t> buf;
+    size_t off = 0;
+    EXPECT_EQ(packetEncodeInternal(p, buf, off), RetStat::OK);
+
+    PacketGetCapabilitiesRequest decoded;
+    off = 0;
+    EXPECT_EQ(packetDecodeInternal(log, decoded, buf, off), RetStat::OK);
+    EXPECT_EQ(decoded.DataTransferSize, 1024);
+    EXPECT_EQ(decoded.MaxSPDMmsgSize, 4096);
+    EXPECT_EQ(decoded.CTExponent, 5);
+}
+
+TEST(packet_spdm12_encode_decode, PacketGetCapabilitiesRequest_SPDM12_MaxValues)
+{
+    LogClass log(std::cerr);
+    PacketGetCapabilitiesRequest p;
+    p.Header.MessageVersion = MessageVersionEnum::SPDM_1_2;
+    p.CTExponent = 12;
+    p.Flags = RequesterCapabilitiesFlags::MEAS_CAP;
+    p.DataTransferSize = 0xFFFFFFFF;
+    p.MaxSPDMmsgSize = 0xFFFFFFFF;
+
+    std::vector<uint8_t> buf;
+    size_t off = 0;
+    EXPECT_EQ(packetEncodeInternal(p, buf, off), RetStat::OK);
+
+    PacketGetCapabilitiesRequest decoded;
+    off = 0;
+    EXPECT_EQ(packetDecodeInternal(log, decoded, buf, off), RetStat::OK);
+    EXPECT_EQ(decoded.DataTransferSize, 0xFFFFFFFF);
+    EXPECT_EQ(decoded.MaxSPDMmsgSize, 0xFFFFFFFF);
+}
+
+TEST(packet_spdm12_encode_decode, PacketGetCapabilitiesRequest_SPDM12_ZeroSizes)
+{
+    LogClass log(std::cerr);
+    PacketGetCapabilitiesRequest p;
+    p.Header.MessageVersion = MessageVersionEnum::SPDM_1_2;
+    p.CTExponent = 0;
+    p.Flags = RequesterCapabilitiesFlags::NIL;
+    p.DataTransferSize = 0;
+    p.MaxSPDMmsgSize = 0;
+
+    std::vector<uint8_t> buf;
+    size_t off = 0;
+    EXPECT_EQ(packetEncodeInternal(p, buf, off), RetStat::OK);
+
+    PacketGetCapabilitiesRequest decoded;
+    off = 0;
+    EXPECT_EQ(packetDecodeInternal(log, decoded, buf, off), RetStat::OK);
+    EXPECT_EQ(decoded.DataTransferSize, 0);
+    EXPECT_EQ(decoded.MaxSPDMmsgSize, 0);
+}
+
+TEST(packet_spdm12_encode_decode, PacketGetCapabilitiesRequest_SPDM11)
+{
+    LogClass log(std::cerr);
+    PacketGetCapabilitiesRequest p;
+    p.Header.MessageVersion = MessageVersionEnum::SPDM_1_1;
+    p.CTExponent = 3;
+    p.Flags = RequesterCapabilitiesFlags::CERT_CAP;
+    p.DataTransferSize = 1024;
+    p.MaxSPDMmsgSize = 4096;
+
+    std::vector<uint8_t> buf;
+    size_t off = 0;
+    EXPECT_EQ(packetEncodeInternal(p, buf, off), RetStat::OK);
+
+    PacketGetCapabilitiesRequest decoded;
+    off = 0;
+    EXPECT_EQ(packetDecodeInternal(log, decoded, buf, off), RetStat::OK);
+    EXPECT_EQ(decoded.DataTransferSize, 0);
+    EXPECT_EQ(decoded.MaxSPDMmsgSize, 0);
+}
+
+TEST(packet_spdm12_encode_decode, PacketCapabilitiesResponse_SPDM12)
+{
+    LogClass log(std::cerr);
+    PacketCapabilitiesResponse p;
+    p.Header.MessageVersion = MessageVersionEnum::SPDM_1_2;
+    p.CTExponent = 7;
+    p.Flags = ResponderCapabilitiesFlags::CERT_CAP;
+    p.DataTransferSize = 2048;
+    p.MaxSPDMmsgSize = 8192;
+
+    std::vector<uint8_t> buf;
+    size_t off = 0;
+    EXPECT_EQ(packetEncodeInternal(p, buf, off), RetStat::OK);
+
+    PacketCapabilitiesResponse decoded;
+    off = 0;
+    EXPECT_EQ(packetDecodeInternal(log, decoded, buf, off), RetStat::OK);
+    EXPECT_EQ(decoded.DataTransferSize, 2048);
+    EXPECT_EQ(decoded.MaxSPDMmsgSize, 8192);
+    EXPECT_EQ(decoded.CTExponent, 7);
+}
+
+TEST(packet_spdm12_encode_decode, PacketCapabilitiesResponse_SPDM12_MaxValues)
+{
+    LogClass log(std::cerr);
+    PacketCapabilitiesResponse p;
+    p.Header.MessageVersion = MessageVersionEnum::SPDM_1_2;
+    p.CTExponent = 15;
+    p.Flags = ResponderCapabilitiesFlags::MEAS_CAP;
+    p.DataTransferSize = 0xFFFFFFFF;
+    p.MaxSPDMmsgSize = 0xFFFFFFFF;
+
+    std::vector<uint8_t> buf;
+    size_t off = 0;
+    EXPECT_EQ(packetEncodeInternal(p, buf, off), RetStat::OK);
+
+    PacketCapabilitiesResponse decoded;
+    off = 0;
+    EXPECT_EQ(packetDecodeInternal(log, decoded, buf, off), RetStat::OK);
+    EXPECT_EQ(decoded.DataTransferSize, 0xFFFFFFFF);
+    EXPECT_EQ(decoded.MaxSPDMmsgSize, 0xFFFFFFFF);
+}
+
+TEST(packet_spdm12_encode_decode, PacketCapabilitiesResponse_SPDM12_Typical)
+{
+    LogClass log(std::cerr);
+    PacketCapabilitiesResponse p;
+    p.Header.MessageVersion = MessageVersionEnum::SPDM_1_2;
+    p.CTExponent = 10;
+    p.Flags = ResponderCapabilitiesFlags::CACHE_CAP;
+    p.DataTransferSize = 512;
+    p.MaxSPDMmsgSize = 2048;
+
+    std::vector<uint8_t> buf;
+    size_t off = 0;
+    EXPECT_EQ(packetEncodeInternal(p, buf, off), RetStat::OK);
+
+    PacketCapabilitiesResponse decoded;
+    off = 0;
+    EXPECT_EQ(packetDecodeInternal(log, decoded, buf, off), RetStat::OK);
+    EXPECT_EQ(decoded.DataTransferSize, 512);
+    EXPECT_EQ(decoded.MaxSPDMmsgSize, 2048);
+}
+
+TEST(packet_spdm12_encode_decode, PacketCapabilitiesResponse_SPDM11)
+{
+    LogClass log(std::cerr);
+    PacketCapabilitiesResponse p;
+    p.Header.MessageVersion = MessageVersionEnum::SPDM_1_1;
+    p.CTExponent = 4;
+    p.Flags = ResponderCapabilitiesFlags::CERT_CAP;
+    p.DataTransferSize = 2048;
+    p.MaxSPDMmsgSize = 8192;
+
+    std::vector<uint8_t> buf;
+    size_t off = 0;
+    EXPECT_EQ(packetEncodeInternal(p, buf, off), RetStat::OK);
+
+    PacketCapabilitiesResponse decoded;
+    off = 0;
+    EXPECT_EQ(packetDecodeInternal(log, decoded, buf, off), RetStat::OK);
+    EXPECT_EQ(decoded.DataTransferSize, 0);
+    EXPECT_EQ(decoded.MaxSPDMmsgSize, 0);
+}
+
+TEST(packet_spdm12, GetCapabilitiesRequest_Size_SPDM12)
+{
+    PacketGetCapabilitiesRequest p12;
+    p12.Header.MessageVersion = MessageVersionEnum::SPDM_1_2;
+
+    PacketGetCapabilitiesRequest p11;
+    p11.Header.MessageVersion = MessageVersionEnum::SPDM_1_1;
+
+    EXPECT_EQ(p12.getSize(), p11.getSize() + 8);
+}
+
+TEST(packet_spdm12, CapabilitiesResponse_Size_SPDM12)
+{
+    PacketCapabilitiesResponse p12;
+    p12.Header.MessageVersion = MessageVersionEnum::SPDM_1_2;
+
+    PacketCapabilitiesResponse p11;
+    p11.Header.MessageVersion = MessageVersionEnum::SPDM_1_1;
+
+    EXPECT_EQ(p12.getSize(), p11.getSize() + 8);
+}
+
+TEST(packet_spdm12, BuildSpdm12SignatureContext_Requester)
+{
+    using namespace spdmcpp;
+    const char* context = "measurement";
+    std::vector<uint8_t> hash = {0x01, 0x02, 0x03, 0x04,
+                                 0x05, 0x06, 0x07, 0x08};
+
+    auto result = buildSpdm12SignatureContext(context, true, hash);
+
+    expectBuildSpdm12SignatureContextLayout(result, context, true, hash);
+}
+
+TEST(packet_spdm12, BuildSpdm12SignatureContext_Responder)
+{
+    using namespace spdmcpp;
+    const char* context = "challenge_auth";
+    std::vector<uint8_t> hash = {0xAA, 0xBB, 0xCC, 0xDD};
+
+    auto result = buildSpdm12SignatureContext(context, false, hash);
+    expectBuildSpdm12SignatureContextLayout(result, context, false, hash);
+}
+
+TEST(packet_spdm12, BuildSpdm12SignatureContext_EmptyHash)
+{
+    using namespace spdmcpp;
+    const char* context = "key_exchange";
+    std::vector<uint8_t> hash;
+
+    auto result = buildSpdm12SignatureContext(context, true, hash);
+    expectBuildSpdm12SignatureContextLayout(result, context, true, hash);
+}
+
+TEST(packet_spdm12, BuildSpdm12SignatureContext_LargeHash)
+{
+    using namespace spdmcpp;
+    const char* context = "finish";
+    std::vector<uint8_t> hash(64, 0xFF); // 64 bytes of 0xFF
+
+    auto result = buildSpdm12SignatureContext(context, false, hash);
+    expectBuildSpdm12SignatureContextLayout(result, context, false, hash);
+}
+
+TEST(packet_spdm12, BuildSpdm12SignatureContext_DifferentContexts)
+{
+    using namespace spdmcpp;
+    std::vector<uint8_t> hash = {0x11, 0x22, 0x33};
+
+    auto result1 = buildSpdm12SignatureContext("short", true, hash);
+    auto result2 = buildSpdm12SignatureContext("longer_context", true, hash);
+    auto result3 = buildSpdm12SignatureContext("", true, hash);
+
+    expectBuildSpdm12SignatureContextLayout(result1, "short", true, hash);
+    expectBuildSpdm12SignatureContextLayout(result2, "longer_context", true,
+                                            hash);
+    expectBuildSpdm12SignatureContextLayout(result3, "", true, hash);
+
+    EXPECT_NE(result1, result2);
+    EXPECT_NE(result2, result3);
+}
+
+TEST(packet_spdm12, BuildSpdm12SignatureContext_RequesterVsResponder)
+{
+    using namespace spdmcpp;
+    const char* context = "same_context";
+    std::vector<uint8_t> hash = {0xAA, 0xBB};
+
+    auto requester_result = buildSpdm12SignatureContext(context, true, hash);
+    auto responder_result = buildSpdm12SignatureContext(context, false, hash);
+
+    expectBuildSpdm12SignatureContextLayout(requester_result, context, true,
+                                            hash);
+    expectBuildSpdm12SignatureContextLayout(responder_result, context, false,
+                                            hash);
+    EXPECT_NE(requester_result, responder_result);
+}
+
+TEST(packet_spdm12, BuildSpdm12SignatureContext_ContextMaxLengthFitsPrefixField)
+{
+    using namespace spdmcpp;
+    const size_t max_base_context_len =
+        SPDM_COMBINED_PREFIX_SIZE -
+        std::strlen(SPDM_VERSION_1_2_SIGNING_PREFIX) *
+            SPDM_SIGNING_CONTEXT_PREFIX_REPEAT_COUNT -
+        1 - std::strlen(SPDM_REQUESTER_PREFIX);
+    ASSERT_EQ(max_base_context_len, 25u);
+
+    const std::string context(max_base_context_len, 'z');
+    std::vector<uint8_t> hash = {0x7E, 0x7F};
+
+    auto requester = buildSpdm12SignatureContext(context.c_str(), true, hash);
+    auto responder = buildSpdm12SignatureContext(context.c_str(), false, hash);
+
+    expectBuildSpdm12SignatureContextLayout(requester, context.c_str(), true,
+                                            hash);
+    expectBuildSpdm12SignatureContextLayout(responder, context.c_str(), false,
+                                            hash);
+}
+
+TEST(packet_spdm12, BuildSpdm12SignatureContext_ContextTooLongForPrefixField)
+{
+    using namespace spdmcpp;
+    const size_t max_base_context_len =
+        SPDM_COMBINED_PREFIX_SIZE -
+        std::strlen(SPDM_VERSION_1_2_SIGNING_PREFIX) *
+            SPDM_SIGNING_CONTEXT_PREFIX_REPEAT_COUNT -
+        1 - std::strlen(SPDM_REQUESTER_PREFIX);
+
+    const std::string context(max_base_context_len + 1, 'z');
+    std::vector<uint8_t> hash = {0x03, 0x04};
+
+    EXPECT_ANY_THROW(buildSpdm12SignatureContext(context.c_str(), true, hash));
+    EXPECT_ANY_THROW(buildSpdm12SignatureContext(context.c_str(), false, hash));
+}
+
+TEST(packet_spdm12, BuildSpdm12SignatureContext_HashLongerThanTypicalDigests)
+{
+    using namespace spdmcpp;
+    const char* context = SPDM_MEASUREMENTS_SIGN_CONTEXT;
+    std::vector<uint8_t> hash(128);
+    for (size_t i = 0; i < hash.size(); ++i)
+    {
+        hash[i] = static_cast<uint8_t>(i & 0xFF);
+    }
+
+    auto result = buildSpdm12SignatureContext(context, false, hash);
+    ASSERT_EQ(result.size(), SPDM_COMBINED_PREFIX_SIZE + hash.size());
+    expectBuildSpdm12SignatureContextLayout(result, context, false, hash);
+}
+
+TEST(packet_version, GetMessageVersion_SPDM10)
+{
+    PacketVersionNumber ver;
+    ver.setMajor(1);
+    ver.setMinor(0);
+
+    EXPECT_EQ(ver.getMessageVersion(), MessageVersionEnum::SPDM_1_0);
+    EXPECT_EQ(ver.getMajor(), 1);
+    EXPECT_EQ(ver.getMinor(), 0);
+}
+
+TEST(packet_version, GetMessageVersion_SPDM11)
+{
+    PacketVersionNumber ver;
+    ver.setMajor(1);
+    ver.setMinor(1);
+
+    EXPECT_EQ(ver.getMessageVersion(), MessageVersionEnum::SPDM_1_1);
+    EXPECT_EQ(ver.getMajor(), 1);
+    EXPECT_EQ(ver.getMinor(), 1);
+}
+
+TEST(packet_version, GetMessageVersion_SPDM12)
+{
+    PacketVersionNumber ver;
+    ver.setMajor(1);
+    ver.setMinor(2);
+
+    EXPECT_EQ(ver.getMessageVersion(), MessageVersionEnum::SPDM_1_2);
+    EXPECT_EQ(ver.getMajor(), 1);
+    EXPECT_EQ(ver.getMinor(), 2);
+}
+
+TEST(packet_version, GetMessageVersion_Unknown)
+{
+    PacketVersionNumber ver;
+    ver.setMajor(2);
+    ver.setMinor(0);
+
+    EXPECT_EQ(ver.getMessageVersion(), MessageVersionEnum::UNKNOWN);
+}
+
+TEST(packet_version, GetMessageVersion_AllVersions)
+{
+    {
+        PacketVersionNumber ver;
+        ver.Bits = (1 << 12) | (0 << 8);
+        EXPECT_EQ(ver.getMessageVersion(), MessageVersionEnum::SPDM_1_0);
+    }
+    {
+        PacketVersionNumber ver;
+        ver.Bits = (1 << 12) | (1 << 8);
+        EXPECT_EQ(ver.getMessageVersion(), MessageVersionEnum::SPDM_1_1);
+    }
+    {
+        PacketVersionNumber ver;
+        ver.Bits = (1 << 12) | (2 << 8);
+        EXPECT_EQ(ver.getMessageVersion(), MessageVersionEnum::SPDM_1_2);
+    }
+    {
+        PacketVersionNumber ver;
+        ver.Bits = (1 << 12) | (3 << 8);
+        EXPECT_EQ(ver.getMessageVersion(), MessageVersionEnum::UNKNOWN);
+    }
+}
+
 #endif
