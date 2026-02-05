@@ -150,3 +150,96 @@ TEST(Helpers, fillRandom_vector)
     EXPECT_NE(memcmp(buf.data(), refBuf.data(), buf.size()),
               0); // shouldn't match pseudo-random data
 }
+
+// Test fillPseudoRandom with different seeds
+TEST(Helpers, fillPseudoRandom_DifferentSeeds)
+{
+    std::array<uint8_t, 128> buf1{};
+    std::array<uint8_t, 128> buf2{};
+    std::array<uint8_t, 128> buf3{};
+
+    // Fill with different seeds
+    fillPseudoRandom(buf1, 13); // Default seed
+    fillPseudoRandom(buf2, 42); // Different seed
+    fillPseudoRandom(buf3, 13); // Same as buf1
+
+    // Same seed should produce same output
+    EXPECT_EQ(memcmp(buf1.data(), buf3.data(), buf1.size()), 0);
+
+    // Different seed should produce different output
+    EXPECT_NE(memcmp(buf1.data(), buf2.data(), buf1.size()), 0);
+}
+
+// Test fillPseudoRandom with small buffers
+TEST(Helpers, fillPseudoRandom_SmallBuffers)
+{
+    std::array<uint8_t, 1> buf1{};
+    std::array<uint8_t, 2> buf2{};
+    std::array<uint8_t, 8> buf8{};
+
+    fillPseudoRandom(buf1);
+    fillPseudoRandom(buf2);
+    fillPseudoRandom(buf8);
+
+    // Verify all bytes are non-zero (fillPseudoRandom uses distribution
+    // starting at 1)
+    EXPECT_NE(buf1[0], 0);
+    EXPECT_NE(buf2[0], 0);
+    EXPECT_NE(buf2[1], 0);
+
+    for (size_t i = 0; i < buf8.size(); ++i)
+    {
+        EXPECT_NE(buf8[i], 0);
+    }
+}
+
+// Test fillPseudoRandom with large buffers
+TEST(Helpers, fillPseudoRandom_LargeBuffer)
+{
+    std::vector<uint8_t> buf;
+    buf.resize(4096); // 4KB buffer
+    fillPseudoRandom(buf);
+
+    // Verify buffer is filled and has variety
+    size_t nonZero =
+        std::count_if(buf.begin(), buf.end(), [](auto v) { return v != 0; });
+    EXPECT_EQ(nonZero, buf.size()); // All should be non-zero
+
+    // Check for variety (at least 128 different values in 4KB)
+    std::array<bool, 256> seen{};
+    for (auto byte : buf)
+    {
+        seen[byte] = true;
+    }
+    size_t uniqueValues = std::count(seen.begin(), seen.end(), true);
+    EXPECT_GE(uniqueValues, 128);
+}
+
+// Test fillRandom with small buffers
+TEST(Helpers, fillRandom_SmallBuffers)
+{
+    std::array<uint8_t, 1> buf1{};
+    std::array<uint8_t, 4> buf4{};
+
+    fillRandom(buf1);
+    fillRandom(buf4);
+
+    // Just verify function executes without crash
+    // Random data can be anything including zero
+    EXPECT_EQ(buf1.size(), 1u);
+    EXPECT_EQ(buf4.size(), 4u);
+}
+
+// Test fillRandom consistency - different calls should produce different output
+TEST(Helpers, fillRandom_Uniqueness)
+{
+    std::array<uint8_t, 256> buf1{};
+    std::array<uint8_t, 256> buf2{};
+
+    fillRandom(buf1);
+    fillRandom(buf2);
+
+    // Two random fills should produce different results
+    // (probability of collision is negligibly small for 256 bytes)
+    EXPECT_NE(memcmp(buf1.data(), buf2.data(), buf1.size()), 0);
+}

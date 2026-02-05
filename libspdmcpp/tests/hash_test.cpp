@@ -180,3 +180,208 @@ TEST(Hash, SHA512)
     EXPECT_EQ(hash.size(), refHash.size());
     EXPECT_EQ(memcmp(hash.data(), refHash.data(), refHash.size()), 0);
 }
+
+// Test incremental hashing workflow (setup + update + hashFinish)
+TEST(Hash, IncrementalHashSHA256)
+{
+    std::array<uint8_t, 32> refHash{};
+    stringToHash(
+        refHash,
+        "33c452d940f6b206bc539bfe92b3151317fb70dfe2c17ecf59375c9f745d1102");
+
+    // Use incremental API instead of static compute
+    HashClass hc;
+    hc.setup(HashEnum::TPM_ALG_SHA_256);
+    hc.update(refBuf.data(), refBuf.size());
+
+    std::vector<uint8_t> hash;
+    hc.hashFinish(hash);
+
+    EXPECT_EQ(hash.size(), refHash.size());
+    EXPECT_EQ(memcmp(hash.data(), refHash.data(), refHash.size()), 0);
+}
+
+// Test incremental hashing for SHA384
+TEST(Hash, IncrementalHashSHA384)
+{
+    std::array<uint8_t, 48> refHash{};
+    stringToHash(
+        refHash,
+        "6625f7f39c1f107ae4344afd711dfde3e2045cc8c467f1a785e75ade18986e5f5db2d8e73b680051d92295e307915533");
+
+    HashClass hc;
+    hc.setup(HashEnum::TPM_ALG_SHA_384);
+    hc.update(refBuf.data(), refBuf.size());
+
+    std::vector<uint8_t> hash;
+    hc.hashFinish(hash);
+
+    EXPECT_EQ(hash.size(), refHash.size());
+    EXPECT_EQ(memcmp(hash.data(), refHash.data(), refHash.size()), 0);
+}
+
+// Test incremental hashing for SHA512
+TEST(Hash, IncrementalHashSHA512)
+{
+    std::array<uint8_t, 64> refHash{};
+    stringToHash(
+        refHash,
+        "64fff176528eba19be10b0122741796ebb753dc72cfe9259e95eff49cada7cab50e2cdb9b380e3334065d0d44493ec1d01ac0bbcf8bd64115554a41a33a12a57");
+
+    HashClass hc;
+    hc.setup(HashEnum::TPM_ALG_SHA_512);
+    hc.update(refBuf.data(), refBuf.size());
+
+    std::vector<uint8_t> hash;
+    hc.hashFinish(hash);
+
+    EXPECT_EQ(hash.size(), refHash.size());
+    EXPECT_EQ(memcmp(hash.data(), refHash.data(), refHash.size()), 0);
+}
+
+// Test multiple update() calls produce same result as single update
+TEST(Hash, MultipleUpdateCalls)
+{
+    std::array<uint8_t, 32> refHash{};
+    stringToHash(
+        refHash,
+        "33c452d940f6b206bc539bfe92b3151317fb70dfe2c17ecf59375c9f745d1102");
+
+    // Hash in one call
+    std::vector<uint8_t> hashSingle;
+    HashClass::compute(hashSingle, HashEnum::TPM_ALG_SHA_256, refBuf.data(),
+                       refBuf.size());
+
+    // Hash in multiple calls (split buffer)
+    HashClass hc;
+    hc.setup(HashEnum::TPM_ALG_SHA_256);
+    hc.update(refBuf.data(), 256);       // First half
+    hc.update(refBuf.data() + 256, 256); // Second half
+
+    std::vector<uint8_t> hashMulti;
+    hc.hashFinish(hashMulti);
+
+    // Both should produce same hash
+    EXPECT_EQ(hashSingle, hashMulti);
+    EXPECT_EQ(memcmp(hashSingle.data(), refHash.data(), refHash.size()), 0);
+}
+
+// Test compute() with vector and offset
+TEST(Hash, ComputeWithOffset)
+{
+    // Create a vector with some padding at the start
+    std::vector<uint8_t> paddedBuf;
+    paddedBuf.resize(100); // 100 bytes of padding
+    paddedBuf.insert(paddedBuf.end(), refBuf.begin(), refBuf.end());
+
+    std::array<uint8_t, 32> refHash{};
+    stringToHash(
+        refHash,
+        "33c452d940f6b206bc539bfe92b3151317fb70dfe2c17ecf59375c9f745d1102");
+
+    // Compute hash starting from offset 100
+    std::vector<uint8_t> hash;
+    HashClass::compute(hash, HashEnum::TPM_ALG_SHA_256, paddedBuf, 100);
+
+    EXPECT_EQ(hash.size(), refHash.size());
+    EXPECT_EQ(memcmp(hash.data(), refHash.data(), refHash.size()), 0);
+}
+
+// Test compute() with vector, offset, and length
+TEST(Hash, ComputeWithOffsetAndLength)
+{
+    // Create a larger buffer with data in the middle
+    std::vector<uint8_t> largeBuf;
+    largeBuf.resize(1000);
+    std::copy(refBuf.begin(), refBuf.end(), largeBuf.begin() + 100);
+
+    std::array<uint8_t, 32> refHash{};
+    stringToHash(
+        refHash,
+        "33c452d940f6b206bc539bfe92b3151317fb70dfe2c17ecf59375c9f745d1102");
+
+    // Compute hash of 512 bytes starting from offset 100
+    std::vector<uint8_t> hash;
+    HashClass::compute(hash, HashEnum::TPM_ALG_SHA_256, largeBuf, 100, 512);
+
+    EXPECT_EQ(hash.size(), refHash.size());
+    EXPECT_EQ(memcmp(hash.data(), refHash.data(), refHash.size()), 0);
+}
+
+// Test update() with vector (using RetStat return value)
+TEST(Hash, UpdateWithVector)
+{
+    std::array<uint8_t, 32> refHash{};
+    stringToHash(
+        refHash,
+        "33c452d940f6b206bc539bfe92b3151317fb70dfe2c17ecf59375c9f745d1102");
+
+    HashClass hc;
+    hc.setup(HashEnum::TPM_ALG_SHA_256);
+
+    // Convert refBuf to vector
+    std::vector<uint8_t> vecBuf(refBuf.begin(), refBuf.end());
+    auto rs = hc.update(vecBuf);
+    EXPECT_EQ(rs, RetStat::OK);
+
+    std::vector<uint8_t> hash;
+    hc.hashFinish(hash);
+
+    EXPECT_EQ(hash.size(), refHash.size());
+    EXPECT_EQ(memcmp(hash.data(), refHash.data(), refHash.size()), 0);
+}
+
+// Test update() with invalid offset (error path)
+TEST(Hash, UpdateWithInvalidOffset)
+{
+    HashClass hc;
+    hc.setup(HashEnum::TPM_ALG_SHA_256);
+
+    std::vector<uint8_t> buf(100);
+
+    // Try to update with offset beyond buffer size
+    auto rs = hc.update(buf, 101); // offset 101 > size 100
+    EXPECT_EQ(rs, RetStat::ERROR_BUFFER_TOO_SMALL);
+}
+
+// Test hashFinish with pointer and size
+TEST(Hash, HashFinishPointer)
+{
+    std::array<uint8_t, 32> refHash{};
+    stringToHash(
+        refHash,
+        "33c452d940f6b206bc539bfe92b3151317fb70dfe2c17ecf59375c9f745d1102");
+
+    HashClass hc;
+    hc.setup(HashEnum::TPM_ALG_SHA_256);
+    hc.update(refBuf.data(), refBuf.size());
+
+    std::array<uint8_t, 32> hash{};
+    hc.hashFinish(hash.data(), hash.size());
+
+    EXPECT_EQ(memcmp(hash.data(), refHash.data(), refHash.size()), 0);
+}
+
+// Test update with offset and length
+TEST(Hash, UpdateWithOffsetAndLength)
+{
+    std::vector<uint8_t> largeBuf;
+    largeBuf.resize(1000);
+    std::copy(refBuf.begin(), refBuf.end(), largeBuf.begin() + 100);
+
+    std::array<uint8_t, 32> refHash{};
+    stringToHash(
+        refHash,
+        "33c452d940f6b206bc539bfe92b3151317fb70dfe2c17ecf59375c9f745d1102");
+
+    HashClass hc;
+    hc.setup(HashEnum::TPM_ALG_SHA_256);
+    auto rs = hc.update(largeBuf, 100, 512); // offset=100, len=512
+    EXPECT_EQ(rs, RetStat::OK);
+
+    std::vector<uint8_t> hash;
+    hc.hashFinish(hash);
+
+    EXPECT_EQ(hash.size(), refHash.size());
+    EXPECT_EQ(memcmp(hash.data(), refHash.data(), refHash.size()), 0);
+}

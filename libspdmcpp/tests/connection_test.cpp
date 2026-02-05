@@ -837,4 +837,144 @@ TEST(Connection, FullFlow_SPDM12_CorruptMeasurementPayload)
         Spdm12MeasurementsFault::CorruptMeasurementPayload);
 }
 
+// Test getCertificatesDER - Exercise certificate extraction function
+TEST(Connection, GetCertificatesDER)
+{
+    ConnectionFixture fix;
+
+    // Try to get certificate (will return false if no cert available)
+    std::vector<uint8_t> certDER;
+    bool result = fix.Connection.getCertificatesDER(certDER, 0);
+
+    // The function should execute without crashing
+    // Result will be false if no certificate is available yet
+    if (result)
+    {
+        // If we got a certificate, verify it's valid
+        EXPECT_GT(certDER.size(), 0);
+        if (!certDER.empty())
+        {
+            // Basic DER validation - should start with SEQUENCE tag (0x30)
+            EXPECT_EQ(certDER[0], 0x30);
+        }
+    }
+    else
+    {
+        // No certificate available yet - that's ok, function was exercised
+        EXPECT_EQ(certDER.size(), 0);
+    }
+}
+
+// Test getCertificatesPEM - Exercise PEM certificate extraction function
+TEST(Connection, GetCertificatesPEM)
+{
+    ConnectionFixture fix;
+
+    // Try to get certificate in PEM format
+    std::string certPEM;
+    bool result = fix.Connection.getCertificatesPEM(certPEM, 0);
+
+    // The function should execute without crashing
+    if (result)
+    {
+        // If we got a certificate, verify it's valid PEM format
+        EXPECT_GT(certPEM.size(), 0);
+        EXPECT_NE(certPEM.find("-----BEGIN CERTIFICATE-----"),
+                  std::string::npos);
+    }
+    else
+    {
+        // No certificate available yet - that's ok, function was exercised
+        EXPECT_EQ(certPEM.size(), 0);
+    }
+}
+
+// Test resetConnection - Clear connection state
+TEST(Connection, ResetConnection)
+{
+    ConnectionFixture fix;
+
+    // Start a connection flow
+    fix.Connection.refreshMeasurements(0);
+    EXPECT_TRUE(fix.Connection.isWaitingForResponse());
+
+    // Reset the connection
+    fix.Connection.resetConnection();
+
+    // Verify state is cleared
+    EXPECT_FALSE(fix.Connection.isWaitingForResponse());
+    EXPECT_FALSE(fix.Connection.hasInfo(ConnectionInfoEnum::CHOOSEN_VERSION));
+    EXPECT_FALSE(fix.Connection.hasInfo(ConnectionInfoEnum::CAPABILITIES));
+    EXPECT_FALSE(fix.Connection.hasInfo(ConnectionInfoEnum::ALGORITHMS));
+}
+
+// Test refreshMeasurements with custom nonce
+TEST(Connection, RefreshMeasurementsWithNonce)
+{
+    ConnectionFixture fix;
+
+    // Create a custom nonce
+    nonce_array_32 customNonce;
+    for (size_t i = 0; i < customNonce.size(); ++i)
+    {
+        customNonce[i] = static_cast<uint8_t>(i);
+    }
+
+    // Call refreshMeasurements with custom nonce
+    auto rs = fix.Connection.refreshMeasurements(0, customNonce);
+    EXPECT_EQ(rs, RetStat::OK);
+    EXPECT_TRUE(fix.Connection.isWaitingForResponse());
+
+    // The nonce should be embedded in the CHALLENGE request
+    // We can't easily verify it without processing the full flow,
+    // but we've at least exercised the code path
+}
+
+// Test refreshMeasurements with specific measurement indices
+TEST(Connection, RefreshMeasurementsWithIndices)
+{
+    ConnectionFixture fix;
+
+    // Create measurement indices bitset (request measurements 1, 3, 5)
+    std::bitset<256> indices;
+    indices.set(1);
+    indices.set(3);
+    indices.set(5);
+
+    // Call refreshMeasurements with indices
+    auto rs = fix.Connection.refreshMeasurements(0, indices);
+    EXPECT_EQ(rs, RetStat::OK);
+    EXPECT_TRUE(fix.Connection.isWaitingForResponse());
+
+    // The indices should be used in GET_MEASUREMENTS requests
+    // Code path is now exercised
+}
+
+// Test refreshMeasurements with both nonce and indices
+TEST(Connection, RefreshMeasurementsWithNonceAndIndices)
+{
+    ConnectionFixture fix;
+
+    // Create custom nonce
+    nonce_array_32 customNonce;
+    for (size_t i = 0; i < customNonce.size(); ++i)
+    {
+        customNonce[i] = static_cast<uint8_t>(0xFF - i);
+    }
+
+    // Create measurement indices
+    std::bitset<256> indices;
+    indices.set(2);
+    indices.set(4);
+    indices.set(6);
+    indices.set(8);
+
+    // Call refreshMeasurements with both parameters
+    auto rs = fix.Connection.refreshMeasurements(0, customNonce, indices);
+    EXPECT_EQ(rs, RetStat::OK);
+    EXPECT_TRUE(fix.Connection.isWaitingForResponse());
+
+    // Both nonce and indices should be used in the requests
+    // Code path is now exercised
+}
 #endif
