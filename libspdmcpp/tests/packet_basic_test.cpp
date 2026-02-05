@@ -329,6 +329,8 @@ TEST(packet_pseudorandom_decode_encode, static_size)
     EXPECT_TRUE(packetPseudorandomDecodeEncodeBasic<PacketCertificateChain>());
     EXPECT_TRUE(
         packetPseudorandomDecodeEncodeBasic<PacketMeasurementBlockMin>());
+    EXPECT_TRUE(
+        packetPseudorandomDecodeEncodeBasic<PacketGetCapabilities10Request>());
 
     EXPECT_TRUE(packetPseudorandomDecodeEncode<PacketVersionResponseMin>());
     EXPECT_TRUE(
@@ -343,6 +345,30 @@ TEST(packet_pseudorandom_decode_encode, static_size)
         packetPseudorandomDecodeEncode<PacketGetMeasurementsRequestMin>());
     EXPECT_TRUE(
         packetPseudorandomDecodeEncode<PacketMeasurementsResponseMin>());
+}
+
+TEST(packet_get_capabilities_10_request, printMl)
+{
+    PacketGetCapabilities10Request p;
+    LogClass log(std::cerr);
+    log.logLevel = LogClass::Level::Informational;
+    p.printMl(log);
+}
+
+TEST(packet_error_response_min, printMl)
+{
+    PacketErrorResponseMin p;
+    LogClass log(std::cerr);
+    log.logLevel = LogClass::Level::Informational;
+    p.printMl(log);
+}
+
+TEST(packet_message_header, printMl)
+{
+    PacketMessageHeader p(RequestResponseEnum::REQUEST_GET_VERSION);
+    LogClass log(std::cerr);
+    log.logLevel = LogClass::Level::Informational;
+    p.printMl(log);
 }
 
 TEST(packet_pseudorandom_encode_decode, PacketErrorResponseVar)

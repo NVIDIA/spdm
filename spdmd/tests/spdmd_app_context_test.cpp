@@ -17,6 +17,8 @@
 
 #include "spdmd_app_context.hpp"
 
+#include <spdmcpp/log.hpp>
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -252,6 +254,43 @@ TEST_F(SpdmdAppContextTest, GetConnAfterConnect)
 
     // Should have a non-empty unique name
     EXPECT_FALSE(serviceName.empty());
+}
+
+// Phase 2: reportError returns true (no D-Bus phosphor logging in tests)
+TEST_F(SpdmdAppContextTest, ReportErrorReturnsTrue)
+{
+    SpdmdAppContext appContext(logStream);
+    appContext.getLog().setLogLevel(spdmcpp::LogClass::Level::Error);
+    EXPECT_TRUE(appContext.reportError("phase2 error message"));
+}
+
+// Phase 2: reportNotice returns true and writes to log stream when level >=
+// Notice
+TEST_F(SpdmdAppContextTest, ReportNoticeReturnsTrueAndWritesToLog)
+{
+    SpdmdAppContext appContext(logStream);
+    appContext.getLog().setLogLevel(spdmcpp::LogClass::Level::Notice);
+    EXPECT_TRUE(appContext.reportNotice("phase2 notice message"));
+    EXPECT_THAT(logStream.str(), ::testing::HasSubstr("phase2 notice message"));
+}
+
+// Phase 2: loop() runs until io is stopped
+TEST_F(SpdmdAppContextTest, LoopRunsUntilStopped)
+{
+    SpdmdAppContext appContext(logStream);
+    auto& io = appContext.getIo();
+    bool ran = false;
+    boost::asio::steady_timer timer(io, std::chrono::milliseconds(0));
+    timer.async_wait([&io, &ran](const boost::system::error_code& ec) {
+        if (!ec)
+        {
+            ran = true;
+            io.stop();
+        }
+    });
+    int n = appContext.loop();
+    EXPECT_TRUE(ran);
+    EXPECT_GT(n, 0);
 }
 
 } // namespace spdmd

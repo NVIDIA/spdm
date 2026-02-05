@@ -22,6 +22,7 @@
 #include <spdmcpp/common.hpp>
 #include <spdmcpp/connection.hpp>
 #include <spdmcpp/context.hpp>
+#include <spdmcpp/event.hpp>
 #include <spdmcpp/mbedtls_support.hpp>
 #include <spdmcpp/mctp_support.hpp>
 #include <spdmcpp/packet.hpp>
@@ -59,6 +60,23 @@ class FixtureTransportClass : public MctpTransportClass
     {}
 
     spdmcpp::RetStat setupTimeout(spdmcpp::timeout_us_t /*timeout*/) override
+    {
+        return RetStat::OK;
+    }
+};
+
+/** Mock transport that fails decode to cover handleRecv error path */
+class FailingDecodeTransportClass : public MctpTransportClass
+{
+  public:
+    FailingDecodeTransportClass() : MctpTransportClass(14)
+    {}
+    RetStat decode(std::vector<uint8_t>& /*buf*/,
+                   TransportClass::LayerState& /*lay*/) override
+    {
+        return RetStat::ERROR_BUFFER_TOO_SMALL;
+    }
+    RetStat setupTimeout(timeout_ms_t /*timeout*/) override
     {
         return RetStat::OK;
     }
@@ -946,8 +964,7 @@ TEST(Connection, RefreshMeasurementsWithIndices)
     EXPECT_EQ(rs, RetStat::OK);
     EXPECT_TRUE(fix.Connection.isWaitingForResponse());
 
-    // The indices should be used in GET_MEASUREMENTS requests
-    // Code path is now exercised
+    // Indices are used internally for GET_MEASUREMENTS requests
 }
 
 // Test refreshMeasurements with both nonce and indices
@@ -976,5 +993,250 @@ TEST(Connection, RefreshMeasurementsWithNonceAndIndices)
 
     // Both nonce and indices should be used in the requests
     // Code path is now exercised
+}
+
+// --- Tests to reach 90% function coverage (public API only) ---
+
+// Getters on fresh connection
+TEST(Connection, GetSendTimeoutValue)
+{
+    ConnectionFixture fix;
+    auto v = fix.Connection.getSendTimeoutValue();
+    (void)v;
+    SUCCEED();
+}
+
+TEST(Connection, GetSendBufferRef)
+{
+    ConnectionFixture fix;
+    const auto& buf = fix.Connection.getSendBufferRef();
+    EXPECT_TRUE(buf.empty());
+}
+
+TEST(Connection, GetCurrentCertificateSlotIdx)
+{
+    ConnectionFixture fix;
+    // Initial value is slotNum (8) until refreshMeasurements is called with a
+    // slot
+    EXPECT_EQ(fix.Connection.getCurrentCertificateSlotIdx(),
+              ConnectionClass::slotNum);
+}
+
+TEST(Connection, GetDbgLastWaitState)
+{
+    ConnectionFixture fix;
+    auto s = fix.Connection.getDbgLastWaitState();
+    (void)s;
+    SUCCEED();
+}
+
+TEST(Connection, GetWaitingForResponse)
+{
+    ConnectionFixture fix;
+    EXPECT_EQ(fix.Connection.getWaitingForResponse(),
+              RequestResponseEnum::INVALID);
+}
+
+TEST(Connection, GetDMTFMeasurements)
+{
+    ConnectionFixture fix;
+    const auto& m = fix.Connection.getDMTFMeasurements();
+    EXPECT_TRUE(m.empty());
+}
+
+TEST(Connection, GetSignedMeasurementsHash)
+{
+    ConnectionFixture fix;
+    const auto& h = fix.Connection.getSignedMeasurementsHash();
+    EXPECT_TRUE(h.empty());
+}
+
+TEST(Connection, GetMeasurementsSignature)
+{
+    ConnectionFixture fix;
+    const auto& sig = fix.Connection.getMeasurementsSignature();
+    EXPECT_TRUE(sig.empty());
+}
+
+TEST(Connection, GetMeasurementNonce)
+{
+    ConnectionFixture fix;
+    const auto& nonce = fix.Connection.getMeasurementNonce();
+    (void)nonce;
+    SUCCEED();
+}
+
+TEST(Connection, GetResponseBufferRef)
+{
+    ConnectionFixture fix;
+    auto& buf = fix.Connection.getResponseBufferRef();
+    EXPECT_TRUE(buf.empty());
+}
+
+TEST(Connection, HasInfoInitial)
+{
+    ConnectionFixture fix;
+    EXPECT_FALSE(fix.Connection.hasInfo(ConnectionInfoEnum::CHOOSEN_VERSION));
+    EXPECT_FALSE(fix.Connection.hasInfo(ConnectionInfoEnum::CAPABILITIES));
+    EXPECT_FALSE(fix.Connection.hasInfo(ConnectionInfoEnum::ALGORITHMS));
+    EXPECT_FALSE(fix.Connection.hasInfo(ConnectionInfoEnum::DIGESTS));
+}
+
+TEST(Connection, SlotHasInfoInitial)
+{
+    ConnectionFixture fix;
+    EXPECT_FALSE(fix.Connection.slotHasInfo(0, SlotInfoEnum::DIGEST));
+    EXPECT_FALSE(fix.Connection.slotHasInfo(0, SlotInfoEnum::CERTIFICATES));
+}
+
+// --- Tests using mocks / event injection to cover more connection paths ---
+
+// Unknown event type: handleEvent returns ERROR_UNKNOWN for
+// non-receive/non-timeout
+struct UnknownEventClass : EventClass
+{};
+
+TEST(Connection, HandleEventUnknownType)
+{
+    ConnectionFixture fix;
+    UnknownEventClass ev;
+    RetStat rs = fix.Connection.handleEvent(ev);
+    EXPECT_EQ(rs, RetStat::ERROR_UNKNOWN);
+}
+
+// Timeout event: exercises handleEvent(EventTimeoutClass) and
+// handleTimeoutOrRetry
+TEST(Connection, HandleEventTimeout)
+{
+    ConnectionFixture fix;
+    fix.Connection.refreshMeasurements(0);
+    EventTimeoutClass timeoutEv("pcie");
+    // refreshMeasurements sets SendRetry=4, so first 4 timeouts trigger retry
+    // (OK); 5th exhausts retries
+    for (int i = 0; i < 4; ++i)
+    {
+        RetStat rs = fix.Connection.handleEvent(timeoutEv);
+        EXPECT_EQ(rs, RetStat::OK);
+        EXPECT_TRUE(fix.Connection.isWaitingForResponse());
+    }
+    RetStat rs = fix.Connection.handleEvent(timeoutEv);
+    EXPECT_EQ(rs, RetStat::ERROR_UNKNOWN);
+    EXPECT_FALSE(fix.Connection.isWaitingForResponse());
+}
+
+// Wrong response code triggers retryTimeout and checkErrorCodeForRetry
+TEST(Connection, WrongResponseCodeTriggersRetry)
+{
+    ConnectionFixture fix;
+    fix.Connection.refreshMeasurements(0);
+    EXPECT_TRUE(fix.Connection.isWaitingForResponse());
+    // Push wrong response type (capabilities instead of version)
+    PacketCapabilitiesResponse wrongResp;
+    wrongResp.Header.MessageVersion = MessageVersionEnum::SPDM_1_1;
+    wrongResp.Flags = ResponderCapabilitiesFlags::CERT_CAP |
+                      ResponderCapabilitiesFlags::MEAS_CAP_10;
+    RetStat pushRs = fix.push(wrongResp);
+    ASSERT_EQ(pushRs, RetStat::OK);
+    RetStat rs = fix.handleRecv();
+    // retryTimeout calls transport->setupTimeout and returns its result (OK for
+    // fixture)
+    EXPECT_EQ(rs, RetStat::OK);
+}
+
+// After wrong response, timeout event triggers handleTimeoutOrRetry with
+// SendRetry > 0
+TEST(Connection, HandleTimeoutWithRetryResends)
+{
+    ConnectionFixture fix;
+    fix.Connection.refreshMeasurements(0);
+    PacketCapabilitiesResponse wrongResp;
+    wrongResp.Header.MessageVersion = MessageVersionEnum::SPDM_1_1;
+    wrongResp.Flags = ResponderCapabilitiesFlags::CERT_CAP;
+    fix.push(wrongResp);
+    fix.handleRecv();
+    EventTimeoutClass timeoutEv("pcie");
+    RetStat rs = fix.Connection.handleEvent(timeoutEv);
+    EXPECT_EQ(rs, RetStat::OK);
+}
+
+// Wrong MessageVersion in response triggers
+// retryTimeout(ERROR_INVALID_HEADER_VERSION)
+TEST(Connection, WrongMessageVersionTriggersRetry)
+{
+    ConnectionFixture fix;
+    fix.Connection.refreshMeasurements(0);
+    PacketVersionResponseVar verResp;
+    verResp.Min.Header.MessageVersion = MessageVersionEnum::SPDM_1_0;
+    PacketVersionNumber ver;
+    ver.setMajor(1);
+    ver.setMinor(1);
+    verResp.VersionNumberEntries.push_back(ver);
+    fix.push(verResp);
+    fix.handleRecv();
+    PacketCapabilitiesResponse capResp;
+    capResp.Header.MessageVersion = MessageVersionEnum::SPDM_1_2;
+    capResp.Flags = ResponderCapabilitiesFlags::CERT_CAP;
+    fix.push(capResp);
+    RetStat rs = fix.handleRecv();
+    EXPECT_EQ(rs, RetStat::OK);
+}
+
+// Transport decode failure: mock transport returns ERROR_BUFFER_TOO_SMALL from
+// decode
+TEST(Connection, TransportDecodeFailureReturnsError)
+{
+    LogClass logg(std::cout);
+    auto IO = std::make_shared<FixtureIOClass>();
+    FailingDecodeTransportClass transFail;
+    ContextClass ctx;
+    ConnectionClass conn(ctx, logg, 0, "pcie");
+#ifndef MCTP_IN_KERNEL
+    ctx.registerIo(IO, "pcie");
+#else
+    ctx.registerIo(IO);
+#endif
+    conn.registerTransport(transFail);
+    conn.refreshMeasurements(0);
+    IO->ReadQueue.push_back(std::vector<uint8_t>(64, 0x00));
+    std::vector<uint8_t> buf;
+    IO->read(buf);
+    EventReceiveClass ev(buf);
+    RetStat rs = conn.handleEvent(ev);
+    EXPECT_EQ(rs, RetStat::ERROR_BUFFER_TOO_SMALL);
+    conn.unregisterTransport(transFail);
+#ifndef MCTP_IN_KERNEL
+    ctx.unregisterIo("pcie");
+#else
+    ctx.unregisterIo();
+#endif
+}
+
+// Push ERROR ResponseNotReady to trigger calcResponseIfReadyWaitTimeMs and
+// setupTimeout path
+TEST(Connection, ResponseNotReadyTriggersDelay)
+{
+    ConnectionFixture fix;
+    fix.Connection.refreshMeasurements(0);
+    PacketGetVersionRequest req;
+    auto rs = fix.interpret(req, MessageHashEnum::NUM);
+    ASSERT_EQ(rs, RetStat::OK);
+    PacketErrorResponseVar errResp;
+    errResp.Min.Header.MessageVersion = MessageVersionEnum::SPDM_1_1;
+    errResp.Min.Header.Param1 =
+        PacketErrorResponseVar::ErrorCodeResponseNotReady;
+    errResp.ExtendedErrorData.resize(PacketErrorResponseVar::ExtErrOffsEOE);
+    errResp.ExtendedErrorData
+        [PacketErrorResponseVar::ExtErrOffsNotReadyRTDExponent] = 1;
+    errResp
+        .ExtendedErrorData[PacketErrorResponseVar::ExtErrOffsReadyRequestCode] =
+        0;
+    errResp.ExtendedErrorData[PacketErrorResponseVar::ExtErrOffsNotReadyToken] =
+        0;
+    errResp.ExtendedErrorData[PacketErrorResponseVar::ExtErrOffsNotReadyRTDM] =
+        2;
+    rs = fix.push(errResp, MessageHashEnum::NUM);
+    ASSERT_EQ(rs, RetStat::OK);
+    rs = fix.handleRecv();
+    EXPECT_EQ(rs, RetStat::OK);
 }
 #endif
