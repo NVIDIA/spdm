@@ -169,4 +169,89 @@ TEST_F(SpdmdAppContextTest, NoWatchdogWhenZeroTimeout)
     EXPECT_TRUE(get_sd_notify_calls().empty());
 }
 
+// Test that getLog() returns a valid logger reference
+TEST_F(SpdmdAppContextTest, GetLogReturnsValidReference)
+{
+    SpdmdAppContext appContext(logStream);
+
+    // Get the logger reference
+    auto& log = appContext.getLog();
+
+    // Verify we can access the log level (basic API check)
+    // This confirms the reference is valid and usable
+    auto level = log.logLevel;
+    (void)level; // Suppress unused variable warning
+
+    // Test passes if we get here without crashing
+    SUCCEED();
+}
+
+// Test that getIo() returns a valid IO context
+TEST_F(SpdmdAppContextTest, GetIoReturnsValidContext)
+{
+    SpdmdAppContext appContext(logStream);
+
+    // Get the IO context reference
+    auto& io = appContext.getIo();
+
+    // Verify the IO context is not stopped (should be ready to use)
+    EXPECT_FALSE(io.stopped());
+
+    // Verify we can post work to it using a timer
+    bool callbackCalled = false;
+    boost::asio::steady_timer timer(io, std::chrono::milliseconds(0));
+    timer.async_wait([&callbackCalled](const boost::system::error_code&) {
+        callbackCalled = true;
+    });
+
+    // Run the IO context briefly
+    io.run_one();
+
+    EXPECT_TRUE(callbackCalled);
+}
+
+// Test getPropertyByEid with invalid EID returns nullopt
+TEST_F(SpdmdAppContextTest, GetPropertyByEidInvalidEid)
+{
+    SpdmdAppContext appContext(logStream);
+
+    // Try to get a property for an EID that doesn't exist in config
+    auto result = appContext.getPropertyByEid<int>(255, "nonexistent_property");
+
+    // Should return nullopt for invalid EID
+    EXPECT_FALSE(result.has_value());
+}
+
+// Test getPropertyByEid with missing property returns nullopt
+TEST_F(SpdmdAppContextTest, GetPropertyByEidMissingProperty)
+{
+    SpdmdAppContext appContext(logStream);
+
+    // Try to get a property that doesn't exist (even if EID exists)
+    auto result =
+        appContext.getPropertyByEid<std::string>(10, "missing_property");
+
+    // Should return nullopt for missing property
+    EXPECT_FALSE(result.has_value());
+}
+
+// Test getConn returns valid connection after connectDBus
+TEST_F(SpdmdAppContextTest, GetConnAfterConnect)
+{
+    SpdmdAppContext appContext(logStream);
+
+    // Connect to D-Bus
+    appContext.connectDBus("test.connection");
+
+    // Get the connection reference
+    auto& conn = appContext.getConn();
+
+    // Verify we can access the connection
+    // Just getting the service name verifies it's a valid connection
+    auto serviceName = conn.get_unique_name();
+
+    // Should have a non-empty unique name
+    EXPECT_FALSE(serviceName.empty());
+}
+
 } // namespace spdmd
