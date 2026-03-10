@@ -45,7 +45,7 @@ inline std::string getVersionStr(const uint8_t version)
         case 0x10:
             return "1.0.0";
         case 0x12:
-            return "1.1.2";
+            return "1.2.0";
         default:
             return "unknown";
     }
