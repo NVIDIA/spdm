@@ -41,30 +41,38 @@ MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
     bus(spdmApp.getConn()), spdmApp(spdmApp)
 #ifndef DISCOVERY_ONLY_FROM_MCTP_CONTROL
     ,
-    inventoryMatch(bus,
-                   sdbusplus::bus::match::rules::interfacesAddedAtPath(
-                       inventorySPDMResponderBasePath),
-                   [this](sdbusplus::message::message& msg) {
-                       sdbusplus::message::object_path objPath;
-                       dbus::InterfaceMap interfaces;
-                       msg.read(objPath, interfaces);
-                       if (!interfaces.contains(inventorySPDMResponderIntfName))
-                       {
-                           return;
-                       }
+    inventoryMatch(
+        bus,
+        sdbusplus::bus::match::rules::interfacesAddedAtPath(
+            inventorySPDMResponderBasePath),
+        [this](sdbusplus::message::message& msg) {
+            sdbusplus::message::object_path objPath;
+            dbus::InterfaceMap interfaces;
+            msg.read(objPath, interfaces);
+            if (!interfaces.contains(inventorySPDMResponderIntfName))
+            {
+                // SPDMResponder not in this signal. Cache UUID if
+                // present so it is available when SPDMResponder
+                // arrives in a subsequent signal.
+                if (interfaces.contains(uuidIntfName))
+                {
+                    uuidCache[objPath] = std::get<std::string>(
+                        interfaces.at(uuidIntfName).at(uuidIntfPropertyUUID));
+                }
+                return;
+            }
 #ifndef CSM_SERVICE_ENABLED
-                       ccsmReady = true;
+            ccsmReady = true;
 #endif
-                       if (ccsmReady)
-                       {
-                           inventoryNewObjectSignal(objPath, interfaces);
-                       }
-                       else
-                       {
-                           inventorySignalQueue.emplace_back(objPath,
-                                                             interfaces);
-                       }
-                   })
+            if (ccsmReady)
+            {
+                inventoryNewObjectSignal(objPath, interfaces);
+            }
+            else
+            {
+                inventorySignalQueue.emplace_back(objPath, interfaces);
+            }
+        })
 #endif
 {
     SPDMCPP_LOG_TRACE_FUNC(spdmApp.getLog());
@@ -505,10 +513,18 @@ void MctpDiscovery::inventoryNewObjectSignal(
     auto uuid = getUUID(interfaces);
     if (uuid.empty())
     {
-        spdmApp.getLog().iprintln(
-            "SPDM inventoryNewObjectSignal couldn't get UUID for path '" +
-            std::string(objPath) + '\'');
-        return;
+        // UUID arrives in a prior signal (EM emits interfaces in lexicographic
+        // order). Look it up from the cache populated by the signal handler.
+        auto it = uuidCache.find(objPath);
+        if (it == uuidCache.end())
+        {
+            spdmApp.getLog().iprintln(
+                "SPDM inventoryNewObjectSignal couldn't get UUID for path '" +
+                std::string(objPath) + '\'');
+            return;
+        }
+        uuid = it->second;
+        uuidCache.erase(it);
     }
 
     getMCTPObjectAsync(uuid, [this, objPath, uuid](Object mctpObj) {

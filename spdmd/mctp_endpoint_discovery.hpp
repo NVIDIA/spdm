@@ -22,6 +22,7 @@
 #include <sdbusplus/bus/match.hpp>
 
 #include <deque>
+#include <map>
 #include <unordered_set>
 
 namespace spdmd
@@ -93,6 +94,16 @@ class MctpDiscovery
     /** @brief Inventory new object signal queue */
     std::deque<std::pair<sdbusplus::message::object_path, dbus::InterfaceMap>>
         inventorySignalQueue;
+
+    /** @brief Per-path UUID cache for EM-sourced inventory objects.
+     *
+     *  EM emits one InterfacesAdded signal per interface in lexicographic
+     *  order.  UUID (xyz.openbmc_project.Common.UUID) arrives in a separate,
+     *  earlier signal than SPDMResponder.  The UUID string is cached here so
+     *  it can be injected when the SPDMResponder signal arrives without it.
+     *  The entry is removed once the object is fully processed.
+     */
+    std::map<sdbusplus::message::object_path, std::string> uuidCache;
 #endif
 
     /** @brief Called when a new mctp endpoint is discovered */
