@@ -25,6 +25,7 @@
 #include <mbedtls/ecdsa.h>
 #include <mbedtls/error.h>
 #include <mbedtls/md.h>
+#include <mbedtls/oid.h>
 #include <mbedtls/pem.h>
 #include <mbedtls/pk.h>
 #include <mbedtls/x509_crt.h>
@@ -352,12 +353,20 @@ inline std::vector<std::string> getKeyUsage(LogClass& log,
                         {MBEDTLS_X509_KU_ENCIPHER_ONLY, "EncipherOnly"},
                         {MBEDTLS_X509_KU_DECIPHER_ONLY, "DecipherOnly"}}};
 
+    // mbedtls_x509_crt_check_key_usage() is a permission check, not a bit
+    // inspector — its may_mask logic returns 0 for EncipherOnly/DecipherOnly
+    // even when absent, causing false positives. Read raw bits directly.
+    if (!(cert->MBEDTLS_PRIVATE(ext_types) & MBEDTLS_X509_EXT_KEY_USAGE))
+    {
+        return {};
+    }
+
     std::vector<std::string> usage;
     usage.reserve(keyUsageMap.size());
 
     for (const auto& [flag, name] : keyUsageMap)
     {
-        if (mbedtls_x509_crt_check_key_usage(cert, flag) == 0)
+        if (cert->MBEDTLS_PRIVATE(key_usage) & flag)
         {
             usage.push_back(std::string(name));
         }
