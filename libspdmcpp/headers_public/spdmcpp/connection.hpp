@@ -305,6 +305,18 @@ class ConnectionClass : public NonCopyable
         return WaitingForResponse;
     }
 
+    /** @brief Clears the waiting-for-response state and disables the
+     *         connection state.
+     *  @details Resets WaitingForResponse to INVALID and sets stateEnabled to
+     *           false. Only intended for error-recovery paths — bypasses the
+     *           INVALID guard in setupResponseWait().
+     */
+    void clearWaitingForResponse()
+    {
+        WaitingForResponse = RequestResponseEnum::INVALID;
+        stateEnabled = false;
+    }
+
     /** @brief The hash algorithm used for generating signatures
      */
     SignatureEnum getSignatureEnum() const
