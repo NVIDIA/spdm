@@ -267,6 +267,7 @@ void Responder::syncSlotsInfo()
 
 void Responder::handleError(spdmcpp::RetStat rs)
 {
+    connection.clearWaitingForResponse();
     updateLastUpdateTime();
     const std::string dbgIdName = "eid: " + std::to_string(connection.m_eid) +
                                   " name: " + inventoryPath.filename();
@@ -472,11 +473,19 @@ void Responder::refresh(uint8_t slotIndex, std::vector<uint8_t> nonc,
             // NOLINTNEXTLINE cppcoreguidelines-pro-type-reinterpret-cast
             *reinterpret_cast<nonce_array_32*>(nonc.data()), meas);
         SPDMCPP_LOG_TRACE_RS(getLog(), rs);
+        if (isError(rs))
+        {
+            handleError(rs);
+        }
     }
     else
     {
         auto rs = connection.refreshMeasurements(slotIndex, meas);
         SPDMCPP_LOG_TRACE_RS(getLog(), rs);
+        if (isError(rs))
+        {
+            handleError(rs);
+        }
     }
 }
 
