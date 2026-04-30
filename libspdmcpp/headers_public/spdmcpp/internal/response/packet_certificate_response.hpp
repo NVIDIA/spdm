@@ -125,8 +125,11 @@ struct PacketCertificateResponseVar
     }
 
     p.CertificateVector.resize(p.Min.PortionLength);
-    memcpy(p.CertificateVector.data(), &buf[off], p.CertificateVector.size());
-    off += p.CertificateVector.size();
+    rs = packetDecodeBasic(logg, p.CertificateVector, buf, off);
+    if (isError(rs))
+    {
+        return rs;
+    }
 
     return RetStat::OK;
 }
