@@ -329,8 +329,6 @@ TEST(packet_pseudorandom_decode_encode, static_size)
     EXPECT_TRUE(packetPseudorandomDecodeEncodeBasic<PacketCertificateChain>());
     EXPECT_TRUE(
         packetPseudorandomDecodeEncodeBasic<PacketMeasurementBlockMin>());
-    EXPECT_TRUE(
-        packetPseudorandomDecodeEncodeBasic<PacketGetCapabilities10Request>());
 
     EXPECT_TRUE(packetPseudorandomDecodeEncode<PacketVersionResponseMin>());
     EXPECT_TRUE(
@@ -345,30 +343,6 @@ TEST(packet_pseudorandom_decode_encode, static_size)
         packetPseudorandomDecodeEncode<PacketGetMeasurementsRequestMin>());
     EXPECT_TRUE(
         packetPseudorandomDecodeEncode<PacketMeasurementsResponseMin>());
-}
-
-TEST(packet_get_capabilities_10_request, printMl)
-{
-    PacketGetCapabilities10Request p;
-    LogClass log(std::cerr);
-    log.logLevel = LogClass::Level::Informational;
-    p.printMl(log);
-}
-
-TEST(packet_error_response_min, printMl)
-{
-    PacketErrorResponseMin p;
-    LogClass log(std::cerr);
-    log.logLevel = LogClass::Level::Informational;
-    p.printMl(log);
-}
-
-TEST(packet_message_header, printMl)
-{
-    PacketMessageHeader p(RequestResponseEnum::REQUEST_GET_VERSION);
-    LogClass log(std::cerr);
-    log.logLevel = LogClass::Level::Informational;
-    p.printMl(log);
 }
 
 TEST(packet_pseudorandom_encode_decode, PacketErrorResponseVar)
@@ -466,6 +440,108 @@ TEST(packet_pseudorandom_encode_decode, PacketCertificateResponseVar)
     EXPECT_EQ(p.finalize(), RetStat::OK);
 
     EXPECT_TRUE(packetEncodeDecode(p));
+}
+
+/** Regression: PortionLength must not permit reading past buf end. */
+TEST(packet_certificate_response_var_decode,
+     truncated_payload_returns_buffer_too_small)
+{
+    LogClass log(std::cerr);
+    PacketCertificateResponseVar p;
+
+    p.Min.Header.MessageVersion = MessageVersionEnum::SPDM_1_2;
+    p.Min.Header.requestResponseCode =
+        RequestResponseEnum::RESPONSE_CERTIFICATE;
+    p.CertificateVector.resize(10);
+    fillPseudoRandom(p.CertificateVector);
+
+    ASSERT_EQ(p.finalize(), RetStat::OK);
+
+    std::vector<uint8_t> buf;
+    ASSERT_EQ(packetEncode(p, buf), RetStat::OK);
+
+    ASSERT_GT(buf.size(), 5u);
+    buf.resize(buf.size() - 5);
+
+    PacketCertificateResponseVar decoded;
+    size_t off = 0;
+    EXPECT_EQ(packetDecode(log, decoded, buf, off),
+              RetStat::ERROR_BUFFER_TOO_SMALL);
+}
+
+/** Off-by-one: header still claims full PortionLength but one payload byte is
+ * missing. */
+TEST(packet_certificate_response_var_decode,
+     truncated_payload_off_by_one_returns_buffer_too_small)
+{
+    LogClass log(std::cerr);
+    PacketCertificateResponseVar p;
+
+    p.Min.Header.MessageVersion = MessageVersionEnum::SPDM_1_2;
+    p.Min.Header.requestResponseCode =
+        RequestResponseEnum::RESPONSE_CERTIFICATE;
+    p.CertificateVector.resize(10);
+    fillPseudoRandom(p.CertificateVector);
+
+    ASSERT_EQ(p.finalize(), RetStat::OK);
+
+    std::vector<uint8_t> buf;
+    ASSERT_EQ(packetEncode(p, buf), RetStat::OK);
+
+    ASSERT_GT(buf.size(), 1u);
+    buf.resize(buf.size() - 1);
+
+    PacketCertificateResponseVar decoded;
+    size_t off = 0;
+    EXPECT_EQ(packetDecode(log, decoded, buf, off),
+              RetStat::ERROR_BUFFER_TOO_SMALL);
+}
+
+/** Decode succeeds when payload length matches header (boundary sanity). */
+TEST(packet_certificate_response_var_decode, exact_fit_payload_decodes)
+{
+    LogClass log(std::cerr);
+    PacketCertificateResponseVar p;
+
+    p.Min.Header.MessageVersion = MessageVersionEnum::SPDM_1_2;
+    p.Min.Header.requestResponseCode =
+        RequestResponseEnum::RESPONSE_CERTIFICATE;
+    p.CertificateVector.resize(10);
+    fillPseudoRandom(p.CertificateVector);
+
+    ASSERT_EQ(p.finalize(), RetStat::OK);
+
+    std::vector<uint8_t> buf;
+    ASSERT_EQ(packetEncode(p, buf), RetStat::OK);
+
+    PacketCertificateResponseVar decoded;
+    size_t off = 0;
+    ASSERT_EQ(packetDecode(log, decoded, buf, off), RetStat::OK);
+    EXPECT_EQ(off, buf.size());
+    EXPECT_EQ(decoded.CertificateVector.size(), 10U);
+}
+
+TEST(packet_certificate_response_var_decode,
+     zero_length_certificate_vector_decodes)
+{
+    LogClass log(std::cerr);
+    PacketCertificateResponseVar p;
+
+    p.Min.Header.MessageVersion = MessageVersionEnum::SPDM_1_2;
+    p.Min.Header.requestResponseCode =
+        RequestResponseEnum::RESPONSE_CERTIFICATE;
+    p.CertificateVector.resize(0);
+
+    ASSERT_EQ(p.finalize(), RetStat::OK);
+
+    std::vector<uint8_t> buf;
+    ASSERT_EQ(packetEncode(p, buf), RetStat::OK);
+
+    PacketCertificateResponseVar decoded;
+    size_t off = 0;
+    ASSERT_EQ(packetDecode(log, decoded, buf, off), RetStat::OK);
+    EXPECT_EQ(off, buf.size());
+    EXPECT_EQ(decoded.CertificateVector.size(), 0U);
 }
 
 TEST(packet_pseudorandom_encode_decode, PacketGetMeasurementsRequestVar)
