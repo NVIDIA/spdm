@@ -753,7 +753,10 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
     SlotIdx idx = CertificateSlotIdx;
     SlotClass& slot = Slots[idx];
     std::vector<uint8_t>& cert = slot.Certificates;
-    if (resp.Min.PortionLength > getResponseBufferRef().size())
+    const size_t headerOff =
+        ResponseBufferSPDMOffset + sizeof(PacketCertificateResponseMin);
+    if (headerOff > getResponseBufferRef().size() ||
+        resp.Min.PortionLength > getResponseBufferRef().size() - headerOff)
     {
         rs = RetStat::ERROR_CERTIFICATE_CHAIN_SIZE_INVALID;
         SPDMCPP_CONNECTION_RS_ERROR_RETURN_WITH_VERSION(rs);
