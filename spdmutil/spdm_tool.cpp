@@ -840,6 +840,9 @@ auto SpdmTool::parseCertChain(std::vector<uint8_t>& vec, std::string& out)
             return rs;
         }
     }
+    // Buffer PEM certs while parsing DER, then reverse to match spdmd chain
+    // order.
+    std::vector<std::string> pemCerts;
     do
     {
         mbedtls_x509_crt cert;
@@ -881,9 +884,17 @@ auto SpdmTool::parseCertChain(std::vector<uint8_t>& vec, std::string& out)
         }
         buf[sz] = '\0';
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-        out += reinterpret_cast<char*>(buf.data());
+        // Add one PEM block per parsed certificate
+        pemCerts.emplace_back(reinterpret_cast<char*>(buf.data()));
         mbedtls_x509_crt_free(&cert);
     } while (off < vec.size());
+
+    // Same ordering as getCertificatesPEM(): leaf, intermediates, root.
+    for (auto it = pemCerts.rbegin(); it != pemCerts.rend(); ++it)
+    {
+        out += *it;
+    }
+
     return rs;
 }
 
