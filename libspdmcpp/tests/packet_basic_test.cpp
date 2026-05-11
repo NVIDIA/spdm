@@ -338,6 +338,95 @@ TEST(packet_pseudorandom_encode_decode, PacketNegotiateAlgorithmsRequestVar)
     EXPECT_TRUE(packetEncodeDecode(p));
 }
 
+/** Malicious AlgCount: FixedAlgCount=15 exceeds AlgSupported (14). */
+TEST(packet_req_alg_struct_decode, reject_fixed_alg_count_exceeding_storage)
+{
+    LogClass log(std::cerr);
+    PacketReqAlgStruct decoded{};
+    std::vector<uint8_t> buf;
+    buf.push_back(static_cast<uint8_t>(AlgTypeEnum::DHE));
+    buf.push_back(0xF0u); // FixedAlgCount=15, ExtAlgCount=0
+
+    size_t off = 0;
+    EXPECT_EQ(packetDecodeInternal(log, decoded, buf, off),
+              RetStat::ERROR_INVALID_PARAMETER);
+}
+
+/** AlgCount 0/0: only type + count bytes. */
+TEST(packet_req_alg_struct_decode, zero_fixed_and_zero_ext_minimal_wire)
+{
+    LogClass log(std::cerr);
+    PacketReqAlgStruct decoded{};
+    std::vector<uint8_t> buf;
+    buf.push_back(static_cast<uint8_t>(AlgTypeEnum::DHE));
+    buf.push_back(0x00u);
+
+    size_t off = 0;
+    ASSERT_EQ(packetDecodeInternal(log, decoded, buf, off), RetStat::OK);
+    EXPECT_EQ(off, buf.size());
+    EXPECT_EQ(decoded.getFixedAlgCount(), 0u);
+    EXPECT_EQ(decoded.getExtAlgCount(), 0u);
+}
+
+/** Max supported FixedAlgCount (14) with ExtAlgCount 0. */
+TEST(packet_req_alg_struct_decode, max_fixed_alg_count_decodes)
+{
+    LogClass log(std::cerr);
+    PacketReqAlgStruct decoded{};
+    std::vector<uint8_t> buf;
+    buf.push_back(static_cast<uint8_t>(AlgTypeEnum::DHE));
+    buf.push_back(0xE0u); // FixedAlgCount=14, ExtAlgCount=0
+    buf.resize(buf.size() + 14, 0xABu);
+
+    size_t off = 0;
+    ASSERT_EQ(packetDecodeInternal(log, decoded, buf, off), RetStat::OK);
+    EXPECT_EQ(off, buf.size());
+    EXPECT_EQ(decoded.getFixedAlgCount(), 14u);
+    EXPECT_EQ(decoded.getExtAlgCount(), 0u);
+    for (size_t i = 0; i < 14; ++i)
+    {
+        EXPECT_EQ(decoded.AlgSupported[i], 0xABu);
+    }
+}
+
+/** Max ExtAlgCount (15) from nibble with FixedAlgCount 0 (boundary for ext
+ * guard). */
+TEST(packet_req_alg_struct_decode, max_ext_alg_count_decodes)
+{
+    LogClass log(std::cerr);
+    PacketReqAlgStruct decoded{};
+    std::vector<uint8_t> buf;
+    buf.push_back(static_cast<uint8_t>(AlgTypeEnum::DHE));
+    buf.push_back(0x0Fu); // FixedAlgCount=0, ExtAlgCount=15
+    const size_t extBytes = 15 * sizeof(uint32_t);
+    buf.resize(buf.size() + extBytes, 0u);
+
+    size_t off = 0;
+    ASSERT_EQ(packetDecodeInternal(log, decoded, buf, off), RetStat::OK);
+    EXPECT_EQ(off, buf.size());
+    EXPECT_EQ(decoded.getFixedAlgCount(), 0u);
+    EXPECT_EQ(decoded.getExtAlgCount(), 15u);
+    for (size_t i = 0; i < 15; ++i)
+    {
+        EXPECT_EQ(decoded.AlgExternal[i], 0u);
+    }
+}
+
+/** After bounds pass, short buffer still fails without OOB read. */
+TEST(packet_req_alg_struct_decode, short_buffer_after_valid_counts)
+{
+    LogClass log(std::cerr);
+    PacketReqAlgStruct decoded{};
+    std::vector<uint8_t> buf;
+    buf.push_back(static_cast<uint8_t>(AlgTypeEnum::DHE));
+    buf.push_back(0xE0u); // 14 fixed bytes expected, provide only 10
+    buf.resize(buf.size() + 10, 0u);
+
+    size_t off = 0;
+    EXPECT_EQ(packetDecodeInternal(log, decoded, buf, off),
+              RetStat::ERROR_BUFFER_TOO_SMALL);
+}
+
 TEST(packet_pseudorandom_encode_decode, PacketAlgorithmsResponseVar)
 {
     PacketAlgorithmsResponseVar p;
