@@ -170,7 +170,23 @@ struct PacketReqAlgStruct
             return rs;
         }
     }
-    // TODO validate p.AlgType & Count?
+    // AlgCount packs two 4-bit fields (FixedAlgCount<<4 | ExtAlgCount), so each
+    // nibble can range 0..15. AlgSupported is bounded to 14 entries and
+    // AlgExternal is bounded to 15 entries. A peer-supplied AlgCount that
+    // exceeds those bounds would index past the std::array storage in the loops
+    // below, so reject it before any OOB access.
+    if (p.getFixedAlgCount() > p.AlgSupported.size())
+    {
+        SPDMCPP_LOG_TRACE(logg, p.getFixedAlgCount());
+        SPDMCPP_LOG_TRACE(logg, p.AlgSupported.size());
+        return RetStat::ERROR_INVALID_PARAMETER;
+    }
+    if (p.getExtAlgCount() > p.AlgExternal.size())
+    {
+        SPDMCPP_LOG_TRACE(logg, p.getExtAlgCount());
+        SPDMCPP_LOG_TRACE(logg, p.AlgExternal.size());
+        return RetStat::ERROR_INVALID_PARAMETER;
+    }
     for (uint8_t i = 0; i < p.getFixedAlgCount(); ++i)
     {
         rs = packetDecodeBasic(logg, p.AlgSupported[i], buf, off);
