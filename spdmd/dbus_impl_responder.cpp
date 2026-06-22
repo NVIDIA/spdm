@@ -52,9 +52,8 @@ inline std::string getVersionStr(const uint8_t version)
 }
 
 Responder::Responder(SpdmdAppContext& appCtx, const std::string& path,
-                     uint8_t eid,
-                     const sdbusplus::message::object_path& mctpPath,
-                     const sdbusplus::message::object_path& invPath,
+                     uint8_t eid, const sdbusplus::object_path& mctpPath,
+                     const sdbusplus::object_path& invPath,
                      std::string transportMedium, std::string bindingType,
                      std::string socketPath) :
     ResponderIntf(appCtx.getConn(), path.c_str(), action::defer_emit),

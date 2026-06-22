@@ -44,7 +44,7 @@ EnumerateEndpoints::EnumerateEndpoints(int m_eid)
     enumerateMCTPDBusObjects(bus, m_eid);
 }
 
-auto EnumerateEndpoints::enumerateMCTPDBusObjects(sdbusplus::bus::bus& bus,
+auto EnumerateEndpoints::enumerateMCTPDBusObjects(sdbusplus::bus_t& bus,
                                                   int m_eid) -> void
 {
 
@@ -83,9 +83,8 @@ auto EnumerateEndpoints::enumerateMCTPDBusObjects(sdbusplus::bus::bus& bus,
     }
 }
 
-auto EnumerateEndpoints::exploreMctpItem(
-    const sdbusplus::message::object_path& path, const DbusInterfaceMap& ifc)
-    -> void
+auto EnumerateEndpoints::exploreMctpItem(const sdbusplus::object_path& path,
+                                         const DbusInterfaceMap& ifc) -> void
 {
     if (const auto eid = getEid(ifc); eid)
     {
@@ -213,7 +212,7 @@ auto EnumerateEndpoints::getUnixSocketAddress(
     return {};
 }
 
-auto EnumerateEndpoints::getMCTPServices(sdbusplus::bus::bus& bus, int m_eid)
+auto EnumerateEndpoints::getMCTPServices(sdbusplus::bus_t& bus, int m_eid)
     -> std::vector<std::pair<std::string, std::string>>
 {
     static constexpr auto mapperService = "xyz.openbmc_project.ObjectMapper";
@@ -268,7 +267,7 @@ auto EnumerateEndpoints::getMCTPServices(sdbusplus::bus::bus& bus, int m_eid)
     return devServices;
 }
 
-auto EnumerateEndpoints::getPropertyValue(sdbusplus::bus::bus& bus,
+auto EnumerateEndpoints::getPropertyValue(sdbusplus::bus_t& bus,
                                           const std::string& service,
                                           const std::string& path,
                                           const std::string& interface,

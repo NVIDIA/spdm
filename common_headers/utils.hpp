@@ -87,7 +87,7 @@ using Value =
 
 using PropertyMap = std::map<Property, Value>;
 using InterfaceMap = std::map<Interface, PropertyMap>;
-using ObjectValueTree = std::map<sdbusplus::message::object_path, InterfaceMap>;
+using ObjectValueTree = std::map<sdbusplus::object_path, InterfaceMap>;
 
 /**
  *  @brief Helper struct for getting the Service name from the ObjectMapper
@@ -125,12 +125,12 @@ struct ServiceHelper
     // xyz.openbmc_project.ObjectMapper throwing "Call failed: path or object
     // not found" instead of returning the correct values (even though the
     // services are running, and it seems to work in qemu)
-    std::string getService(sdbusplus::bus::bus& /*bus*/) const
+    std::string getService(sdbusplus::bus_t& /*bus*/) const
     {
         return defaultService;
     }
 #else
-    std::string getService(sdbusplus::bus::bus& bus) const
+    std::string getService(sdbusplus::bus_t& bus) const
     {
         constexpr auto mapperService = "xyz.openbmc_project.ObjectMapper";
         constexpr auto mapperPath = "/xyz/openbmc_project/object_mapper";
@@ -159,7 +159,7 @@ struct ServiceHelper
      *
      *  @throw sdbusplus::exception::exception when it fails
      */
-    std::string getServiceWithFallback(sdbusplus::bus::bus& bus) const
+    std::string getServiceWithFallback(sdbusplus::bus_t& bus) const
     {
         try
         {
@@ -185,7 +185,7 @@ struct ServiceHelper
      *  @throw sdbusplus::exception::exception when it fails
      */
     // NOLINTNEXTLINE readability-identifier-naming
-    auto new_method_call(sdbusplus::bus::bus& bus, const char* method) const
+    auto new_method_call(sdbusplus::bus_t& bus, const char* method) const
     {
         return bus.new_method_call(getServiceWithFallback(bus).c_str(), path,
                                    interface, method);
@@ -197,7 +197,7 @@ struct ServiceHelper
      *  @throw sdbusplus::exception::exception when it fails
      */
     // NOLINTNEXTLINE readability-identifier-naming
-    auto new_method_call(sdbusplus::bus::bus& bus, const char* interface,
+    auto new_method_call(sdbusplus::bus_t& bus, const char* interface,
                          const char* method) const
     {
         return bus.new_method_call(getServiceWithFallback(bus).c_str(), path,
@@ -209,7 +209,7 @@ struct ServiceHelper
      *  @throw sdbusplus::exception::exception when it fails
      */
     // NOLINTNEXTLINE readability-identifier-naming
-    auto new_method_call(sdbusplus::bus::bus& bus, const char* path,
+    auto new_method_call(sdbusplus::bus_t& bus, const char* path,
                          const char* interface, const char* method) const
     {
         return bus.new_method_call(getServiceWithFallback(bus).c_str(), path,
@@ -230,7 +230,7 @@ struct ServiceHelper
         return defaultService;
     }
 
-    void waitForService(sdbusplus::bus::bus& bus) const
+    void waitForService(sdbusplus::bus_t& bus) const
     {
         bool wait = true;
         sdbusplus::bus::match_t match(

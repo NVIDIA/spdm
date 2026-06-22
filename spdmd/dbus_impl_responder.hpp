@@ -56,8 +56,8 @@ struct ResponderArgs
     std::string uuid;
     std::string medium;
     std::string bindingType;
-    sdbusplus::message::object_path mctpPath;
-    sdbusplus::message::object_path inventoryPath;
+    sdbusplus::object_path mctpPath;
+    sdbusplus::object_path inventoryPath;
     std::string socketPath;
 };
 
@@ -129,8 +129,8 @@ class Responder :
      *  @param[in] socketPath      - IO device path
      */
     Responder(SpdmdAppContext& appCtx, const std::string& path, uint8_t eid,
-              const sdbusplus::message::object_path& mctpPath,
-              const sdbusplus::message::object_path& inventPath,
+              const sdbusplus::object_path& mctpPath,
+              const sdbusplus::object_path& inventPath,
               std::string transportMedium, std::string bindingType,
               std::string socketPath);
 
@@ -188,7 +188,7 @@ class Responder :
     spdmcpp::LogClass& log;
     spdmcpp::ConnectionClass connection;
     MctpTransportClass transport;
-    sdbusplus::message::object_path inventoryPath;
+    sdbusplus::object_path inventoryPath;
     std::string transportMedium;
     std::string bindingType;
     uint8_t eid;

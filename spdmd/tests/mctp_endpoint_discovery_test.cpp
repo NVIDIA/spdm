@@ -94,7 +94,7 @@ namespace dbus
 {
 using Value = std::variant<uint32_t, size_t, std::string, std::vector<uint8_t>>;
 using InterfaceMap = std::map<std::string, std::map<std::string, Value>>;
-using ObjectValueTree = std::map<sdbusplus::message::object_path, InterfaceMap>;
+using ObjectValueTree = std::map<sdbusplus::object_path, InterfaceMap>;
 } // namespace dbus
 
 namespace spdmd
@@ -144,7 +144,7 @@ class MctpDiscovery
     }
 
     // This would be called by D-Bus signal handler
-    void mctpNewObjectSignal(sdbusplus::message::object_path& /* objectPath */,
+    void mctpNewObjectSignal(sdbusplus::object_path& /* objectPath */,
                              dbus::InterfaceMap& interfaces)
     {
         // Extract EID, UUID and medium type from interfaces
@@ -187,10 +187,10 @@ class MctpDiscovery
     void getInventoryPathAsync(
         const std::string& /* uuid */, // Parameter name commented out to avoid
                                        // warning
-        std::function<void(sdbusplus::message::object_path)> callback)
+        std::function<void(sdbusplus::object_path)> callback)
     {
         // In the real implementation, this would do D-Bus calls
-        sdbusplus::message::object_path path(
+        sdbusplus::object_path path(
             "/xyz/openbmc_project/inventory/system/device");
         callback(path);
     }
@@ -238,7 +238,7 @@ class MctpDiscovery
     }
 
     // Extract EID from object path
-    uint8_t extractEidFromPath(const sdbusplus::message::object_path& path)
+    uint8_t extractEidFromPath(const sdbusplus::object_path& path)
     {
         // Assuming format like "/xyz/openbmc_project/mctp/endpoint/42"
         std::string pathStr = path.str;
@@ -262,8 +262,7 @@ class MctpDiscovery
     // Process getInventoryPathAsync failures
     void getInventoryPathWithErrorHandling(
         const std::string& uuid,
-        std::function<void(std::optional<sdbusplus::message::object_path>)>
-            callback)
+        std::function<void(std::optional<sdbusplus::object_path>)> callback)
     {
         if (!isValidUuid(uuid))
         {
@@ -273,7 +272,7 @@ class MctpDiscovery
         }
 
         // For valid UUID, return a path
-        sdbusplus::message::object_path path(
+        sdbusplus::object_path path(
             "/xyz/openbmc_project/inventory/system/device");
         callback(path);
     }
@@ -347,8 +346,7 @@ TEST_F(MctpDiscoveryTest, MctpNewObjectSignal)
         std::make_unique<MctpDiscovery>(*mockApp);
 
     // Create a test endpoint object path and interfaces
-    sdbusplus::message::object_path objPath(
-        "/xyz/openbmc_project/mctp/endpoint/1");
+    sdbusplus::object_path objPath("/xyz/openbmc_project/mctp/endpoint/1");
     dbus::InterfaceMap interfaces;
 
     // Add MCTP UUID interface
@@ -385,7 +383,7 @@ TEST_F(MctpDiscoveryTest, GetInventoryPath)
     std::string testUuid = "11111111-2222-3333-4444-555555555555";
 
     discovery->getInventoryPathAsync(
-        testUuid, [&callbackCalled](sdbusplus::message::object_path path) {
+        testUuid, [&callbackCalled](sdbusplus::object_path path) {
             EXPECT_EQ(path.str, "/xyz/openbmc_project/inventory/system/device");
             callbackCalled = true;
         });
@@ -458,8 +456,7 @@ TEST_F(MctpDiscoveryTest, MissingPropertiesInSignal)
     std::unique_ptr<MctpDiscovery> discovery =
         std::make_unique<MctpDiscovery>(*mockApp);
 
-    sdbusplus::message::object_path objPath(
-        "/xyz/openbmc_project/mctp/endpoint/1");
+    sdbusplus::object_path objPath("/xyz/openbmc_project/mctp/endpoint/1");
     dbus::InterfaceMap interfaces;
 
     // MCTP interface with empty properties (missing UUID)
@@ -505,18 +502,18 @@ TEST_F(MctpDiscoveryTest, EidExtraction)
         std::make_unique<MctpDiscovery>(*mockApp);
 
     // Test valid EID paths
-    EXPECT_EQ(discovery->extractEidFromPath(sdbusplus::message::object_path(
+    EXPECT_EQ(discovery->extractEidFromPath(sdbusplus::object_path(
                   "/xyz/openbmc_project/mctp/endpoint/42")),
               42);
-    EXPECT_EQ(discovery->extractEidFromPath(sdbusplus::message::object_path(
+    EXPECT_EQ(discovery->extractEidFromPath(sdbusplus::object_path(
                   "/xyz/openbmc_project/mctp/endpoint/255")),
               255);
 
     // Test paths with invalid EIDs
-    EXPECT_EQ(discovery->extractEidFromPath(sdbusplus::message::object_path(
+    EXPECT_EQ(discovery->extractEidFromPath(sdbusplus::object_path(
                   "/xyz/openbmc_project/mctp/endpoint/")),
               0);
-    EXPECT_EQ(discovery->extractEidFromPath(sdbusplus::message::object_path(
+    EXPECT_EQ(discovery->extractEidFromPath(sdbusplus::object_path(
                   "/xyz/openbmc_project/mctp/endpoint/abc")),
               0);
 }
@@ -527,8 +524,7 @@ TEST_F(MctpDiscoveryTest, MissingInterface)
     std::unique_ptr<MctpDiscovery> discovery =
         std::make_unique<MctpDiscovery>(*mockApp);
 
-    sdbusplus::message::object_path objPath(
-        "/xyz/openbmc_project/mctp/endpoint/1");
+    sdbusplus::object_path objPath("/xyz/openbmc_project/mctp/endpoint/1");
     dbus::InterfaceMap interfaces;
 
     // No MCTP.UUID interface, only binding interface
@@ -580,7 +576,7 @@ TEST_F(MctpDiscoveryTest, InvalidUUIDForInventory)
     // Test with invalid UUID
     discovery->getInventoryPathWithErrorHandling(
         "invalid-uuid",
-        [&callbackCalled](std::optional<sdbusplus::message::object_path> path) {
+        [&callbackCalled](std::optional<sdbusplus::object_path> path) {
             EXPECT_FALSE(path.has_value());
             callbackCalled = true;
         });
@@ -592,7 +588,7 @@ TEST_F(MctpDiscoveryTest, InvalidUUIDForInventory)
 
     discovery->getInventoryPathWithErrorHandling(
         "11111111-2222-3333-4444-555555555555",
-        [&callbackCalled](std::optional<sdbusplus::message::object_path> path) {
+        [&callbackCalled](std::optional<sdbusplus::object_path> path) {
             EXPECT_TRUE(path.has_value());
             if (path.has_value())
             {
@@ -611,8 +607,7 @@ TEST_F(MctpDiscoveryTest, ConnectionFailure)
     std::unique_ptr<MctpDiscovery> discovery =
         std::make_unique<MctpDiscovery>(*mockApp);
 
-    sdbusplus::message::object_path objPath(
-        "/xyz/openbmc_project/mctp/endpoint/1");
+    sdbusplus::object_path objPath("/xyz/openbmc_project/mctp/endpoint/1");
     dbus::InterfaceMap interfaces;
 
     // Add MCTP UUID interface
@@ -642,8 +637,7 @@ TEST_F(MctpDiscoveryTest, MultipleEndpointsWithSameUUID)
     std::string testUuid = "11111111-2222-3333-4444-555555555555";
 
     // Create first endpoint
-    sdbusplus::message::object_path objPath1(
-        "/xyz/openbmc_project/mctp/endpoint/1");
+    sdbusplus::object_path objPath1("/xyz/openbmc_project/mctp/endpoint/1");
     dbus::InterfaceMap interfaces1;
 
     std::map<std::string, dbus::Value> uuidProps1;
@@ -656,8 +650,7 @@ TEST_F(MctpDiscoveryTest, MultipleEndpointsWithSameUUID)
     interfaces1["xyz.openbmc_project.MCTP.Binding"] = bindingProps1;
 
     // Create second endpoint with same UUID but different EID
-    sdbusplus::message::object_path objPath2(
-        "/xyz/openbmc_project/mctp/endpoint/2");
+    sdbusplus::object_path objPath2("/xyz/openbmc_project/mctp/endpoint/2");
     dbus::InterfaceMap interfaces2 = interfaces1; // Same interfaces, same UUID
 
     // Expect connectMCTP and discoveryUpdateResponder to be called twice, both
@@ -708,19 +701,19 @@ TEST_F(MctpDiscoveryTest, EIDExtractionEdgeCases)
     std::unique_ptr<MctpDiscovery> discovery =
         std::make_unique<MctpDiscovery>(*mockApp);
 
-    EXPECT_EQ(discovery->extractEidFromPath(sdbusplus::message::object_path(
+    EXPECT_EQ(discovery->extractEidFromPath(sdbusplus::object_path(
                   "/xyz/openbmc_project/mctp/endpoint/0")),
               0);
 
-    EXPECT_EQ(discovery->extractEidFromPath(sdbusplus::message::object_path(
+    EXPECT_EQ(discovery->extractEidFromPath(sdbusplus::object_path(
                   "/xyz/openbmc_project/mctp/endpoint/254")),
               254);
 
-    EXPECT_EQ(discovery->extractEidFromPath(sdbusplus::message::object_path(
+    EXPECT_EQ(discovery->extractEidFromPath(sdbusplus::object_path(
                   "/xyz/openbmc_project/mctp/endpoint/")),
               0);
 
-    EXPECT_EQ(discovery->extractEidFromPath(sdbusplus::message::object_path(
+    EXPECT_EQ(discovery->extractEidFromPath(sdbusplus::object_path(
                   "/xyz/openbmc_project/mctp/endpoint/invalid")),
               0);
 }
@@ -730,8 +723,7 @@ TEST_F(MctpDiscoveryTest, MediumTypeMissingProperty)
     std::unique_ptr<MctpDiscovery> discovery =
         std::make_unique<MctpDiscovery>(*mockApp);
 
-    sdbusplus::message::object_path objPath(
-        "/xyz/openbmc_project/mctp/endpoint/1");
+    sdbusplus::object_path objPath("/xyz/openbmc_project/mctp/endpoint/1");
     dbus::InterfaceMap interfaces;
 
     std::map<std::string, dbus::Value> endpointProps;
@@ -758,8 +750,7 @@ TEST_F(MctpDiscoveryTest, BindingTypeMissingInterface)
     std::unique_ptr<MctpDiscovery> discovery =
         std::make_unique<MctpDiscovery>(*mockApp);
 
-    sdbusplus::message::object_path objPath(
-        "/xyz/openbmc_project/mctp/endpoint/1");
+    sdbusplus::object_path objPath("/xyz/openbmc_project/mctp/endpoint/1");
     dbus::InterfaceMap interfaces;
 
     std::map<std::string, dbus::Value> endpointProps;
@@ -783,8 +774,7 @@ TEST_F(MctpDiscoveryTest, MediumTypeMissingInterface)
     std::unique_ptr<MctpDiscovery> discovery =
         std::make_unique<MctpDiscovery>(*mockApp);
 
-    sdbusplus::message::object_path objPath(
-        "/xyz/openbmc_project/mctp/endpoint/1");
+    sdbusplus::object_path objPath("/xyz/openbmc_project/mctp/endpoint/1");
     dbus::InterfaceMap interfaces;
 
     std::map<std::string, dbus::Value> uuidProps;
@@ -830,7 +820,7 @@ TEST_F(MctpDiscoveryTest, AllMediumAndBindingCombinations)
     {
         for (const auto& bindingType : allBindingTypes)
         {
-            sdbusplus::message::object_path objPath(
+            sdbusplus::object_path objPath(
                 "/xyz/openbmc_project/mctp/endpoint/" +
                 std::to_string(testCount));
             dbus::InterfaceMap interfaces;
@@ -869,8 +859,7 @@ TEST_F(MctpDiscoveryTest, BindingTypePropertyMissing)
     std::unique_ptr<MctpDiscovery> discovery =
         std::make_unique<MctpDiscovery>(*mockApp);
 
-    sdbusplus::message::object_path objPath(
-        "/xyz/openbmc_project/mctp/endpoint/1");
+    sdbusplus::object_path objPath("/xyz/openbmc_project/mctp/endpoint/1");
     dbus::InterfaceMap interfaces;
 
     std::map<std::string, dbus::Value> endpointProps;
@@ -906,8 +895,8 @@ TEST_F(MctpDiscoveryTest, SameMediumDifferentBindings)
     int eid = 1;
     for (const auto& binding : bindings)
     {
-        sdbusplus::message::object_path objPath(
-            "/xyz/openbmc_project/mctp/endpoint/" + std::to_string(eid));
+        sdbusplus::object_path objPath("/xyz/openbmc_project/mctp/endpoint/" +
+                                       std::to_string(eid));
         dbus::InterfaceMap interfaces;
 
         std::map<std::string, dbus::Value> endpointProps;
@@ -947,8 +936,8 @@ TEST_F(MctpDiscoveryTest, SameBindingDifferentMediums)
     int eid = 1;
     for (const auto& medium : mediums)
     {
-        sdbusplus::message::object_path objPath(
-            "/xyz/openbmc_project/mctp/endpoint/" + std::to_string(eid));
+        sdbusplus::object_path objPath("/xyz/openbmc_project/mctp/endpoint/" +
+                                       std::to_string(eid));
         dbus::InterfaceMap interfaces;
 
         std::map<std::string, dbus::Value> endpointProps;
@@ -980,8 +969,7 @@ TEST_F(MctpDiscoveryTest, MediumTypeWrongVariantType)
     std::unique_ptr<MctpDiscovery> discovery =
         std::make_unique<MctpDiscovery>(*mockApp);
 
-    sdbusplus::message::object_path objPath(
-        "/xyz/openbmc_project/mctp/endpoint/1");
+    sdbusplus::object_path objPath("/xyz/openbmc_project/mctp/endpoint/1");
     dbus::InterfaceMap interfaces;
 
     std::map<std::string, dbus::Value> endpointProps;
@@ -1009,8 +997,7 @@ TEST_F(MctpDiscoveryTest, BindingTypeWrongVariantType)
     std::unique_ptr<MctpDiscovery> discovery =
         std::make_unique<MctpDiscovery>(*mockApp);
 
-    sdbusplus::message::object_path objPath(
-        "/xyz/openbmc_project/mctp/endpoint/1");
+    sdbusplus::object_path objPath("/xyz/openbmc_project/mctp/endpoint/1");
     dbus::InterfaceMap interfaces;
 
     std::map<std::string, dbus::Value> endpointProps;
@@ -1038,8 +1025,7 @@ TEST_F(MctpDiscoveryTest, I2CMediumType)
     std::unique_ptr<MctpDiscovery> discovery =
         std::make_unique<MctpDiscovery>(*mockApp);
 
-    sdbusplus::message::object_path objPath(
-        "/xyz/openbmc_project/mctp/endpoint/1");
+    sdbusplus::object_path objPath("/xyz/openbmc_project/mctp/endpoint/1");
     dbus::InterfaceMap interfaces;
 
     std::map<std::string, dbus::Value> endpointProps;
@@ -1085,20 +1071,20 @@ TEST_F(MctpDiscoveryTest, EIDExtractionBoundaryValues)
     std::unique_ptr<MctpDiscovery> discovery =
         std::make_unique<MctpDiscovery>(*mockApp);
 
-    EXPECT_EQ(discovery->extractEidFromPath(sdbusplus::message::object_path(
+    EXPECT_EQ(discovery->extractEidFromPath(sdbusplus::object_path(
                   "/xyz/openbmc_project/mctp/endpoint/1")),
               1);
-    EXPECT_EQ(discovery->extractEidFromPath(sdbusplus::message::object_path(
+    EXPECT_EQ(discovery->extractEidFromPath(sdbusplus::object_path(
                   "/xyz/openbmc_project/mctp/endpoint/127")),
               127);
-    EXPECT_EQ(discovery->extractEidFromPath(sdbusplus::message::object_path(
+    EXPECT_EQ(discovery->extractEidFromPath(sdbusplus::object_path(
                   "/xyz/openbmc_project/mctp/endpoint/255")),
               255);
-    EXPECT_EQ(discovery->extractEidFromPath(sdbusplus::message::object_path(
+    EXPECT_EQ(discovery->extractEidFromPath(sdbusplus::object_path(
                   "/xyz/openbmc_project/mctp/endpoint/42/")),
               0);
-    EXPECT_EQ(discovery->extractEidFromPath(sdbusplus::message::object_path(
-                  "/xyz/openbmc_project/mctp/endpoint")),
+    EXPECT_EQ(discovery->extractEidFromPath(
+                  sdbusplus::object_path("/xyz/openbmc_project/mctp/endpoint")),
               0);
 }
 
@@ -1120,8 +1106,8 @@ TEST_F(MctpDiscoveryTest, MultipleMediumTypesInSequence)
     int eid = 10;
     for (const auto& [medium, binding] : combinations)
     {
-        sdbusplus::message::object_path objPath(
-            "/xyz/openbmc_project/mctp/endpoint/" + std::to_string(eid));
+        sdbusplus::object_path objPath("/xyz/openbmc_project/mctp/endpoint/" +
+                                       std::to_string(eid));
         dbus::InterfaceMap interfaces;
 
         std::map<std::string, dbus::Value> endpointProps;
@@ -1154,8 +1140,8 @@ TEST_F(MctpDiscoveryTest, MultipleConnectionFailures)
 
     for (int i = 1; i <= 3; ++i)
     {
-        sdbusplus::message::object_path objPath(
-            "/xyz/openbmc_project/mctp/endpoint/" + std::to_string(i));
+        sdbusplus::object_path objPath("/xyz/openbmc_project/mctp/endpoint/" +
+                                       std::to_string(i));
         dbus::InterfaceMap interfaces;
 
         std::map<std::string, dbus::Value> uuidProps;
@@ -1176,8 +1162,7 @@ TEST_F(MctpDiscoveryTest, EmptyInterfacesMap)
     std::unique_ptr<MctpDiscovery> discovery =
         std::make_unique<MctpDiscovery>(*mockApp);
 
-    sdbusplus::message::object_path objPath(
-        "/xyz/openbmc_project/mctp/endpoint/1");
+    sdbusplus::object_path objPath("/xyz/openbmc_project/mctp/endpoint/1");
     dbus::InterfaceMap interfaces;
 
     EXPECT_CALL(*mockApp, connectMCTP("/tmp/mctp.sock")).WillOnce(Return(true));

@@ -46,7 +46,7 @@ MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
         sdbusplus::bus::match::rules::interfacesAddedAtPath(
             inventorySPDMResponderBasePath),
         [this](sdbusplus::message::message& msg) {
-            sdbusplus::message::object_path objPath;
+            sdbusplus::object_path objPath;
             dbus::InterfaceMap interfaces;
             msg.read(objPath, interfaces);
             if (!interfaces.contains(inventorySPDMResponderIntfName))
@@ -82,7 +82,7 @@ MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
     mctpMatch = std::make_unique<sdbusplus::bus::match_t>(
         bus, sdbusplus::bus::match::rules::interfacesAdded(mctpPath),
         [this](sdbusplus::message::message& msg) {
-            sdbusplus::message::object_path objPath;
+            sdbusplus::object_path objPath;
             dbus::InterfaceMap interfaces;
             msg.read(objPath, interfaces);
             using namespace std::chrono_literals;
@@ -282,9 +282,8 @@ void MctpDiscovery::tryConnectMCTP(const std::string& sockPath)
     }
 }
 
-void MctpDiscovery::mctpNewObjectSignal(
-    const sdbusplus::message::object_path& objPath,
-    const dbus::InterfaceMap& interfaces)
+void MctpDiscovery::mctpNewObjectSignal(const sdbusplus::object_path& objPath,
+                                        const dbus::InterfaceMap& interfaces)
 {
     spdmApp.getLog().iprintln("mctpNewObjectSignal: " + std::string(objPath));
     /** If MCTP service is not read yet ignore */
@@ -446,8 +445,8 @@ void MctpDiscovery::mctpNewObjectSignal(
     auto sockPath = "";
 #endif
     getInventoryPathAsync(uuid, [this, eid, uuid, objPath, mediumType,
-                                 bindingType, sockPath, eidValue1](
-                                    sdbusplus::message::object_path invPath) {
+                                 bindingType, sockPath,
+                                 eidValue1](sdbusplus::object_path invPath) {
         if (invPath.filename().empty())
         {
             static constexpr auto confName = "name";
@@ -503,8 +502,7 @@ void MctpDiscovery::mctpNewObjectSignal(
 
 #ifndef DISCOVERY_ONLY_FROM_MCTP_CONTROL
 void MctpDiscovery::inventoryNewObjectSignal(
-    const sdbusplus::message::object_path& objPath,
-    const dbus::InterfaceMap& interfaces)
+    const sdbusplus::object_path& objPath, const dbus::InterfaceMap& interfaces)
 {
     if (!interfaces.contains(inventorySPDMResponderIntfName))
     {
@@ -938,7 +936,7 @@ void MctpDiscovery::getMCTPObjectAsync(const std::string& uuid,
 
 void MctpDiscovery::getInventoryPathAsync(
     const std::string& uuid,
-    std::function<void(sdbusplus::message::object_path)> callback)
+    std::function<void(sdbusplus::object_path)> callback)
 {
     SPDMCPP_LOG_TRACE_FUNC(spdmApp.getLog());
 
@@ -958,8 +956,7 @@ void MctpDiscovery::getInventoryPathAsync(
         [this, uuid, callback = std::move(callback)](
             boost::system::error_code ec,
             sdbusplus::message::message& replyMsg) {
-            auto resultPathPtr =
-                std::make_shared<sdbusplus::message::object_path>();
+            auto resultPathPtr = std::make_shared<sdbusplus::object_path>();
 
             if (ec)
             {
@@ -1053,7 +1050,7 @@ void MctpDiscovery::getInventoryPathAsync(
                      processNextPtr](std::string propertyVal) mutable {
                         if (uuid == propertyVal)
                         {
-                            *resultPathPtr = sdbusplus::message::object_path(
+                            *resultPathPtr = sdbusplus::object_path(
                                 (*candidates)[*sharedIndex].objectPath);
                             callback(*resultPathPtr);
                             return;

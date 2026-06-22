@@ -256,8 +256,7 @@ TEST_F(MctpDiscoveryTest, MctpNewObjectSignal)
     runContext();
 
     // Create a test endpoint object path and interfaces
-    sdbusplus::message::object_path objPath(
-        "/xyz/openbmc_project/mctp/endpoint/1");
+    sdbusplus::object_path objPath("/xyz/openbmc_project/mctp/endpoint/1");
     dbus::InterfaceMap interfaces;
 
     // Add MCTP UUID interface
@@ -403,7 +402,7 @@ TEST_F(MctpDiscoveryTest, GetInventoryPath)
     std::atomic<bool> callbackCalled{false};
 
     discovery->getInventoryPathAsync(
-        testUuid, [&callbackCalled](sdbusplus::message::object_path path) {
+        testUuid, [&callbackCalled](sdbusplus::object_path path) {
             EXPECT_EQ(path.str, "/xyz/openbmc_project/inventory/system/device");
             callbackCalled = true;
         });
@@ -477,8 +476,7 @@ TEST_F(MctpDiscoveryTest,
     csmInterface->initialize();
     runContext();
 
-    sdbusplus::message::object_path objPath(
-        "/xyz/openbmc_project/mctp/endpoint/1");
+    sdbusplus::object_path objPath("/xyz/openbmc_project/mctp/endpoint/1");
     dbus::InterfaceMap interfaces;
 
     std::map<std::string, dbus::Value> uuidProps;
@@ -601,8 +599,7 @@ TEST_F(MctpDiscoveryTest, GetBindingType_MissingInterface)
     runContext();
 
     // Create interfaces without binding interface
-    sdbusplus::message::object_path objPath(
-        "/xyz/openbmc_project/mctp/endpoint/1");
+    sdbusplus::object_path objPath("/xyz/openbmc_project/mctp/endpoint/1");
     dbus::InterfaceMap interfaces;
 
     std::map<std::string, dbus::Value> uuidProps;
@@ -643,8 +640,7 @@ TEST_F(MctpDiscoveryTest, GetBindingType_MissingProperty)
     csmInterface->initialize();
     runContext();
 
-    sdbusplus::message::object_path objPath(
-        "/xyz/openbmc_project/mctp/endpoint/1");
+    sdbusplus::object_path objPath("/xyz/openbmc_project/mctp/endpoint/1");
     dbus::InterfaceMap interfaces;
 
     std::map<std::string, dbus::Value> uuidProps;
@@ -690,8 +686,7 @@ TEST_F(MctpDiscoveryTest, GetMediumAndBindingType_ValidComplete)
     csmInterface->initialize();
     runContext();
 
-    sdbusplus::message::object_path objPath(
-        "/xyz/openbmc_project/mctp/endpoint/1");
+    sdbusplus::object_path objPath("/xyz/openbmc_project/mctp/endpoint/1");
     dbus::InterfaceMap interfaces;
 
     std::map<std::string, dbus::Value> uuidProps;
@@ -762,8 +757,7 @@ TEST_F(MctpDiscoveryTest, MctpNewObjectSignal_AllMediumTypes)
 
     for (const auto& mediumType : allMediumTypes)
     {
-        sdbusplus::message::object_path objPath(
-            "/xyz/openbmc_project/mctp/endpoint/1");
+        sdbusplus::object_path objPath("/xyz/openbmc_project/mctp/endpoint/1");
         dbus::InterfaceMap interfaces;
 
         std::map<std::string, dbus::Value> uuidProps;
@@ -829,8 +823,7 @@ TEST_F(MctpDiscoveryTest, MctpNewObjectSignal_AllBindingTypes)
 
     for (const auto& bindingType : allBindingTypes)
     {
-        sdbusplus::message::object_path objPath(
-            "/xyz/openbmc_project/mctp/endpoint/1");
+        sdbusplus::object_path objPath("/xyz/openbmc_project/mctp/endpoint/1");
         dbus::InterfaceMap interfaces;
 
         std::map<std::string, dbus::Value> uuidProps;
@@ -884,8 +877,7 @@ TEST_F(MctpDiscoveryTest, MctpNewObjectSignal_EmptyMediumType)
     csmInterface->initialize();
     runContext();
 
-    sdbusplus::message::object_path objPath(
-        "/xyz/openbmc_project/mctp/endpoint/1");
+    sdbusplus::object_path objPath("/xyz/openbmc_project/mctp/endpoint/1");
     dbus::InterfaceMap interfaces;
 
     std::map<std::string, dbus::Value> uuidProps;
@@ -926,8 +918,7 @@ TEST_F(MctpDiscoveryTest, MctpNewObjectSignal_EmptyBindingType)
     csmInterface->initialize();
     runContext();
 
-    sdbusplus::message::object_path objPath(
-        "/xyz/openbmc_project/mctp/endpoint/1");
+    sdbusplus::object_path objPath("/xyz/openbmc_project/mctp/endpoint/1");
     dbus::InterfaceMap interfaces;
 
     std::map<std::string, dbus::Value> uuidProps;

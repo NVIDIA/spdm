@@ -58,7 +58,7 @@ class MctpDiscovery
   private:
     struct Object
     {
-        sdbusplus::message::object_path path;
+        sdbusplus::object_path path;
         dbus::InterfaceMap interfaces;
         bool isValid() const
         {
@@ -67,7 +67,7 @@ class MctpDiscovery
     };
 
     /** @brief reference to the systemd bus */
-    sdbusplus::bus::bus& bus;
+    sdbusplus::bus_t& bus;
 
     /** @brief reference to the SPDM app, used to create responder */
     SpdmdApp& spdmApp;
@@ -92,7 +92,7 @@ class MctpDiscovery
 
 #ifndef DISCOVERY_ONLY_FROM_MCTP_CONTROL
     /** @brief Inventory new object signal queue */
-    std::deque<std::pair<sdbusplus::message::object_path, dbus::InterfaceMap>>
+    std::deque<std::pair<sdbusplus::object_path, dbus::InterfaceMap>>
         inventorySignalQueue;
 
     /** @brief Per-path UUID cache for EM-sourced inventory objects.
@@ -103,18 +103,17 @@ class MctpDiscovery
      *  it can be injected when the SPDMResponder signal arrives without it.
      *  The entry is removed once the object is fully processed.
      */
-    std::map<sdbusplus::message::object_path, std::string> uuidCache;
+    std::map<sdbusplus::object_path, std::string> uuidCache;
 #endif
 
     /** @brief Called when a new mctp endpoint is discovered */
-    void mctpNewObjectSignal(const sdbusplus::message::object_path& objectPath,
+    void mctpNewObjectSignal(const sdbusplus::object_path& objectPath,
                              const dbus::InterfaceMap& interfaces);
 
 #ifndef DISCOVERY_ONLY_FROM_MCTP_CONTROL
     /** @brief Called when a new PLDM inventory object is discovered */
-    void inventoryNewObjectSignal(
-        const sdbusplus::message::object_path& objectPath,
-        const dbus::InterfaceMap& interfaces);
+    void inventoryNewObjectSignal(const sdbusplus::object_path& objectPath,
+                                  const dbus::InterfaceMap& interfaces);
 #endif
 
     /** @brief Try calling spdmApp.ConnectMCTP() with user-space mctp stack. */
@@ -267,7 +266,7 @@ class MctpDiscovery
      */
     void getInventoryPathAsync(
         const std::string& uuid,
-        std::function<void(sdbusplus::message::object_path)> callback);
+        std::function<void(sdbusplus::object_path)> callback);
 
     /** @brief Get the unique services from the object mapper asynchronously
      *  @param[in] callback - Function to call with the set of service names

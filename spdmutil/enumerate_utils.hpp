@@ -37,8 +37,7 @@ using DbusValue =
 
 using DbusPropertyMap = std::map<DbusProperty, DbusValue>;
 using DbusInterfaceMap = std::map<DbusInterface, DbusPropertyMap>;
-using DbusObjectValueTree =
-    std::map<sdbusplus::message::object_path, DbusInterfaceMap>;
+using DbusObjectValueTree = std::map<sdbusplus::object_path, DbusInterfaceMap>;
 
 /** @brief SPDM type of an MCTP message */
 static constexpr uint8_t mctpTypeSPDM = 5;

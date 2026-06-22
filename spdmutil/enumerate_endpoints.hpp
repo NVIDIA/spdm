@@ -58,7 +58,7 @@ class EnumerateEndpoints
 
   private:
     /** @brief Explore MCTP spdm objects */
-    auto enumerateMCTPDBusObjects(sdbusplus::bus::bus& bus, int m_eid) -> void;
+    auto enumerateMCTPDBusObjects(sdbusplus::bus_t& bus, int m_eid) -> void;
 
     /** @brief Explore a single MCTP item
      *
@@ -67,7 +67,7 @@ class EnumerateEndpoints
      *
      * @return void This method doesn't return a value
      */
-    auto exploreMctpItem(const sdbusplus::message::object_path& path,
+    auto exploreMctpItem(const sdbusplus::object_path& path,
                          const DbusInterfaceMap& ifc) -> void;
     /** @brief Get endpoint EID*/
     auto getEid(const DbusInterfaceMap& ifc) -> std::optional<size_t>;
@@ -82,12 +82,12 @@ class EnumerateEndpoints
     /** @brief Get the unique service from the object mapper
      *
      * @param bus The D-Bus connection to use for querying the object mapper
-     * @type bus: sdbusplus::bus::bus&
+     * @type bus: sdbusplus::bus_t&
      *
      * @return std::unordered_set<std::string> A set of unique MCTP service
      * names
      */
-    auto getMCTPServices(sdbusplus::bus::bus& bus, int m_eid)
+    auto getMCTPServices(sdbusplus::bus_t& bus, int m_eid)
         -> std::vector<std::pair<std::string, std::string>>;
 
     /** @brief Extract a particular value from the service and path
@@ -99,7 +99,7 @@ class EnumerateEndpoints
      *
      * @return std::string The value of the requested property
      */
-    auto getPropertyValue(sdbusplus::bus::bus& bus, const std::string& service,
+    auto getPropertyValue(sdbusplus::bus_t& bus, const std::string& service,
                           const std::string& path, const std::string& interface,
                           const std::string& property) -> size_t;
 

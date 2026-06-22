@@ -100,8 +100,7 @@ bool SpdmdAppContext::reportLog(obmcprj::Logging::server::Entry::Level severity,
     try
     {
         auto reply = bus.call(method);
-        std::vector<
-            std::tuple<uint32_t, std::string, sdbusplus::message::object_path>>
+        std::vector<std::tuple<uint32_t, std::string, sdbusplus::object_path>>
             users;
         reply.read(users);
         for (auto& user : users)
