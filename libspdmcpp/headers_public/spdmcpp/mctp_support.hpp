@@ -23,20 +23,17 @@
 #include <arpa/inet.h>
 #include <linux/if_arp.h>
 #include <linux/mctp.h>
-#include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/un.h>
 #include <unistd.h>
 
 #include <array>
-#include <cerrno>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <iostream>
 #include <limits>
-#include <unordered_map>
 #include <vector>
 
 // MCTP tag type and constants (avoiding dependency on libmctp-externals.h)
@@ -344,9 +341,6 @@ class MctpIoClass : public IOClass
      */
     void deleteSocket()
     {
-#ifdef MCTP_IN_KERNEL
-        dropMctpKernelTags();
-#endif
         close(Socket);
         Socket = -1;
     }
@@ -366,78 +360,9 @@ class MctpIoClass : public IOClass
     }
 
   private:
-#ifdef MCTP_IN_KERNEL
-    /**
-     * @brief Kernel tag mapping from ioctl(SIOCMCTPALLOCTAG) per destination
-     * EID (reused).
-     *
-     * This unordered_map maintains the kernel-allocated tag (uint8_t)
-     * associated with each peer Endpoint ID (EID, also uint8_t). Tags are
-     * reused for efficiency and released using dropMctpKernelTags().
-     */
-    std::unordered_map<uint8_t, uint8_t> mctpKernelTags;
-
-    /**
-     * @brief Drops all kernel-allocated MCTP tags associated with this socket
-     * and clears the tag map.
-     *
-     * This function calls ioctl(SIOCMCTPDROPTAG) for each active kernel tag and
-     * then clears the mctpKernelTags map to release all associated resources.
-     */
-    void dropMctpKernelTags();
-    bool allocOrGetKernelTag(uint8_t peerEid, uint8_t& tagOut);
-#endif
-
     LogClass& Log;
     int Socket = -1;
 };
-
-#ifdef MCTP_IN_KERNEL
-inline void MctpIoClass::dropMctpKernelTags()
-{
-#ifdef SIOCMCTPDROPTAG
-    if (Socket >= 0)
-    {
-        for (const auto& kv : mctpKernelTags)
-        {
-            struct mctp_ioc_tag_ctl ctl = {};
-            ctl.peer_addr = kv.first;
-            ctl.tag = kv.second;
-            (void)ioctl(Socket, SIOCMCTPDROPTAG, &ctl);
-        }
-    }
-#endif
-    mctpKernelTags.clear();
-}
-
-inline bool MctpIoClass::allocOrGetKernelTag(uint8_t peerEid, uint8_t& tagOut)
-{
-    auto it = mctpKernelTags.find(peerEid);
-    if (it != mctpKernelTags.end())
-    {
-        tagOut = it->second;
-        return true;
-    }
-
-    /*
-     * sendMessage: SIOCMCTPALLOCTAG with peer_addr;
-     * tag and flags zero in; kernel returns tag with owner/prealloc set.
-     */
-#if defined(SIOCMCTPALLOCTAG)
-    struct mctp_ioc_tag_ctl ctl = {};
-    ctl.peer_addr = peerEid;
-
-    if (ioctl(Socket, SIOCMCTPALLOCTAG, &ctl) == 0)
-    {
-        tagOut = ctl.tag;
-        mctpKernelTags[peerEid] = ctl.tag;
-        return true;
-    }
-#endif
-
-    return false;
-}
-#endif /* MCTP_IN_KERNEL */
 
 #ifdef MCTP_IN_KERNEL
 /**
@@ -452,34 +377,28 @@ inline bool MctpIoClass::allocOrGetKernelTag(uint8_t peerEid, uint8_t& tagOut)
  * @param timeout The timeout value for the operation (not used in this
  * implementation).
  * @return RetStat::OK if the data is sent successfully, RetStat::ERROR_UNKNOWN
- * or RetStat::ERROR_BUFFER_TOO_SMALL otherwise.
+ * otherwise.
  */
 inline RetStat MctpIoClass::write(const std::vector<uint8_t>& buf,
                                   [[maybe_unused]] timeout_us_t /*timeout*/)
 {
     if (buf.size() < 3)
     {
+        if (Log.logLevel >= LogClass::Level::Critical)
+        {
+            Log.iprint("Send error: invalid MCTP frame size");
+        }
         return RetStat::ERROR_BUFFER_TOO_SMALL;
     }
 
     struct sockaddr_mctp addr;
     memset(&addr, 0, sizeof(addr));
 
-    const uint8_t peerEid = buf[1];
     addr.smctp_family = AF_MCTP;
     addr.smctp_network = MCTP_NET_ANY;
-    addr.smctp_addr.s_addr = peerEid;
+    addr.smctp_addr.s_addr = buf[1];
+    addr.smctp_tag = MCTP_TAG_OWNER;
     addr.smctp_type = MCTP_TYPE_SPDM;
-
-    uint8_t sendTag = MCTP_TAG_OWNER;
-    if (peerEid != 0 && peerEid != MCTP_ADDR_ANY)
-    {
-        if (!allocOrGetKernelTag(peerEid, sendTag))
-        {
-            sendTag = MCTP_TAG_OWNER;
-        }
-    }
-    addr.smctp_tag = sendTag;
 
     ssize_t rc =
         sendto(Socket, buf.data() + 3, buf.size() - 3, 0,
