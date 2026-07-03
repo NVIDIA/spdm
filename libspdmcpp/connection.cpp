@@ -851,6 +851,11 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
                 Log.print(mbedtlsToInfoString(*c));
             }
         }
+        // The HMC/BMC acts as a conduit for the attestation exchange. It
+        // neither authenticates the responder nor validates the certificate
+        // chain presented by the responder. Certificate validation and
+        // responder authentication are the responsibility of the verifier.
+        //
         // rs = verifyCertificateChain(slot);
         // SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
         slot.markInfo(SlotInfoEnum::CERTIFICATES);
