@@ -1,28 +1,31 @@
 
 #pragma once
 
-//NOLINTNEXTLINE cppcoreguidelines-macro-usage
+// NOLINTNEXTLINE cppcoreguidelines-macro-usage
 #define SPDMD_VERSION @SPDMD_VERSION@
 
-//NOLINTNEXTLINE cppcoreguidelines-macro-usage
+// NOLINTNEXTLINE cppcoreguidelines-macro-usage
 #define SPDM_WRAPPER_VERSION @SPDMD_VERSION@
 
-//NOLINTNEXTLINE cppcoreguidelines-macro-usage
+// NOLINTNEXTLINE cppcoreguidelines-macro-usage
 #mesondefine FETCH_SERIALNUMBER_FROM_RESPONDER
 
-//NOLINTNEXTLINE cppcoreguidelines-macro-usage
+// NOLINTNEXTLINE cppcoreguidelines-macro-usage
 #mesondefine DISCOVERY_ONLY_FROM_MCTP_CONTROL
 
-//NOLINTNEXTLINE cppcoreguidelines-macro-usage
+// NOLINTNEXTLINE cppcoreguidelines-macro-usage
 #mesondefine SPDM_JSON_CONF_FILE_NAME
 
-//NOLINTNEXTLINE cppcoreguidelines-macro-usage
+// NOLINTNEXTLINE cppcoreguidelines-macro-usage
+#mesondefine COMPOSITE_ATTESTER_BACKEND
+
+// NOLINTNEXTLINE cppcoreguidelines-macro-usage
 #mesondefine USE_DEFAULT_DBUS
 
-//NOLINTNEXTLINE cppcoreguidelines-macro-usage
+// NOLINTNEXTLINE cppcoreguidelines-macro-usage
 #mesondefine USE_FUZZ
 
-//NOLINTNEXTLINE cppcoreguidelines-macro-usage
+// NOLINTNEXTLINE cppcoreguidelines-macro-usage
 #mesondefine MCTP_IN_KERNEL
 
 #mesondefine CSM_SERVICE_ENABLED

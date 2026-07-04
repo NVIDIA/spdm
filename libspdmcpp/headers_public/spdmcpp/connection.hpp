@@ -154,6 +154,9 @@ class ConnectionClass : public NonCopyable
      * DSP0274_1.1.1 page 56 */
     static constexpr SlotIdx slotNum = 8;
 
+    static constexpr uint8_t measurementSpecificationDmtf = 1U << 0U;
+    static constexpr uint8_t measurementSpecificationEat = 1U << 1U;
+
     /** @brief Main constructor
      *  @param[in] context - Context containing various common configuration and
      * information
@@ -339,6 +342,13 @@ class ConnectionClass : public NonCopyable
         return toHash(Algorithms.Min.MeasurementHashAlgo);
     }
 
+    /** @brief Negotiated MeasurementSpecification from ALGORITHMS. */
+    uint8_t getMeasurementSpecification() const
+    {
+        SPDMCPP_ASSERT(hasInfo(ConnectionInfoEnum::ALGORITHMS));
+        return Algorithms.Min.MeasurementSpecification;
+    }
+
     /** @brief Capabilities flag for responder capabilities
      *
      */
@@ -361,6 +371,17 @@ class ConnectionClass : public NonCopyable
      * was not fetched for the given slot (even if it is available on the device
      * itself)
      *  @param[out] buf - the buffer into which the certificate chain is written
+     *  @returns true if the certificate chain was available and written into
+     * buf, false otherwise
+     */
+    bool getCertificateChainObject(std::vector<uint8_t>& buf,
+                                   SlotIdx slotidx) const;
+
+    /** @brief Returns the DER certificate chain for the given slot index
+     *  @details This strips the SPDM certificate-chain header and RootHash.
+     * Use getCertificateChainObject() when the verifier needs native SPDM
+     * evidence bytes.
+     *  @param[out] buf - the buffer into which the DER chain is written
      *  @returns true if the certificate chain was available and written into
      * buf, false otherwise
      */
@@ -417,6 +438,12 @@ class ConnectionClass : public NonCopyable
 
         return CombinedMeasurementTranscript;
     }
+
+    /** @brief VERSION/CAPABILITIES/ALGORITHMS transcript bytes. */
+    const std::vector<uint8_t>& getVcaTranscript() const
+    {
+        return refBuf(BufEnum::A);
+    }
     /** @brief The L1/L2 hash of the measurements, as returned by
      * getSignedMeasurementsBuffer()
      */
@@ -431,6 +458,11 @@ class ConnectionClass : public NonCopyable
     const std::vector<uint8_t>& getMeasurementsSignature() const
     {
         return MeasurementsSignature;
+    }
+    /** @brief Reassembled EAT token bytes from EAT measurement blocks. */
+    const std::vector<uint8_t>& getDeviceEatToken() const
+    {
+        return DeviceEatToken;
     }
     const nonce_array_32& getMeasurementNonce() const
     {
@@ -779,6 +811,9 @@ class ConnectionClass : public NonCopyable
     /** @brief Storage for the received and decoded measurements
      */
     DMTFMeasurementsContainer DMTFMeasurements;
+
+    /** @brief Storage for reassembled EAT measurement-block payloads. */
+    std::vector<uint8_t> DeviceEatToken;
 
     /** @brief Storage for the final L1/L2 hash
      */

@@ -106,7 +106,8 @@ auto calcResponseIfReadyWaitTimeMs(uint8_t RTDExp, uint8_t RTDM)
 
 ConnectionClass::ConnectionClass(const ContextClass& cont, LogClass& log,
                                  uint8_t eid, std::string sockPath) :
-    context(cont), Log(log), sockPath(std::move(sockPath)), m_eid(eid)
+    context(cont),
+    Log(log), sockPath(std::move(sockPath)), m_eid(eid)
 {
     resetConnection();
 }
@@ -179,6 +180,7 @@ void ConnectionClass::resetConnection()
     respIfReqCode = 0;
     respIfReadyToken = std::nullopt;
     DMTFMeasurements.clear();
+    DeviceEatToken.clear();
     MeasurementsHash.clear();
     MeasurementsSignature.clear();
     MeasurementNonce.fill(0);
@@ -220,6 +222,21 @@ bool ConnectionClass::getCertificatesDER(std::vector<uint8_t>& buf,
     buf.resize(src.size());
     std::copy(src.begin(), src.end(), buf.begin());
     return true;
+}
+
+bool ConnectionClass::getCertificateChainObject(std::vector<uint8_t>& buf,
+                                                SlotIdx slotidx) const
+{
+    SPDMCPP_LOG_TRACE_FUNC(Log);
+    buf.clear();
+
+    if (!slotHasInfo(slotidx, SlotInfoEnum::CERTIFICATES))
+    {
+        return false;
+    }
+
+    buf = Slots[slotidx].Certificates;
+    return !buf.empty();
 }
 
 bool ConnectionClass::getCertificatesPEM(std::string& str,
@@ -537,7 +554,7 @@ RetStat ConnectionClass::tryNegotiateAlgorithms()
 
     PacketNegotiateAlgorithmsRequestVar request;
     request.Min.Header.MessageVersion = MessageVersion;
-    request.Min.MeasurementSpecification = 1 << 0;
+    request.Min.MeasurementSpecification = measurementSpecificationDmtf;
 
     request.Min.BaseAsymAlgo = BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P256 |
                                BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P384 |
@@ -958,7 +975,7 @@ RetStat ConnectionClass::handleRecv<PacketMeasurementsResponseVar>()
     // parse and store DMTF Measurements
     for (const auto& block : resp.MeasurementBlockVector)
     {
-        if (block.Min.MeasurementSpecification == 1)
+        if (block.Min.MeasurementSpecification == measurementSpecificationDmtf)
         {
             if (DMTFMeasurements.find(block.Min.Index) !=
                 DMTFMeasurements.end())
@@ -983,6 +1000,13 @@ RetStat ConnectionClass::handleRecv<PacketMeasurementsResponseVar>()
                     }
                 }
             }
+        }
+        else if (block.Min.MeasurementSpecification ==
+                 measurementSpecificationEat)
+        {
+            DeviceEatToken.insert(DeviceEatToken.end(),
+                                  block.MeasurementVector.begin(),
+                                  block.MeasurementVector.end());
         }
     }
     // Reset index if used

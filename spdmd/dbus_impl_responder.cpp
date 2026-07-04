@@ -326,6 +326,11 @@ void Responder::handleError(spdmcpp::RetStat rs)
             appContext.reportError(std::string("SPDM other error: ") +
                                    get_cstr(rs) + " on " + dbgIdName);
     }
+
+    if (refreshCompleteCb)
+    {
+        refreshCompleteCb(eid, false);
+    }
 }
 
 spdmcpp::RetStat Responder::handleEventForRefresh(spdmcpp::EventClass& ev)
@@ -356,6 +361,10 @@ spdmcpp::RetStat Responder::handleEventForRefresh(spdmcpp::EventClass& ev)
         syncSlotsInfo();
         updateLastUpdateTime();
         status(SPDMStatus::Success);
+        if (refreshCompleteCb)
+        {
+            refreshCompleteCb(eid, true);
+        }
     }
     else if (connection.slotHasInfo(slotidx, SlotInfoEnum::CERTIFICATES))
     {
