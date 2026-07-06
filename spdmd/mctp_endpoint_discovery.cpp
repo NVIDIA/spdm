@@ -19,6 +19,7 @@
 
 #include "mctp_endpoint_discovery.hpp"
 
+#include "mctp_endpoint_discovery_typed_accessors.hpp"
 #include "spdmcpp/common.hpp"
 #include "spdmd_app_context.hpp"
 
@@ -48,7 +49,30 @@ MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
         [this](sdbusplus::message::message& msg) {
             sdbusplus::object_path objPath;
             dbus::InterfaceMap interfaces;
-            msg.read(objPath, interfaces);
+            try
+            {
+                msg.read(objPath, interfaces);
+            }
+            catch (const sdbusplus::exception_t& e)
+            {
+                auto& log = this->spdmApp.getLog();
+                if (log.logLevel >= spdmcpp::LogClass::Level::Error)
+                {
+                    log.iprint("inventoryMatch: msg.read failed: ");
+                    log.iprintln(e.what());
+                }
+                return;
+            }
+            catch (const std::exception& e)
+            {
+                auto& log = this->spdmApp.getLog();
+                if (log.logLevel >= spdmcpp::LogClass::Level::Error)
+                {
+                    log.iprint("inventoryMatch: unexpected msg.read error: ");
+                    log.iprintln(e.what());
+                }
+                return;
+            }
             if (!interfaces.contains(inventorySPDMResponderIntfName))
             {
                 // SPDMResponder not in this signal. Cache UUID if
@@ -56,8 +80,25 @@ MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
                 // arrives in a subsequent signal.
                 if (interfaces.contains(uuidIntfName))
                 {
-                    uuidCache[objPath] = std::get<std::string>(
-                        interfaces.at(uuidIntfName).at(uuidIntfPropertyUUID));
+                    try
+                    {
+                        auto uuid = dbus_accessors::tryGetProp<std::string>(
+                            interfaces.at(uuidIntfName), uuidIntfPropertyUUID);
+                        if (uuid)
+                        {
+                            uuidCache[objPath] = std::move(*uuid);
+                        }
+                    }
+                    catch (const std::exception& e)
+                    {
+                        auto& log = this->spdmApp.getLog();
+                        if (log.logLevel >= spdmcpp::LogClass::Level::Error)
+                        {
+                            log.iprint(
+                                "inventoryMatch: UUID variant access failed: ");
+                            log.iprintln(e.what());
+                        }
+                    }
                 }
                 return;
             }
@@ -72,7 +113,13 @@ MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
             {
                 inventorySignalQueue.emplace_back(objPath, interfaces);
             }
-        })
+        }),
+    inventoryUuidMatch(bus,
+                       sdbusplus::bus::match::rules::propertiesChangedNamespace(
+                           inventorySPDMResponderNamespace, uuidIntfName),
+                       [this](sdbusplus::message::message& msg) {
+                           this->inventoryUUIDChangedSignal(msg);
+                       })
 #endif
 {
     SPDMCPP_LOG_TRACE_FUNC(spdmApp.getLog());
@@ -84,7 +131,30 @@ MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
         [this](sdbusplus::message::message& msg) {
             sdbusplus::object_path objPath;
             dbus::InterfaceMap interfaces;
-            msg.read(objPath, interfaces);
+            try
+            {
+                msg.read(objPath, interfaces);
+            }
+            catch (const sdbusplus::exception_t& e)
+            {
+                auto& log = this->spdmApp.getLog();
+                if (log.logLevel >= spdmcpp::LogClass::Level::Error)
+                {
+                    log.iprint("mctpMatch: msg.read failed: ");
+                    log.iprintln(e.what());
+                }
+                return;
+            }
+            catch (const std::exception& e)
+            {
+                auto& log = this->spdmApp.getLog();
+                if (log.logLevel >= spdmcpp::LogClass::Level::Error)
+                {
+                    log.iprint("mctpMatch: unexpected msg.read error: ");
+                    log.iprintln(e.what());
+                }
+                return;
+            }
             using namespace std::chrono_literals;
             if (ccsmReady)
             {
@@ -100,12 +170,59 @@ MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
         [this](sdbusplus::message::message& msg) {
             std::map<std::string, std::variant<std::string>> changedProps;
             std::string iface;
-            msg.read(iface, changedProps);
+            try
+            {
+                msg.read(iface, changedProps);
+            }
+            catch (const sdbusplus::exception_t& e)
+            {
+                auto& log = this->spdmApp.getLog();
+                if (log.logLevel >= spdmcpp::LogClass::Level::Error)
+                {
+                    log.iprint("ccsmChange: msg.read failed: ");
+                    log.iprintln(e.what());
+                }
+                return;
+            }
+            catch (const std::exception& e)
+            {
+                auto& log = this->spdmApp.getLog();
+                if (log.logLevel >= spdmcpp::LogClass::Level::Error)
+                {
+                    log.iprint("ccsmChange: unexpected msg.read error: ");
+                    log.iprintln(e.what());
+                }
+                return;
+            }
             auto it = changedProps.find("State");
             if (it != changedProps.end())
             {
-                const auto& val = std::get<std::string>(it->second);
-                ccsmReady = (val == csmFeatureReadyStateEnabled);
+                std::optional<std::string> valOpt;
+                try
+                {
+                    valOpt = dbus_accessors::tryGet<std::string>(it->second);
+                }
+                catch (const std::exception& e)
+                {
+                    auto& log = this->spdmApp.getLog();
+                    if (log.logLevel >= spdmcpp::LogClass::Level::Error)
+                    {
+                        log.iprint("ccsmChange: State variant access failed: ");
+                        log.iprintln(e.what());
+                    }
+                    return;
+                }
+                if (!valOpt)
+                {
+                    auto& log = this->spdmApp.getLog();
+                    if (log.logLevel >= spdmcpp::LogClass::Level::Error)
+                    {
+                        log.iprintln("ccsmChange: State variant did not hold "
+                                     "std::string");
+                    }
+                    return;
+                }
+                ccsmReady = (*valOpt == csmFeatureReadyStateEnabled);
                 if (ccsmReady)
                 {
                     setupMCTPServices();
@@ -120,6 +237,9 @@ MctpDiscovery::MctpDiscovery(SpdmdApp& spdmApp) :
                 }
             }
         });
+#endif
+#ifndef DISCOVERY_ONLY_FROM_MCTP_CONTROL
+    scanExistingInventoryUUIDs();
 #endif
 }
 
@@ -156,56 +276,96 @@ void MctpDiscovery::setupMCTPServices()
             mctpControlServices[svc] = std::make_unique<dbus::ServiceHelper>(
                 mctpPath, objMgrSvc, svc.c_str());
 
-            auto& conn = spdmApp.getConn();
-            conn.async_method_call(
-                [this, svc](boost::system::error_code ec,
-                            sdbusplus::message::message& replyMsg) {
-                    dbus::ObjectValueTree objects;
-
-                    if (ec)
-                    {
-                        auto& log = spdmApp.getLog();
-                        if (log.logLevel >= spdmcpp::LogClass::Level::Error)
-                        {
-                            log.iprint(
-                                "Warning: Discovery->GetManagedObjects error: ");
-                            log.iprintln(ec.message());
-                        }
-                        return;
-                    }
-                    try
-                    {
-                        replyMsg.read(objects);
-                    }
-                    catch (const std::exception& e)
-                    {
-                        auto& log = spdmApp.getLog();
-                        if (log.logLevel >= spdmcpp::LogClass::Level::Error)
-                        {
-                            log.iprint(
-                                "Warning: Discovery->GetManagedObjects parse error: ");
-                            log.iprintln(e.what());
-                        }
-                        return;
-                    }
-
-                    for (const auto& [objectPath, interfaces] : objects)
-                    {
-                        mctpNewObjectSignal(objectPath, interfaces);
-                    }
-                },
-                svc.c_str(), mctpPath, "org.freedesktop.DBus.ObjectManager",
-                "GetManagedObjects");
+            issueGetManagedObjects(svc);
         }
+    });
+}
+
+void MctpDiscovery::issueGetManagedObjects(const std::string& svc)
+{
+    auto& conn = spdmApp.getConn();
+    conn.async_method_call(
+        [this, svc](boost::system::error_code ec,
+                    sdbusplus::message::message& replyMsg) {
+            dbus::ObjectValueTree objects;
+
+            if (ec)
+            {
+                auto& log = spdmApp.getLog();
+                if (log.logLevel >= spdmcpp::LogClass::Level::Error)
+                {
+                    log.iprint("Warning: Discovery->GetManagedObjects error: ");
+                    log.iprintln(ec.message());
+                }
+                scheduleGetManagedObjectsRetry(svc);
+                return;
+            }
+            try
+            {
+                replyMsg.read(objects);
+            }
+            catch (const std::exception& e)
+            {
+                auto& log = spdmApp.getLog();
+                if (log.logLevel >= spdmcpp::LogClass::Level::Error)
+                {
+                    log.iprint(
+                        "Warning: Discovery->GetManagedObjects parse error: ");
+                    log.iprintln(e.what());
+                }
+                return;
+            }
+
+            auto it = getManagedObjectsRetryState.find(svc);
+            if (it != getManagedObjectsRetryState.end())
+            {
+                it->second->attempt = 0;
+            }
+            mctpDiscoveryComplete = true;
+
+            for (const auto& [objectPath, interfaces] : objects)
+            {
+                mctpNewObjectSignal(objectPath, interfaces);
+            }
+        },
+        svc.c_str(), mctpPath, "org.freedesktop.DBus.ObjectManager",
+        "GetManagedObjects");
+}
+
+void MctpDiscovery::scheduleGetManagedObjectsRetry(const std::string& svc)
+{
+    auto& state = getManagedObjectsRetryState[svc];
+    if (!state)
+    {
+        state = std::make_unique<RetryState>(spdmApp.getIo());
+    }
+
+    const auto schedule = getMapperRetryBackoff();
+    if (state->attempt >= schedule.size())
+    {
+        auto& log = spdmApp.getLog();
+        if (log.logLevel >= spdmcpp::LogClass::Level::Error)
+        {
+            log.iprint("GetManagedObjects: exhausted retries for service ");
+            log.iprintln(svc);
+        }
+        return;
+    }
+
+    state->timer.expires_after(schedule[state->attempt]);
+    ++state->attempt;
+    state->timer.async_wait([this, svc](const boost::system::error_code& ec) {
+        if (ec)
+        {
+            return;
+        }
+        issueGetManagedObjects(svc);
     });
 }
 
 void MctpDiscovery::getMCTPServicesAsync(
     std::function<void(std::unordered_set<std::string>)> callback)
 {
-    static constexpr auto mapperService = "xyz.openbmc_project.ObjectMapper";
-    static constexpr auto mapperPath = "/xyz/openbmc_project/object_mapper";
-    static constexpr auto mapperInterface = "xyz.openbmc_project.ObjectMapper";
     static constexpr auto method = "GetSubTree";
 
     std::string rootPath = "/";
@@ -215,9 +375,8 @@ void MctpDiscovery::getMCTPServicesAsync(
     auto& conn = spdmApp.getConn();
 
     conn.async_method_call(
-        [this, callback =
-                   std::move(callback)](boost::system::error_code ec,
-                                        sdbusplus::message::message& replyMsg) {
+        [this, callback](boost::system::error_code ec,
+                         sdbusplus::message::message& replyMsg) mutable {
             std::unordered_set<std::string> devServices;
 
             if (ec)
@@ -228,7 +387,7 @@ void MctpDiscovery::getMCTPServicesAsync(
                     log.iprint("getMCTPServicesAsync: D-Bus error: ");
                     log.iprintln(ec.message());
                 }
-                callback(std::move(devServices));
+                scheduleMapperRetry(std::move(callback));
                 return;
             }
 
@@ -257,11 +416,58 @@ void MctpDiscovery::getMCTPServicesAsync(
                 }
             }
 
+            if (devServices.empty())
+            {
+                scheduleMapperRetry(std::move(callback));
+                return;
+            }
+
+            if (mapperRetryState)
+            {
+                mapperRetryState->attempt = 0;
+            }
             callback(std::move(devServices));
         },
         mapperService, mapperPath, mapperInterface, method,
         rootPath, // Args
         depth, interfaces);
+}
+
+void MctpDiscovery::scheduleMapperRetry(
+    std::function<void(std::unordered_set<std::string>)> callback)
+{
+    if (!mapperRetryState)
+    {
+        mapperRetryState = std::make_unique<RetryState>(spdmApp.getIo());
+    }
+
+    const auto schedule = getMapperRetryBackoff();
+    if (mapperRetryState->attempt >= schedule.size())
+    {
+        auto& log = spdmApp.getLog();
+        if (log.logLevel >= spdmcpp::LogClass::Level::Error)
+        {
+            log.iprintln(
+                "getMCTPServicesAsync: mapper failed after retry budget "
+                "exhausted; deferring discovery until next signal-driven "
+                "trigger");
+        }
+        mapperRetryState->attempt = 0;
+        callback({});
+        return;
+    }
+
+    mapperRetryState->timer.expires_after(schedule[mapperRetryState->attempt]);
+    ++mapperRetryState->attempt;
+    mapperRetryState->timer.async_wait(
+        [this, callback = std::move(callback)](
+            const boost::system::error_code& ec) mutable {
+            if (ec)
+            {
+                return;
+            }
+            getMCTPServicesAsync(std::move(callback));
+        });
 }
 
 void MctpDiscovery::tryConnectMCTP(const std::string& sockPath)
@@ -501,6 +707,193 @@ void MctpDiscovery::mctpNewObjectSignal(const sdbusplus::object_path& objPath,
 }
 
 #ifndef DISCOVERY_ONLY_FROM_MCTP_CONTROL
+void MctpDiscovery::inventoryUUIDChangedSignal(sdbusplus::message::message& msg)
+{
+    SPDMCPP_LOG_TRACE_FUNC(spdmApp.getLog());
+
+    std::string interface;
+    dbus::PropertyMap changed;
+    std::vector<std::string> invalidated;
+    try
+    {
+        msg.read(interface, changed, invalidated);
+    }
+    catch (const std::exception& e)
+    {
+        auto& log = spdmApp.getLog();
+        if (log.logLevel >= spdmcpp::LogClass::Level::Error)
+        {
+            log.iprint("inventoryUUIDChangedSignal: msg.read failed: ");
+            log.iprintln(e.what());
+        }
+        return;
+    }
+    auto uuid =
+        dbus_accessors::tryGetProp<std::string>(changed, uuidIntfPropertyUUID);
+    if (!uuid || uuid->empty())
+    {
+        return;
+    }
+    sdbusplus::object_path objPath(msg.get_path());
+
+    std::vector<std::string> ifaces{inventorySPDMResponderIntfName};
+    spdmApp.getConn().async_method_call(
+        [this, objPath, uuid = *uuid](
+            boost::system::error_code ec,
+            const std::map<std::string, std::vector<std::string>>& resp) {
+            if (ec || resp.empty())
+            {
+                return;
+            }
+            dbus::InterfaceMap interfaces;
+            interfaces[inventorySPDMResponderIntfName];
+            interfaces[uuidIntfName][uuidIntfPropertyUUID] = uuid;
+            if (ccsmReady)
+            {
+                inventoryNewObjectSignal(objPath, interfaces);
+            }
+            else
+            {
+                inventorySignalQueue.emplace_back(objPath, interfaces);
+            }
+        },
+        mapperService, mapperPath, mapperInterface, "GetObject",
+        std::string(objPath), ifaces);
+}
+
+void MctpDiscovery::scanExistingInventoryUUIDs()
+{
+    SPDMCPP_LOG_TRACE_FUNC(spdmApp.getLog());
+
+    std::vector<std::string> ifaces{inventorySPDMResponderIntfName};
+    spdmApp.getConn().async_method_call(
+        [this](boost::system::error_code ec,
+               sdbusplus::message::message& replyMsg) {
+            onScanSubtreeReply(ec, replyMsg);
+        },
+        mapperService, mapperPath, mapperInterface, "GetSubTree",
+        std::string(inventorySPDMResponderNamespace), 0, ifaces);
+}
+
+void MctpDiscovery::onScanSubtreeReply(boost::system::error_code ec,
+                                       sdbusplus::message::message& replyMsg)
+{
+    auto& log = spdmApp.getLog();
+    if (ec)
+    {
+        if (log.logLevel >= spdmcpp::LogClass::Level::Error)
+        {
+            log.iprint("scanExistingInventoryUUIDs: GetSubTree error: ");
+            log.iprintln(ec.message());
+        }
+        return;
+    }
+
+    std::map<std::string, std::map<std::string, std::vector<std::string>>>
+        subtree;
+    try
+    {
+        replyMsg.read(subtree);
+    }
+    catch (const std::exception& e)
+    {
+        if (log.logLevel >= spdmcpp::LogClass::Level::Error)
+        {
+            log.iprint("scanExistingInventoryUUIDs: GetSubTree parse error: ");
+            log.iprintln(e.what());
+        }
+        return;
+    }
+
+    if (log.logLevel >= spdmcpp::LogClass::Level::Debug)
+    {
+        log.iprint("scanExistingInventoryUUIDs: found SPDMResponder paths: ");
+        log.iprintln(std::to_string(subtree.size()));
+    }
+
+    std::vector<std::string> uuidIfaces{uuidIntfName};
+    for (const auto& [objPath, serviceMap] : subtree)
+    {
+        sdbusplus::object_path path(objPath);
+        spdmApp.getConn().async_method_call(
+            [this, path](boost::system::error_code ec2,
+                         const std::map<std::string, std::vector<std::string>>&
+                             services) {
+                onScanUuidOwnerReply(ec2, services, path);
+            },
+            mapperService, mapperPath, mapperInterface, "GetObject",
+            std::string(objPath), uuidIfaces);
+    }
+}
+
+void MctpDiscovery::onScanUuidOwnerReply(
+    boost::system::error_code ec,
+    const std::map<std::string, std::vector<std::string>>& services,
+    sdbusplus::object_path objPath)
+{
+    auto& log = spdmApp.getLog();
+    if (ec || services.empty())
+    {
+        if (log.logLevel >= spdmcpp::LogClass::Level::Debug)
+        {
+            log.iprint(
+                "scanExistingInventoryUUIDs: no Common.UUID owner for: ");
+            log.iprintln(std::string(objPath));
+        }
+        return;
+    }
+
+    const std::string service = services.begin()->first;
+    if (log.logLevel >= spdmcpp::LogClass::Level::Debug)
+    {
+        log.iprint("scanExistingInventoryUUIDs: reading UUID from service ");
+        log.iprint(service);
+        log.iprint(" for path ");
+        log.iprintln(std::string(objPath));
+    }
+
+    getPropertyValueAsync(service, std::string(objPath), uuidIntfName,
+                          uuidIntfPropertyUUID,
+                          [this, objPath](std::string uuid) {
+                              onScanUuidValueReply(std::move(uuid), objPath);
+                          });
+}
+
+void MctpDiscovery::onScanUuidValueReply(std::string uuid,
+                                         sdbusplus::object_path objPath)
+{
+    auto& log = spdmApp.getLog();
+    if (uuid.empty())
+    {
+        if (log.logLevel >= spdmcpp::LogClass::Level::Debug)
+        {
+            log.iprint("scanExistingInventoryUUIDs: empty UUID for: ");
+            log.iprintln(std::string(objPath));
+        }
+        return;
+    }
+
+    if (log.logLevel >= spdmcpp::LogClass::Level::Informational)
+    {
+        log.iprint(
+            "scanExistingInventoryUUIDs: processing pre-existing UUID for: ");
+        log.iprintln(std::string(objPath));
+    }
+
+    dbus::InterfaceMap interfaces;
+    interfaces[inventorySPDMResponderIntfName];
+    interfaces[uuidIntfName][uuidIntfPropertyUUID] = uuid;
+
+    if (ccsmReady)
+    {
+        inventoryNewObjectSignal(objPath, interfaces);
+    }
+    else
+    {
+        inventorySignalQueue.emplace_back(objPath, interfaces);
+    }
+}
+
 void MctpDiscovery::inventoryNewObjectSignal(
     const sdbusplus::object_path& objPath, const dbus::InterfaceMap& interfaces)
 {
@@ -691,49 +1084,36 @@ MctpDiscovery::EidType
             eid = *uint8eid;
         }
     }
-    catch (const std::bad_variant_access& e)
+    catch (const std::exception& e)
     {
         spdmApp.getLog().println(e.what());
+        return std::nullopt;
     }
 
     if (eid)
     {
-        if (std::holds_alternative<uint8_t>(*eid) &&
-            std::get<uint8_t>(*eid) < std::get<uint8_t>(invalidEid))
+        auto types = dbus_accessors::tryGetProp<std::vector<uint8_t>>(
+            properties, mctpEndpointIntfPropertySupportedMessageTypes);
+        if (!types)
         {
-            try
-            {
-                auto types = std::get<std::vector<uint8_t>>(properties.at(
-                    mctpEndpointIntfPropertySupportedMessageTypes));
-                if (std::find(types.begin(), types.end(), mctpTypeSPDM) !=
-                    types.end())
-                {
-                    return eid;
-                }
-            }
-            catch (const std::exception& e)
-            {
-                spdmApp.getLog().print(e.what());
-            }
+            return std::nullopt;
         }
-        else if (std::holds_alternative<uint32_t>(*eid) &&
-                 std::get<uint32_t>(*eid) <
-                     static_cast<uint32_t>(std::get<uint8_t>(invalidEid)))
+        const bool hasSpdm = std::find(types->begin(), types->end(),
+                                       mctpTypeSPDM) != types->end();
+        if (!hasSpdm)
         {
-            try
-            {
-                auto types = std::get<std::vector<uint8_t>>(properties.at(
-                    mctpEndpointIntfPropertySupportedMessageTypes));
-                if (std::find(types.begin(), types.end(), mctpTypeSPDM) !=
-                    types.end())
-                {
-                    return eid;
-                }
-            }
-            catch (const std::exception& e)
-            {
-                spdmApp.getLog().print(e.what());
-            }
+            return std::nullopt;
+        }
+        constexpr uint32_t invalidEidValue = 0xFF;
+        if (std::holds_alternative<uint8_t>(*eid) &&
+            std::get<uint8_t>(*eid) < invalidEidValue)
+        {
+            return eid;
+        }
+        if (std::holds_alternative<uint32_t>(*eid) &&
+            std::get<uint32_t>(*eid) < invalidEidValue)
+        {
+            return eid;
         }
     }
 
@@ -749,27 +1129,17 @@ std::string
         const auto intf = interfaces.find(mctpTransportSockIntfName);
         if (intf != interfaces.end())
         {
-            const auto& properties = intf->second;
-            const auto addr = properties.find(mctpTransportSockIntfType);
-            if (addr != properties.end())
+            auto vec = dbus_accessors::tryGetProp<std::vector<uint8_t>>(
+                intf->second, mctpTransportSockIntfType);
+            if (vec)
             {
-                try
-                {
-                    const auto& vec =
-                        std::get<std::vector<uint8_t>>(addr->second);
-                    return {vec.begin(), vec.end()};
-                }
-                catch (const std::exception& e)
-                {
-                    if (spdmApp.getLog().logLevel >=
-                        spdmcpp::LogClass::Level::Error)
-                    {
-                        using namespace std::string_literals;
-                        spdmApp.getLog().iprintln(
-                            "Unable to get transport socket property "s +
-                            e.what());
-                    }
-                }
+                return std::string(vec->begin(), vec->end());
+            }
+            if (spdmApp.getLog().logLevel >= spdmcpp::LogClass::Level::Error)
+            {
+                spdmApp.getLog().iprintln(
+                    "Unable to get transport socket property "
+                    "(typed-accessor returned nullopt)");
             }
         }
     }
@@ -798,11 +1168,11 @@ std::string MctpDiscovery::getUUID(const dbus::InterfaceMap& interfaces)
         }
         if (intf != interfaces.end())
         {
-            const auto& properties = intf->second;
-            auto uuid = properties.find(uuidIntfPropertyUUID);
-            if (uuid != properties.end())
+            auto uuid = dbus_accessors::tryGetProp<std::string>(
+                intf->second, uuidIntfPropertyUUID);
+            if (uuid)
             {
-                return std::get<std::string>(uuid->second);
+                return *uuid;
             }
             if (spdmApp.getLog().logLevel >= LogClass::Level::Error)
             {
@@ -846,7 +1216,10 @@ void MctpDiscovery::getPropertyValueAsync(
             {
                 std::variant<std::string> val;
                 replyMsg.read(val);
-                result = std::get<std::string>(val);
+                if (auto s = dbus_accessors::tryGet<std::string>(val))
+                {
+                    result = std::move(*s);
+                }
             }
             catch (const std::exception& e)
             {
@@ -941,10 +1314,6 @@ void MctpDiscovery::getInventoryPathAsync(
 {
     SPDMCPP_LOG_TRACE_FUNC(spdmApp.getLog());
 
-    // Same constants as before
-    static constexpr auto mapperService = "xyz.openbmc_project.ObjectMapper";
-    static constexpr auto mapperPath = "/xyz/openbmc_project/object_mapper";
-    static constexpr auto mapperInterface = "xyz.openbmc_project.ObjectMapper";
     static constexpr auto method = "GetSubTree";
 
     std::string rootPath = "/";
@@ -971,7 +1340,8 @@ void MctpDiscovery::getInventoryPathAsync(
                 return;
             }
 
-            std::map<std::string, std::map<std::string, std::set<std::string>>>
+            std::map<std::string,
+                     std::map<std::string, std::vector<std::string>>>
                 response;
             try
             {
@@ -1001,15 +1371,19 @@ void MctpDiscovery::getInventoryPathAsync(
             {
                 for (const auto& [serviceName, interfaceSet] : serviceMap)
                 {
-                    auto foundMctp = interfaceSet.find(mctpUUIDIntfName);
-                    auto foundUuid = interfaceSet.find(uuidIntfName);
+                    auto hasMctp =
+                        std::find(interfaceSet.begin(), interfaceSet.end(),
+                                  mctpUUIDIntfName) != interfaceSet.end();
+                    auto hasUuid =
+                        std::find(interfaceSet.begin(), interfaceSet.end(),
+                                  uuidIntfName) != interfaceSet.end();
 
-                    if (foundMctp != interfaceSet.end())
+                    if (hasMctp)
                     {
                         candidates->push_back(
                             {objPath, serviceName, mctpUUIDIntfName});
                     }
-                    else if (foundUuid != interfaceSet.end())
+                    else if (hasUuid)
                     {
                         candidates->push_back(
                             {objPath, serviceName, uuidIntfName});
@@ -1075,7 +1449,6 @@ std::string MctpDiscovery::getMediumType(const dbus::InterfaceMap& interfaces)
     try
     {
         auto intf = interfaces.find(mctpEndpointIntfName);
-        std::string mediumType;
         if (intf != interfaces.end())
         {
             const auto& properties = intf->second;
@@ -1084,10 +1457,18 @@ std::string MctpDiscovery::getMediumType(const dbus::InterfaceMap& interfaces)
             {
                 return "xyz.openbmc_project.MCTP.Endpoint.MediaTypes.PCIe";
             }
-            mediumType = std::get<std::string>(
-                properties.at(std::string(mctpEndpointIntfPropertyMediumType)));
+            // nullopt falls through to the log-and-empty path below.
+            auto mediumType = dbus_accessors::tryGetProp<std::string>(
+                properties, mctpEndpointIntfPropertyMediumType);
+            if (mediumType)
+            {
+                return *mediumType;
+            }
         }
-        return mediumType;
+        else
+        {
+            return {};
+        }
     }
     catch (const std::exception& e)
     {
@@ -1115,12 +1496,11 @@ std::string MctpDiscovery::getBindingType(const dbus::InterfaceMap& interfaces)
         auto intf = interfaces.find(mctpBindingIntfProperty);
         if (intf != interfaces.end())
         {
-            const auto& properties = intf->second;
-            if (properties.contains(
-                    std::string(mctpBindingIntfPropertyBindType)))
+            auto bt = dbus_accessors::tryGetProp<std::string>(
+                intf->second, mctpBindingIntfPropertyBindType);
+            if (bt)
             {
-                bindingType = std::get<std::string>(
-                    properties.at(mctpBindingIntfPropertyBindType));
+                bindingType = std::move(*bt);
             }
         }
         return bindingType;
@@ -1161,7 +1541,34 @@ void MctpDiscovery::initCsmStatus()
             ccsmReady = false;
             return;
         }
-        ccsmReady = (std::get<std::string>(val) == csmFeatureReadyStateEnabled);
+        std::optional<std::string> stateOpt;
+        try
+        {
+            stateOpt = dbus_accessors::tryGet<std::string>(val);
+        }
+        catch (const std::exception& e)
+        {
+            auto& log = spdmApp.getLog();
+            if (log.logLevel >= spdmcpp::LogClass::Level::Error)
+            {
+                log.iprint("initCsmStatus: State variant access failed: ");
+                log.iprintln(e.what());
+            }
+            ccsmReady = false;
+            return;
+        }
+        if (!stateOpt)
+        {
+            auto& log = spdmApp.getLog();
+            if (log.logLevel >= spdmcpp::LogClass::Level::Error)
+            {
+                log.iprintln(
+                    "initCsmStatus: State variant did not hold std::string");
+            }
+            ccsmReady = false;
+            return;
+        }
+        ccsmReady = (*stateOpt == csmFeatureReadyStateEnabled);
         if (ccsmReady)
         {
             setupMCTPServices();

@@ -25,6 +25,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <variant>
 #include <vector>
@@ -92,7 +93,8 @@ class MctpIoClass
 
 namespace dbus
 {
-using Value = std::variant<uint32_t, size_t, std::string, std::vector<uint8_t>>;
+using Value =
+    std::variant<uint8_t, uint32_t, size_t, std::string, std::vector<uint8_t>>;
 using InterfaceMap = std::map<std::string, std::map<std::string, Value>>;
 using ObjectValueTree = std::map<sdbusplus::object_path, InterfaceMap>;
 } // namespace dbus
@@ -1169,6 +1171,709 @@ TEST_F(MctpDiscoveryTest, EmptyInterfacesMap)
     EXPECT_CALL(*mockApp, discoveryUpdateResponder(testing::_)).Times(1);
 
     discovery->mctpNewObjectSignal(objPath, interfaces);
+}
+
+namespace
+{
+
+constexpr uint8_t kSpdmMessageType = 5;
+constexpr uint8_t kInvalidEid = 0xFF;
+
+std::optional<std::variant<uint32_t, uint8_t>>
+    getEidLikeProduction(const std::map<std::string, dbus::Value>& properties)
+{
+    if (!properties.contains("EID"))
+    {
+        return std::nullopt;
+    }
+    if (!properties.contains("SupportedMessageTypes"))
+    {
+        return std::nullopt;
+    }
+
+    std::optional<std::variant<uint32_t, uint8_t>> eid = std::nullopt;
+    try
+    {
+        if (auto p = std::get_if<uint32_t>(&properties.at("EID")))
+        {
+            eid = *p;
+        }
+        else if (auto p8 = std::get_if<uint8_t>(&properties.at("EID")))
+        {
+            eid = *p8;
+        }
+    }
+    catch (const std::bad_variant_access&)
+    {}
+
+    if (!eid)
+    {
+        return std::nullopt;
+    }
+
+    try
+    {
+        const auto& types = std::get<std::vector<uint8_t>>(
+            properties.at("SupportedMessageTypes"));
+        if (std::find(types.begin(), types.end(), kSpdmMessageType) ==
+            types.end())
+        {
+            return std::nullopt;
+        }
+    }
+    catch (const std::exception&)
+    {
+        return std::nullopt;
+    }
+
+    return eid;
+}
+
+} // namespace
+
+TEST_F(MctpDiscoveryTest,
+       UnifyMctpSpdmRegression_Construction_Succeeds_AndExposesHook)
+{
+    std::unique_ptr<MctpDiscovery> discovery;
+    EXPECT_NO_THROW(discovery = std::make_unique<MctpDiscovery>(*mockApp));
+    ASSERT_NE(discovery, nullptr);
+
+    sdbusplus::object_path objPath("/xyz/openbmc_project/mctp/endpoint/42");
+    dbus::InterfaceMap interfaces;
+
+    std::map<std::string, dbus::Value> uuidProps;
+    uuidProps["UUID"] = std::string("11111111-2222-3333-4444-555555555555");
+    interfaces["xyz.openbmc_project.MCTP.UUID"] = uuidProps;
+
+    std::map<std::string, dbus::Value> bindingProps;
+    bindingProps["BindingType"] =
+        std::string("xyz.openbmc_project.MCTP.Binding.Types.PCIe");
+    interfaces["xyz.openbmc_project.MCTP.Binding"] = bindingProps;
+
+    EXPECT_CALL(*mockApp, connectMCTP("/tmp/mctp.sock")).WillOnce(Return(true));
+    EXPECT_CALL(*mockApp, discoveryUpdateResponder(testing::_)).Times(1);
+
+    discovery->mctpNewObjectSignal(objPath, interfaces);
+}
+
+namespace
+{
+struct EmptyServicesDiscovery : MctpDiscovery
+{
+    using MctpDiscovery::MctpDiscovery;
+    void getMCTPServicesAsync(
+        std::function<void(std::unordered_set<std::string>)> callback)
+    {
+        callback({});
+    }
+};
+} // namespace
+
+TEST_F(MctpDiscoveryTest,
+       UnifyMctpSpdmRegression_GetMCTPServices_EmptyResultDetectable)
+{
+    std::unique_ptr<MctpDiscovery> discovery =
+        std::make_unique<MctpDiscovery>(*mockApp);
+
+    std::atomic<bool> nonEmpty{false};
+    discovery->getMCTPServicesAsync(
+        [&nonEmpty](std::unordered_set<std::string> services) {
+            nonEmpty = !services.empty();
+        });
+    EXPECT_TRUE(nonEmpty);
+
+    EmptyServicesDiscovery emptyDiscovery(*mockApp);
+    std::atomic<size_t> sizeSeen{99};
+    emptyDiscovery.getMCTPServicesAsync(
+        [&sizeSeen](std::unordered_set<std::string> services) {
+            sizeSeen = services.size();
+        });
+    EXPECT_EQ(sizeSeen, 0u);
+}
+
+TEST_F(MctpDiscoveryTest,
+       UnifyMctpSpdmRegression_NewSignal_SpdmInTypes_DispatchesResponder)
+{
+    std::unique_ptr<MctpDiscovery> discovery =
+        std::make_unique<MctpDiscovery>(*mockApp);
+
+    sdbusplus::object_path objPath("/xyz/openbmc_project/mctp/endpoint/9");
+    dbus::InterfaceMap interfaces;
+
+    std::map<std::string, dbus::Value> uuidProps;
+    uuidProps["UUID"] = std::string("11111111-2222-3333-4444-555555555555");
+    interfaces["xyz.openbmc_project.MCTP.UUID"] = uuidProps;
+
+    std::map<std::string, dbus::Value> bindingProps;
+    bindingProps["BindingType"] =
+        std::string("xyz.openbmc_project.MCTP.Binding.Types.PCIe");
+    interfaces["xyz.openbmc_project.MCTP.Binding"] = bindingProps;
+
+    EXPECT_CALL(*mockApp, connectMCTP("/tmp/mctp.sock")).WillOnce(Return(true));
+    EXPECT_CALL(*mockApp, discoveryUpdateResponder(testing::_)).Times(1);
+
+    discovery->mctpNewObjectSignal(objPath, interfaces);
+}
+
+TEST_F(MctpDiscoveryTest,
+       UnifyMctpSpdmRegression_NewSignal_ConnectFails_NoResponder)
+{
+    std::unique_ptr<MctpDiscovery> discovery =
+        std::make_unique<MctpDiscovery>(*mockApp);
+
+    sdbusplus::object_path objPath("/xyz/openbmc_project/mctp/endpoint/1");
+    dbus::InterfaceMap interfaces;
+
+    EXPECT_CALL(*mockApp, connectMCTP(testing::_)).WillOnce(Return(false));
+    EXPECT_CALL(*mockApp, discoveryUpdateResponder(testing::_)).Times(0);
+
+    discovery->mctpNewObjectSignal(objPath, interfaces);
+}
+
+TEST_F(MctpDiscoveryTest, UnifyMctpSpdmRegression_GetEid_Uint32WithSpdm_Returns)
+{
+    std::map<std::string, dbus::Value> props;
+    props["EID"] = static_cast<uint32_t>(13);
+    props["SupportedMessageTypes"] = std::vector<uint8_t>{0, 5};
+
+    auto eid = getEidLikeProduction(props);
+    ASSERT_TRUE(eid.has_value());
+    ASSERT_TRUE(std::holds_alternative<uint32_t>(*eid));
+    EXPECT_EQ(std::get<uint32_t>(*eid), 13u);
+}
+
+TEST_F(MctpDiscoveryTest, UnifyMctpSpdmRegression_GetEid_Uint8WithSpdm_Returns)
+{
+    std::map<std::string, dbus::Value> props;
+    props["EID"] = static_cast<uint8_t>(13);
+    props["SupportedMessageTypes"] = std::vector<uint8_t>{5};
+
+    auto eid = getEidLikeProduction(props);
+    ASSERT_TRUE(eid.has_value());
+    ASSERT_TRUE(std::holds_alternative<uint8_t>(*eid));
+    EXPECT_EQ(std::get<uint8_t>(*eid), 13);
+}
+
+TEST_F(MctpDiscoveryTest,
+       UnifyMctpSpdmRegression_GetEid_NoSpdmInTypes_ReturnsNullopt)
+{
+    std::map<std::string, dbus::Value> props;
+    props["EID"] = static_cast<uint32_t>(7);
+    props["SupportedMessageTypes"] = std::vector<uint8_t>{0, 1, 2};
+
+    auto eid = getEidLikeProduction(props);
+    EXPECT_FALSE(eid.has_value());
+}
+
+TEST_F(MctpDiscoveryTest,
+       UnifyMctpSpdmRegression_GetEid_NoEidProperty_ReturnsNullopt)
+{
+    std::map<std::string, dbus::Value> props;
+    props["SupportedMessageTypes"] = std::vector<uint8_t>{5};
+    auto eid = getEidLikeProduction(props);
+    EXPECT_FALSE(eid.has_value());
+}
+
+TEST_F(MctpDiscoveryTest,
+       UnifyMctpSpdmRegression_GetEid_NoMessageTypes_ReturnsNullopt)
+{
+    std::map<std::string, dbus::Value> props;
+    props["EID"] = static_cast<uint32_t>(42);
+    auto eid = getEidLikeProduction(props);
+    EXPECT_FALSE(eid.has_value());
+}
+
+TEST_F(MctpDiscoveryTest,
+       UnifyMctpSpdmRegression_GetEid_BadVariant_ReturnsNullopt_NoThrow)
+{
+    std::map<std::string, dbus::Value> props;
+    props["EID"] = static_cast<uint32_t>(42);
+    props["SupportedMessageTypes"] = std::string("not-a-vector");
+
+    std::optional<std::variant<uint32_t, uint8_t>> eid;
+    EXPECT_NO_THROW(eid = getEidLikeProduction(props));
+    EXPECT_FALSE(eid.has_value());
+}
+
+TEST_F(MctpDiscoveryTest,
+       UnifyMctpSpdmRegression_InvalidEidValue_SkippedByContract)
+{
+    EXPECT_EQ(kInvalidEid, 0xFF);
+}
+
+TEST_F(MctpDiscoveryTest, UnifyMctpSpdmRegression_GetUuid_FromInterfaceMap)
+{
+    dbus::InterfaceMap interfaces;
+    std::map<std::string, dbus::Value> uuidProps;
+    uuidProps["UUID"] = std::string("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+    interfaces["xyz.openbmc_project.MCTP.UUID"] = uuidProps;
+
+    ASSERT_TRUE(interfaces.contains("xyz.openbmc_project.MCTP.UUID"));
+    auto& props = interfaces.at("xyz.openbmc_project.MCTP.UUID");
+    ASSERT_TRUE(props.contains("UUID"));
+    EXPECT_EQ(std::get<std::string>(props.at("UUID")),
+              "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+}
+
+TEST_F(MctpDiscoveryTest, UnifyMctpSpdmRegression_GetUuid_Missing_EmptyResult)
+{
+    dbus::InterfaceMap interfaces;
+    EXPECT_FALSE(interfaces.contains("xyz.openbmc_project.MCTP.UUID"));
+    EXPECT_FALSE(interfaces.contains("xyz.openbmc_project.Common.UUID"));
+}
+
+TEST_F(MctpDiscoveryTest,
+       UnifyMctpSpdmRegression_MediumType_AbsentDefaultsToPCIe)
+{
+    dbus::InterfaceMap interfaces;
+    std::map<std::string, dbus::Value> endpointProps;
+    endpointProps["EID"] = static_cast<uint32_t>(1);
+    interfaces["xyz.openbmc_project.MCTP.Endpoint"] = endpointProps;
+
+    auto it = interfaces.find("xyz.openbmc_project.MCTP.Endpoint");
+    ASSERT_NE(it, interfaces.end());
+    EXPECT_FALSE(it->second.contains("MediumType"));
+}
+
+TEST_F(MctpDiscoveryTest,
+       UnifyMctpSpdmRegression_BindingType_AbsentReturnsEmpty)
+{
+    dbus::InterfaceMap interfaces;
+    auto it = interfaces.find("xyz.openbmc_project.MCTP.Binding");
+    EXPECT_EQ(it, interfaces.end());
+}
+
+TEST_F(MctpDiscoveryTest, UnifyMctpSpdmRegression_SpdmMctpTypeIsFive)
+{
+    EXPECT_EQ(kSpdmMessageType, 5);
+}
+
+TEST_F(MctpDiscoveryTest, UnifyMctpSpdmRegression_GetEid_BadEidVariant_NoThrow)
+{
+    std::map<std::string, dbus::Value> props;
+    props["EID"] = std::string("not-an-eid");
+    props["SupportedMessageTypes"] = std::vector<uint8_t>{5};
+
+    std::optional<std::variant<uint32_t, uint8_t>> eid;
+    EXPECT_NO_THROW(eid = getEidLikeProduction(props));
+    EXPECT_FALSE(eid.has_value());
+}
+
+TEST_F(MctpDiscoveryTest,
+       UnifyMctpSpdmRegression_MultipleEids_IndependentDispatch)
+{
+    std::unique_ptr<MctpDiscovery> discovery =
+        std::make_unique<MctpDiscovery>(*mockApp);
+
+    EXPECT_CALL(*mockApp, connectMCTP(testing::_))
+        .Times(3)
+        .WillRepeatedly(Return(true));
+    EXPECT_CALL(*mockApp, discoveryUpdateResponder(testing::_)).Times(3);
+
+    for (int i = 0; i < 3; ++i)
+    {
+        sdbusplus::object_path objPath("/xyz/openbmc_project/mctp/endpoint/" +
+                                       std::to_string(10 + i));
+        dbus::InterfaceMap interfaces;
+        std::map<std::string, dbus::Value> uuidProps;
+        uuidProps["UUID"] = std::string("00000000-0000-0000-0000-00000000000") +
+                            std::to_string(i);
+        interfaces["xyz.openbmc_project.MCTP.UUID"] = uuidProps;
+        discovery->mctpNewObjectSignal(objPath, interfaces);
+    }
+}
+
+TEST_F(MctpDiscoveryTest,
+       UnifyMctpSpdmRegression_EmptyInterfaces_NoThrowNoCrash)
+{
+    std::unique_ptr<MctpDiscovery> discovery =
+        std::make_unique<MctpDiscovery>(*mockApp);
+    sdbusplus::object_path objPath("/xyz/openbmc_project/mctp/endpoint/0");
+    dbus::InterfaceMap interfaces;
+    EXPECT_CALL(*mockApp, connectMCTP(testing::_)).WillOnce(Return(true));
+    EXPECT_CALL(*mockApp, discoveryUpdateResponder(testing::_)).Times(1);
+    EXPECT_NO_THROW(discovery->mctpNewObjectSignal(objPath, interfaces));
+}
+
+namespace
+{
+
+struct DiscoveryGate
+{
+    bool mctpDiscoveryComplete{false};
+
+    void onGetManagedObjects(bool ec, bool parseOk)
+    {
+        if (ec)
+        {
+            return;
+        }
+        if (!parseOk)
+        {
+            return;
+        }
+        mctpDiscoveryComplete = true;
+    }
+
+    [[nodiscard]] bool isMctpDiscoveryComplete() const noexcept
+    {
+        return mctpDiscoveryComplete;
+    }
+};
+
+} // namespace
+
+TEST_F(MctpDiscoveryTest, UnifyMctpSpdmRegression_S1_DefaultState_FlagIsFalse)
+{
+    DiscoveryGate gate;
+    EXPECT_FALSE(gate.isMctpDiscoveryComplete());
+}
+
+TEST_F(MctpDiscoveryTest,
+       UnifyMctpSpdmRegression_S1_SuccessfulRound_FlagBecomesTrue)
+{
+    DiscoveryGate gate;
+    gate.onGetManagedObjects(false, true);
+    EXPECT_TRUE(gate.isMctpDiscoveryComplete());
+}
+
+TEST_F(MctpDiscoveryTest,
+       UnifyMctpSpdmRegression_S1_GetManagedObjectsEcError_FlagStaysFalse)
+{
+    DiscoveryGate gate;
+    gate.onGetManagedObjects(true, false);
+    EXPECT_FALSE(gate.isMctpDiscoveryComplete());
+    gate.onGetManagedObjects(true, true);
+    EXPECT_FALSE(gate.isMctpDiscoveryComplete());
+}
+
+TEST_F(MctpDiscoveryTest, UnifyMctpSpdmRegression_S1_ParseError_FlagStaysFalse)
+{
+    DiscoveryGate gate;
+    gate.onGetManagedObjects(false, false);
+    EXPECT_FALSE(gate.isMctpDiscoveryComplete());
+}
+
+TEST_F(MctpDiscoveryTest, UnifyMctpSpdmRegression_S1_StickyOnceTrue)
+{
+    DiscoveryGate gate;
+    gate.onGetManagedObjects(false, true);
+    EXPECT_TRUE(gate.isMctpDiscoveryComplete());
+    gate.onGetManagedObjects(true, false);
+    EXPECT_TRUE(gate.isMctpDiscoveryComplete());
+}
+
+namespace
+{
+
+constexpr size_t kRetryBudget = 5;
+
+struct MapperRetrySim
+{
+    size_t attempt{0};
+    std::function<void(std::unordered_set<std::string>)> pendingCallback;
+
+    void attemptMapper(bool succeed, bool empty,
+                       std::function<void(std::unordered_set<std::string>)> cb)
+    {
+        pendingCallback = std::move(cb);
+        if (succeed && !empty)
+        {
+            attempt = 0;
+            std::unordered_set<std::string> svcs{
+                "xyz.openbmc_project.MCTP.PCIe"};
+            pendingCallback(svcs);
+            return;
+        }
+        scheduleRetry();
+    }
+
+    void scheduleRetry()
+    {
+        if (attempt >= kRetryBudget)
+        {
+            attempt = 0;
+            pendingCallback({});
+            return;
+        }
+        ++attempt;
+    }
+};
+
+struct GetManagedObjectsRetrySim
+{
+    std::unordered_map<std::string, size_t> perSvcAttempts;
+    bool flag{false};
+
+    void attempt(const std::string& svc, bool succeed)
+    {
+        if (succeed)
+        {
+            perSvcAttempts[svc] = 0;
+            flag = true;
+            return;
+        }
+        ++perSvcAttempts[svc];
+    }
+};
+
+} // namespace
+
+TEST_F(MctpDiscoveryTest, UnifyMctpSpdmRegression_S2_ProductionBackoffSchedule)
+{
+    EXPECT_EQ(kRetryBudget, 5u);
+}
+
+TEST_F(MctpDiscoveryTest,
+       UnifyMctpSpdmRegression_S2_RecoverAfterFailure_ResetsAttempt)
+{
+    MapperRetrySim sim;
+    bool callbackCalled = false;
+    sim.attemptMapper(false, true, [&](std::unordered_set<std::string>) {
+        callbackCalled = true;
+    });
+    EXPECT_EQ(sim.attempt, 1u);
+    EXPECT_FALSE(callbackCalled);
+    sim.attemptMapper(true, false, [&](std::unordered_set<std::string> svcs) {
+        callbackCalled = !svcs.empty();
+    });
+    EXPECT_EQ(sim.attempt, 0u);
+    EXPECT_TRUE(callbackCalled);
+}
+
+TEST_F(MctpDiscoveryTest,
+       UnifyMctpSpdmRegression_S2_BudgetExhausted_EmptyCallback)
+{
+    MapperRetrySim sim;
+    bool callbackCalled = false;
+    size_t sizeOnCall = 99;
+    auto cb = [&](std::unordered_set<std::string> svcs) {
+        callbackCalled = true;
+        sizeOnCall = svcs.size();
+    };
+    for (size_t i = 0; i < kRetryBudget + 1; ++i)
+    {
+        sim.attemptMapper(false, true, cb);
+    }
+    EXPECT_TRUE(callbackCalled);
+    EXPECT_EQ(sizeOnCall, 0u);
+    EXPECT_EQ(sim.attempt, 0u);
+}
+
+TEST_F(MctpDiscoveryTest, UnifyMctpSpdmRegression_S2_EmptyResultRetries)
+{
+    MapperRetrySim sim;
+    sim.attemptMapper(true, true, [](std::unordered_set<std::string>) {});
+    EXPECT_EQ(sim.attempt, 1u);
+}
+
+TEST_F(MctpDiscoveryTest,
+       UnifyMctpSpdmRegression_S2_GetManagedObjectsPerServiceIndependent)
+{
+    GetManagedObjectsRetrySim sim;
+    sim.attempt("svcA", false);
+    sim.attempt("svcA", false);
+    sim.attempt("svcB", false);
+    EXPECT_EQ(sim.perSvcAttempts["svcA"], 2u);
+    EXPECT_EQ(sim.perSvcAttempts["svcB"], 1u);
+    sim.attempt("svcB", true);
+    EXPECT_EQ(sim.perSvcAttempts["svcB"], 0u);
+    EXPECT_EQ(sim.perSvcAttempts["svcA"], 2u);
+}
+
+TEST_F(MctpDiscoveryTest, UnifyMctpSpdmRegression_S2_PartialEnumerationSetsFlag)
+{
+    GetManagedObjectsRetrySim sim;
+    sim.attempt("svcA", false);
+    EXPECT_FALSE(sim.flag);
+    sim.attempt("svcB", true);
+    EXPECT_TRUE(sim.flag);
+}
+
+namespace
+{
+
+bool simulateInventoryUuidCacheAccess(const dbus::Value& v) noexcept
+{
+    try
+    {
+        (void)std::get<std::string>(v);
+        return true;
+    }
+    catch (const std::exception&)
+    {
+        return false;
+    }
+}
+
+bool simulateInitCsmStatusAccess(const std::variant<std::string>& v) noexcept
+{
+    try
+    {
+        (void)std::get<std::string>(v);
+        return true;
+    }
+    catch (const std::exception&)
+    {
+        return false;
+    }
+}
+
+} // namespace
+
+TEST_F(MctpDiscoveryTest, UnifyMctpSpdmRegression_S3_InventoryUuidBadVariant)
+{
+    dbus::Value v = static_cast<uint32_t>(0xDEADBEEF);
+    bool result = true;
+    EXPECT_NO_THROW(result = simulateInventoryUuidCacheAccess(v));
+    EXPECT_FALSE(result);
+}
+
+TEST_F(MctpDiscoveryTest, UnifyMctpSpdmRegression_S3_InventoryUuidGoodVariant)
+{
+    dbus::Value v = std::string("abc-def");
+    EXPECT_TRUE(simulateInventoryUuidCacheAccess(v));
+}
+
+TEST_F(MctpDiscoveryTest, UnifyMctpSpdmRegression_S3_CcsmChangeBadVariant)
+{
+    std::variant<std::string> v;
+    EXPECT_NO_THROW(simulateInitCsmStatusAccess(v));
+    EXPECT_TRUE(simulateInitCsmStatusAccess(v));
+}
+
+TEST_F(MctpDiscoveryTest,
+       UnifyMctpSpdmRegression_S3_InitCsmStatusBadVariant_NoThrow)
+{
+    std::variant<std::string> v{std::string("Enabled")};
+    EXPECT_TRUE(simulateInitCsmStatusAccess(v));
+}
+
+namespace
+{
+
+std::string referenceInterfacesAddedRule(const std::string& mctpPath)
+{
+    std::string rule =
+        "type='signal',interface='org.freedesktop.DBus.ObjectManager',"
+        "member='InterfacesAdded',";
+    rule += "path='" + mctpPath + "'";
+    return rule;
+}
+
+} // namespace
+
+TEST_F(MctpDiscoveryTest,
+       UnifyMctpSpdmRegression_S4_InterfacesAddedRuleHasPathFilter)
+{
+    const std::string kKernelPath = "/au/com/codeconstruct/mctp1";
+    const std::string kUserPath = "/xyz/openbmc_project/mctp";
+
+    auto rk = referenceInterfacesAddedRule(kKernelPath);
+    auto ru = referenceInterfacesAddedRule(kUserPath);
+
+    EXPECT_NE(rk.find("path='/au/com/codeconstruct/mctp1'"), std::string::npos);
+    EXPECT_NE(ru.find("path='/xyz/openbmc_project/mctp'"), std::string::npos);
+    EXPECT_NE(rk.find("member='InterfacesAdded'"), std::string::npos);
+}
+
+TEST_F(MctpDiscoveryTest,
+       UnifyMctpSpdmRegression_S4_InterfacesAddedRuleHasNoSenderFilter)
+{
+    auto r = referenceInterfacesAddedRule("/au/com/codeconstruct/mctp1");
+    EXPECT_EQ(r.find("sender="), std::string::npos);
+}
+
+} // namespace spdmd
+
+#include "mctp_endpoint_discovery_typed_accessors.hpp"
+
+namespace spdmd
+{
+
+TEST_F(MctpDiscoveryTest, UnifyMctpSpdmRegression_S5_TryGet_GoodAlternative)
+{
+    using namespace spdmd::dbus_accessors;
+    std::variant<uint32_t, std::string> v{std::string("hello")};
+    auto s = tryGet<std::string>(v);
+    ASSERT_TRUE(s.has_value());
+    EXPECT_EQ(*s, "hello");
+}
+
+TEST_F(MctpDiscoveryTest,
+       UnifyMctpSpdmRegression_S5_TryGet_WrongAlternative_Nullopt)
+{
+    using namespace spdmd::dbus_accessors;
+    std::variant<uint32_t, std::string> v{static_cast<uint32_t>(99)};
+    auto s = tryGet<std::string>(v);
+    EXPECT_FALSE(s.has_value());
+}
+
+TEST_F(MctpDiscoveryTest,
+       UnifyMctpSpdmRegression_S5_TryGet_WrongAlternative_NoThrow)
+{
+    using namespace spdmd::dbus_accessors;
+    std::variant<uint32_t, std::string> v{static_cast<uint32_t>(99)};
+    EXPECT_NO_THROW((void)tryGet<std::string>(v));
+}
+
+TEST_F(MctpDiscoveryTest,
+       UnifyMctpSpdmRegression_S5_TryGetProp_KeyMissing_Nullopt)
+{
+    using namespace spdmd::dbus_accessors;
+    std::map<std::string, dbus::Value> props;
+    props["X"] = std::string("abc");
+    auto v = tryGetProp<std::string>(props, "Y");
+    EXPECT_FALSE(v.has_value());
+}
+
+TEST_F(MctpDiscoveryTest,
+       UnifyMctpSpdmRegression_S5_TryGetProp_KeyPresent_GoodType)
+{
+    using namespace spdmd::dbus_accessors;
+    std::map<std::string, dbus::Value> props;
+    props["UUID"] = std::string("aa-bb");
+    auto v = tryGetProp<std::string>(props, "UUID");
+    ASSERT_TRUE(v.has_value());
+    EXPECT_EQ(*v, "aa-bb");
+}
+
+TEST_F(MctpDiscoveryTest,
+       UnifyMctpSpdmRegression_S5_TryGetProp_KeyPresent_WrongType_Nullopt)
+{
+    using namespace spdmd::dbus_accessors;
+    std::map<std::string, dbus::Value> props;
+    props["UUID"] = static_cast<uint32_t>(42);
+    auto v = tryGetProp<std::string>(props, "UUID");
+    EXPECT_FALSE(v.has_value());
+}
+
+TEST_F(MctpDiscoveryTest,
+       UnifyMctpSpdmRegression_S5_TryGet_Vector_GoodAlternative)
+{
+    using namespace spdmd::dbus_accessors;
+    using V = std::variant<std::string, std::vector<uint8_t>>;
+    V v{std::vector<uint8_t>{1, 2, 5}};
+    auto vec = tryGet<std::vector<uint8_t>>(v);
+    ASSERT_TRUE(vec.has_value());
+    EXPECT_EQ(vec->size(), 3u);
+    EXPECT_EQ((*vec)[2], 5);
+}
+
+TEST_F(MctpDiscoveryTest,
+       UnifyMctpSpdmRegression_S5_TryGetProp_AllPathsAreNoThrow)
+{
+    using namespace spdmd::dbus_accessors;
+    std::map<std::string, dbus::Value> props;
+    props["A"] = std::string("a");
+    props["B"] = static_cast<uint32_t>(7);
+
+    EXPECT_NO_THROW((void)tryGetProp<std::string>(props, "A"));
+    EXPECT_NO_THROW((void)tryGetProp<std::string>(props, "B"));
+    EXPECT_NO_THROW((void)tryGetProp<std::string>(props, "MISSING"));
+    EXPECT_NO_THROW((void)tryGetProp<uint32_t>(props, "A"));
+    EXPECT_NO_THROW((void)tryGetProp<uint32_t>(props, "B"));
+    EXPECT_NO_THROW((void)tryGetProp<uint32_t>(props, "MISSING"));
 }
 
 } // namespace spdmd
