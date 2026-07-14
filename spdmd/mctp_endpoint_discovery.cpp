@@ -717,7 +717,8 @@ MctpDiscovery::EidType
             }
         }
         else if (std::holds_alternative<uint32_t>(*eid) &&
-                 std::get<uint32_t>(*eid) < std::get<uint32_t>(invalidEid))
+                 std::get<uint32_t>(*eid) <
+                     static_cast<uint32_t>(std::get<uint8_t>(invalidEid)))
         {
             try
             {
