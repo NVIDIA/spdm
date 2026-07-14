@@ -1,18 +1,12 @@
 spdmd_headers = ['.', '..', '../libspdmcpp/headers_public', '../common_headers']
 
-sources = [
-    'spdmd.cpp',
-    'dbus_impl_responder.cpp',
-    'mctp_endpoint_discovery.cpp',
-    'spdmd_app_context.cpp',
-]
+sources = ['spdmd.cpp', 'mctp_endpoint_discovery.cpp', 'spdmd_app_context.cpp']
 
 executable(
     'spdmd',
     sources,
     implicit_include_directories: false,
     include_directories: include_directories(spdmd_headers),
-    link_with: libspdmcpp_requester,
     dependencies: [
         conf_h_dep,
         CLI11_dep,
@@ -20,7 +14,7 @@ executable(
         sdbusplus,
         crypto_deps,
         nlohmann_json,
-        libspdmcpp_requester_dep,
+        libspdmcpp_dep,
     ],
     install: true,
 )

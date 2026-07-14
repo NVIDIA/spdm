@@ -1,0 +1,236 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#pragma once
+
+#include "config.h"
+
+#include "spdmcpp/common.hpp"
+#include "xyz/openbmc_project/Association/Definitions/server.hpp"
+#include "xyz/openbmc_project/Attestation/ComponentIntegrity/server.hpp"
+#include "xyz/openbmc_project/Attestation/IdentityAuthentication/server.hpp"
+#include "xyz/openbmc_project/Certs/Certificate/server.hpp"
+#include "xyz/openbmc_project/Inventory/Item/TrustedComponent/server.hpp"
+#include "xyz/openbmc_project/Object/Enable/server.hpp"
+#include "xyz/openbmc_project/SPDM/Responder/server.hpp"
+
+#include <boost/asio/steady_timer.hpp>
+#include <sdbusplus/asio/connection.hpp>
+#include <sdbusplus/bus.hpp>
+#include <sdbusplus/server/object.hpp>
+#include <sdbusplus/timer.hpp>
+#include <spdmcpp/connection.hpp>
+#include <spdmcpp/mctp_support.hpp>
+
+#include <functional>
+#include <map>
+#include <memory>
+
+namespace spdmcpp
+{
+
+class Responder;
+
+/** @class ResponderTransport
+ *  @brief Support class for transport through the mctp-demux-daemon with
+ * timeouts handled by boost asio
+ */
+// NOLINTNEXTLINE cppcoreguidelines-special-member-functions
+class ResponderTransport : public spdmcpp::MctpTransportClass
+{
+  public:
+    ResponderTransport(uint8_t eid, Responder& resp, std::string medium,
+                       spdmcpp::LogClass& logIn) :
+        spdmcpp::MctpTransportClass(eid), transportMedium(std::move(medium)),
+        responder(resp), log(logIn)
+    {}
+    ~ResponderTransport() override = default;
+
+    spdmcpp::RetStat setupTimeout(spdmcpp::timeout_ms_t timeout) override;
+
+    bool clearTimeout() override;
+
+    auto getTransportMedium()
+    {
+        return transportMedium;
+    }
+
+  protected:
+    std::string transportMedium;
+    Responder& responder;
+    std::unique_ptr<boost::asio::steady_timer> timer;
+    spdmcpp::LogClass& log;
+    void timeoutCallback();
+};
+
+using ResponderIntf = sdbusplus::server::object::object<
+    sdbusplus::xyz::openbmc_project::SPDM::server::Responder,
+    sdbusplus::xyz::openbmc_project::Association::server::Definitions,
+    sdbusplus::xyz::openbmc_project::Object::server::Enable,
+    sdbusplus::xyz::openbmc_project::Certs::server::Certificate,
+    sdbusplus::xyz::openbmc_project::Attestation::server::ComponentIntegrity,
+    sdbusplus::xyz::openbmc_project::Attestation::server::
+        IdentityAuthentication,
+    sdbusplus::xyz::openbmc_project::Inventory::Item::server::TrustedComponent>;
+
+/** @class Responder
+ *  @brief OpenBMC SPDM.Responder implementation.
+ *  @details A concrete implementation for the
+ *  xyz.openbmc_project.SPDM.Responder DBus APIs.
+ */
+class Responder :
+    public ResponderIntf,
+    public std::enable_shared_from_this<Responder>
+{
+  public:
+    Responder() = delete;
+    Responder(const Responder&) = delete;
+    Responder& operator=(const Responder&) = delete;
+    Responder(Responder&&) = delete;
+    Responder& operator=(Responder&&) = delete;
+
+    /** @brief Constructor to put object onto bus at a dbus path.
+     *  @param[in] bus - Bus to attach to.
+     *  @param[in] io - Event loop used for transport timeouts.
+     *  @param[in] context - SPDM context with the registered transport IO.
+     *  @param[in] log - Logger supplied by the application.
+     *  @param[in] reportError - Application error-reporting callback.
+     *  @param[in] path - Path to attach at.
+     *  @param[in] eid - MCTP EndpointID of the responder
+     *  @param[in] inventoryPath - Used for the object-manager association
+     *  @param[in] transportMedium - Responder base transport medium
+     *  @param[in] bindingType - Responder binding type
+     *  @param[in] socketPath      - IO device path
+     *  @param[in] visible - Initial Object.Enable property.
+     *  @details Supplied services must outlive this responder.
+     */
+    Responder(sdbusplus::asio::connection& bus, boost::asio::io_context& io,
+              ContextClass& context, LogClass& log,
+              std::function<void(const std::string&)> reportError,
+              const std::string& path, uint8_t eid,
+              const sdbusplus::object_path& mctpPath,
+              const sdbusplus::object_path& inventPath,
+              std::string transportMedium, std::string bindingType,
+              std::string socketPath, bool visible = true);
+
+    ~Responder() override;
+
+    void refresh(uint8_t slot, std::vector<uint8_t> nonc,
+                 std::vector<uint8_t> measurementIndices,
+                 uint32_t sessionId) override;
+
+#if FETCH_SERIALNUMBER_FROM_RESPONDER != 0
+    void refreshSerialNumber();
+#endif
+
+    spdmcpp::LogClass& getLog()
+    {
+        return log;
+    }
+
+    std::string getTransportMedium() const
+    {
+        return transportMedium;
+    }
+
+    uint8_t getEid() const
+    {
+        return eid;
+    }
+
+    /** @brief Event callback for receiving events
+     *  @param[inout] bus - Buffer containing the data, note that after the call
+     * the contents of buf will be effectively clobbered
+     */
+    spdmcpp::RetStat handleEvent(
+        spdmcpp::EventClass& event) // cppcheck-suppress constParameter
+    {
+        // eventHandler is null from Responder construction (at discovery) until
+        // the first refresh()/refreshSerialNumber() sets it. An unsolicited
+        // MCTP SPDM packet for a discovered EID reaches here in that window and
+        // would call through a null member-function pointer, crashing the
+        // daemon; with Restart=always the objects are re-created with
+        // eventHandler null again, making it an indefinitely repeatable crash
+        // loop. Drop the event instead.
+        if (eventHandler == nullptr)
+        {
+            getLog().iprintln(
+                "WARNING - handleEvent ignored: unsolicited packet before any "
+                "refresh (eventHandler unset)");
+            return spdmcpp::RetStat::ERROR_UNKNOWN;
+        }
+        return (this->*eventHandler)(event);
+    }
+
+    auto& getIo()
+    {
+        return io;
+    }
+    /** @brief Update responder verification status for identity authentication
+     */
+    virtual void updateResponderVerificationStatus();
+
+  protected:
+    using MeasurementsContainerType =
+        std::vector<std::tuple<uint8_t, uint8_t, std::vector<uint8_t>>>;
+    using CertificatesContainerType =
+        std::vector<std::tuple<uint8_t, std::string>>;
+
+    sdbusplus::asio::connection& bus;
+    boost::asio::io_context& io;
+    std::function<void(const std::string&)> reportError;
+
+    spdmcpp::LogClass& log;
+    spdmcpp::ConnectionClass connection;
+    ResponderTransport transport;
+    sdbusplus::object_path inventoryPath;
+    std::string transportMedium;
+    std::string bindingType;
+    uint8_t eid;
+
+    spdmcpp::RetStat (Responder::*eventHandler)(spdmcpp::EventClass& event) =
+        nullptr;
+
+    void updateVersionInfo();
+    void updateAlgorithmsInfo();
+    virtual void updateCertificatesInfo();
+    void updateLastUpdateTime();
+    void updateCapabilities();
+    void syncSlotsInfo();
+
+    virtual void handleError(spdmcpp::RetStat rs);
+    virtual spdmcpp::RetStat handleEventForRefresh(spdmcpp::EventClass& event);
+#if FETCH_SERIALNUMBER_FROM_RESPONDER != 0
+    spdmcpp::RetStat handleEventForSerialNumber(spdmcpp::EventClass& event);
+#endif
+
+  private:
+    /** @brief Update serial number in the inventory
+     * @param[in] serialData Serial number data
+     */
+    void setSerialNumberAsync(const std::vector<uint8_t>& serialData);
+
+    /** @brief Parse a PEM-formatted certificate and fill the certificate info
+     *  @param[in] certPEM - PEM-formatted certificate string to parse
+     *  @details Parses the provided PEM certificate string and populates the
+     *           internal certificate information structures. The certificate
+     *           is expected to be in valid PEM format.
+     */
+    virtual void parseAndFillCertificate(const std::string& certPEM);
+};
+
+} // namespace spdmcpp

@@ -15,9 +15,10 @@
  * limitations under the License.
  */
 
-#include "dbus_impl_responder.hpp"
-
+#include "common_headers/utils.hpp"
 #include "xyz/openbmc_project/Common/error.hpp"
+
+#include <spdmcpp/dbus_impl_responder.hpp>
 
 #include <chrono>
 #include <iostream>
@@ -25,9 +26,7 @@
 using namespace sdbusplus::xyz::openbmc_project::Common::Error;
 using namespace spdmcpp;
 
-namespace spdmd
-{
-namespace dbus_api
+namespace spdmcpp
 {
 
 /**
@@ -51,16 +50,21 @@ inline std::string getVersionStr(const uint8_t version)
     }
 }
 
-Responder::Responder(SpdmdAppContext& appCtx, const std::string& path,
-                     uint8_t eid, const sdbusplus::object_path& mctpPath,
+Responder::Responder(sdbusplus::asio::connection& bus,
+                     boost::asio::io_context& io, ContextClass& context,
+                     LogClass& log,
+                     std::function<void(const std::string&)> reportError,
+                     const std::string& path, uint8_t eid,
+                     const sdbusplus::object_path& mctpPath,
                      const sdbusplus::object_path& invPath,
                      std::string transportMedium, std::string bindingType,
-                     std::string socketPath) :
-    ResponderIntf(appCtx.getConn(), path.c_str(), action::defer_emit),
-    appContext(appCtx), log(appCtx.getLog()),
-    connection(appCtx.context, log, eid, std::move(socketPath)),
-    transport(eid, *this, std::move(transportMedium), log),
-    inventoryPath(invPath), bindingType(bindingType), eid(eid)
+                     std::string socketPath, bool visible) :
+    ResponderIntf(bus, path.c_str(), action::defer_emit), bus(bus), io(io),
+    reportError(std::move(reportError)), log(log),
+    connection(context, log, eid, std::move(socketPath)),
+    transport(eid, *this, transportMedium, log), inventoryPath(invPath),
+    transportMedium(std::move(transportMedium)),
+    bindingType(std::move(bindingType)), eid(eid)
 {
     {
         std::vector<std::tuple<std::string, std::string, std::string>> prop;
@@ -92,9 +96,7 @@ Responder::Responder(SpdmdAppContext& appCtx, const std::string& path,
     }
 
     // Update hidden property
-    static constexpr auto confName = "visible";
-    sdbusplus::xyz::openbmc_project::Object::server::Enable::enabled(
-        appCtx.getPropertyByEid<bool>(eid, confName).value_or(true));
+    sdbusplus::xyz::openbmc_project::Object::server::Enable::enabled(visible);
     sdbusplus::xyz::openbmc_project::Attestation::server::ComponentIntegrity::
         enabled(true);
 
@@ -281,13 +283,11 @@ void Responder::handleError(spdmcpp::RetStat rs)
         case RetStat::ERROR_WRONG_REQUEST_RESPONSE_CODE:
         case RetStat::ERROR_UNKNOWN_REQUEST_RESPONSE_CODE:
             status(SPDMStatus::Error_RequesterCommunication);
-            appContext.reportError("SPDM requester communication fail on " +
-                                   dbgIdName);
+            reportError("SPDM requester communication fail on " + dbgIdName);
             break;
         case RetStat::ERROR_RESPONSE:
             status(SPDMStatus::Error_Responder);
-            appContext.reportError("SPDM responder response fail on " +
-                                   dbgIdName);
+            reportError("SPDM responder response fail on " + dbgIdName);
             break;
         case RetStat::ERROR_CERTIFICATE_CHAIN_DIGEST_INVALID:
         case RetStat::ERROR_ROOT_CERTIFICATE_HASH_INVALID:
@@ -295,22 +295,20 @@ void Responder::handleError(spdmcpp::RetStat rs)
         case RetStat::ERROR_CERTIFICATE_PARSING_ERROR:
         case RetStat::ERROR_CERTIFICATE_CHAIN_SIZE_INVALID:
             status(SPDMStatus::Error_CertificateValidation);
-            appContext.reportError("SPDM certificate validation fail on " +
-                                   dbgIdName);
+            reportError("SPDM certificate validation fail on " + dbgIdName);
             break;
         case RetStat::ERROR_AUTHENTICATION_FAILED:
             status(SPDMStatus::Error_AuthenticationFailed);
-            appContext.reportError("SPDM authentication fail on " + dbgIdName);
+            reportError("SPDM authentication fail on " + dbgIdName);
             break;
         case RetStat::ERROR_MEASUREMENT_SIGNATURE_VERIFIY_FAILED:
             status(SPDMStatus::Error_MeasurementsSignatureVerificationFailed);
-            appContext.reportError(
-                "SPDM measurements signature verification fail on " +
-                dbgIdName);
+            reportError("SPDM measurements signature verification fail on " +
+                        dbgIdName);
             break;
         case RetStat::ERROR_TIMEOUT:
             status(Responder::SPDMStatus::Error_ConnectionTimeout);
-            appContext.reportError(
+            reportError(
                 "SPDM timeout on " + dbgIdName + ", while waiting on: " +
                 get_cstr(connection.getDbgLastWaitState()) +
                 ", timeout value: " +
@@ -323,12 +321,12 @@ void Responder::handleError(spdmcpp::RetStat rs)
         case RetStat::ERROR_WRONG_ALGO_BITS:
         case RetStat::ERROR_INVALID_PARAMETER:
         case RetStat::ERROR_INVALID_RESERVED:
-            appContext.reportError("Packet corrupted on " + dbgIdName);
+            reportError("Packet corrupted on " + dbgIdName);
             break;
         default:
             status(SPDMStatus::Error_Other);
-            appContext.reportError(std::string("SPDM other error: ") +
-                                   get_cstr(rs) + " on " + dbgIdName);
+            reportError(std::string("SPDM other error: ") + get_cstr(rs) +
+                        " on " + dbgIdName);
     }
 }
 
@@ -460,7 +458,7 @@ void Responder::refresh(uint8_t slotIndex, std::vector<uint8_t> nonc,
         }
     }
 
-    eventHandler = &spdmd::dbus_api::Responder::handleEventForRefresh;
+    eventHandler = &Responder::handleEventForRefresh;
 
     slot(slotIndex);
 
@@ -505,7 +503,7 @@ void Responder::refreshSerialNumber()
             "WARNING - refreshSerialNumber() ignored because a previous refresh is still processing!");
         return;
     }
-    eventHandler = &spdmd::dbus_api::Responder::handleEventForSerialNumber;
+    eventHandler = &Responder::handleEventForSerialNumber;
 
     std::bitset<256> meas;
     meas.set(FETCH_SERIALNUMBER_FROM_RESPONDER);
@@ -557,9 +555,9 @@ void Responder::updateLastUpdateTime()
             .count());
 }
 
-spdmcpp::RetStat MctpTransportClass::setupTimeout(spdmcpp::timeout_ms_t timeout)
+spdmcpp::RetStat ResponderTransport::setupTimeout(spdmcpp::timeout_ms_t timeout)
 {
-    auto& io = responder.getAppCtx().getIo();
+    auto& io = responder.getIo();
     if (!timer)
     {
         timer = std::make_unique<boost::asio::steady_timer>(io);
@@ -574,7 +572,7 @@ spdmcpp::RetStat MctpTransportClass::setupTimeout(spdmcpp::timeout_ms_t timeout)
     return RetStat::OK;
 }
 
-void MctpTransportClass::timeoutCallback()
+void ResponderTransport::timeoutCallback()
 {
 #ifdef MCTP_IN_KERNEL
     spdmcpp::EventTimeoutClass ev{};
@@ -584,7 +582,7 @@ void MctpTransportClass::timeoutCallback()
     responder.handleEvent(ev);
 }
 
-bool MctpTransportClass::clearTimeout()
+bool ResponderTransport::clearTimeout()
 {
     if (timer)
     {
@@ -645,7 +643,7 @@ void Responder::setSerialNumberAsync(const std::vector<uint8_t>& serialData)
         "xyz.openbmc_project.Inventory.Decorator.Asset";
     const std::string propertyName = "SerialNumber";
     auto propertyValue =
-        std::variant<std::string>(toBigEndianHexString(serialData));
+        std::variant<std::string>(spdmd::toBigEndianHexString(serialData));
 
     const std::string path = std::string(inventoryPath);
 
@@ -653,7 +651,7 @@ void Responder::setSerialNumberAsync(const std::vector<uint8_t>& serialData)
     static constexpr auto mapperPath = "/xyz/openbmc_project/object_mapper";
     static constexpr auto mapperInterface = "xyz.openbmc_project.ObjectMapper";
 
-    auto& conn = appContext.getConn();
+    auto& conn = bus;
 
     conn.async_method_call(
         [this, weakSelf{weak_from_this()}, path, propertyInterface,
@@ -709,7 +707,7 @@ void Responder::setSerialNumberAsync(const std::vector<uint8_t>& serialData)
                 "org.freedesktop.DBus.Properties";
             static constexpr auto methodSet = "Set";
 
-            auto& conn = appContext.getConn();
+            auto& conn = bus;
             conn.async_method_call(
                 [this, weakSelf, path](boost::system::error_code ecSet) {
                     auto self = weakSelf.lock();
@@ -738,5 +736,4 @@ void Responder::setSerialNumberAsync(const std::vector<uint8_t>& serialData)
         std::vector<std::string>{propertyInterface});
 }
 
-} // namespace dbus_api
-} // namespace spdmd
+} // namespace spdmcpp
