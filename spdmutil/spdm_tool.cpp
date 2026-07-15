@@ -251,10 +251,6 @@ auto SpdmTool::parseArgs(int argc, char** argv) -> int
             {
                 cmdList[i] = CertCmd{};
             }
-            else if (i == vpos_meas)
-            {
-                cmdList[i] = MeasCmd{};
-            }
         }
     }
     return EXIT_SUCCESS;
