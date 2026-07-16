@@ -198,6 +198,11 @@ class MctpTransportClass : public TransportClass
 // NOLINTNEXTLINE cppcoreguidelines-special-member-functions
 class MctpIoClass : public IOClass
 {
+    // Bound for AF_MCTP sendto() blocking time. If the kernel TX queue stays
+    // full longer than this, write() returns ERROR_TRANSPORT_BUSY and the
+    // SPDM timeout/retry mechanism retransmits.
+    static constexpr int mctpSendTimeoutSecs = 5;
+
   public:
     explicit MctpIoClass(LogClass& log) : Log(log)
     {}
@@ -234,6 +239,24 @@ class MctpIoClass : public IOClass
             Log.iprint("socket() error: ");
             Log.println(errno);
             return false;
+        }
+
+        // Bound how long sendto() may block when the kernel MCTP TX queue is
+        // saturated. Without this a full queue blocks the boost::asio
+        // io_context thread indefinitely and risks a watchdog kill.
+        // SO_SNDTIMEO causes sendto() to return EAGAIN after 5 s; write()
+        // maps that to RetStat::ERROR_TRANSPORT_BUSY so the SPDM retry
+        // mechanism can recover without blocking the event loop.
+        {
+            struct timeval tv = {mctpSendTimeoutSecs, 0};
+            if (setsockopt(Socket, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)) !=
+                0)
+            {
+                Log.iprint("setsockopt(SO_SNDTIMEO) failed: ");
+                Log.println(errno);
+                deleteSocket();
+                return false;
+            }
         }
 
         // NOLINTNEXTLINE cppcoreguidelines-pro-bounds-array-to-pointer-decay
@@ -405,6 +428,21 @@ inline RetStat MctpIoClass::write(const std::vector<uint8_t>& buf,
                reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr));
     if (rc == -1)
     {
+        if (errno == EAGAIN || errno == EWOULDBLOCK)
+        {
+            // SO_SNDTIMEO expired — TX queue still full after 5 s.
+            // Return a transient error so the caller can drop the send
+            // and let the SPDM timeout/retry path recover, without
+            // treating this as a hard transport failure.
+            if (Log.logLevel >= LogClass::Level::Warning)
+            {
+                Log.iprint(
+                    "AF_MCTP TX queue full (EAGAIN), dropping SPDM send; "
+                    "retry via SPDM timeout");
+                Log.println(errno);
+            }
+            return RetStat::ERROR_TRANSPORT_BUSY;
+        }
         if (Log.logLevel >= LogClass::Level::Critical)
         {
             Log.iprint("Send error:");
