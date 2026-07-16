@@ -1349,7 +1349,10 @@ RetStat ConnectionClass::handleTimeoutOrRetry(EventTimeoutClass&)
 #else
         auto rs = context.getIO(sockPath)->write(SendBuffer);
 #endif
-        SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+        if (rs != RetStat::ERROR_TRANSPORT_BUSY)
+        {
+            SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+        }
         rs = transport->setupTimeout(SendTimeout);
         SPDMCPP_LOG_TRACE_RS(Log, rs);
         return rs;

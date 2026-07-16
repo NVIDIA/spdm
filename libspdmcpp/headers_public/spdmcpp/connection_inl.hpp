@@ -165,10 +165,14 @@ RetStat ConnectionClass::sendRequestSetupResponse(const T& request,
                                                   uint16_t retry)
 {
     auto rs = sendRequest(request, bufidx);
-    if (isError(rs))
+    if (isError(rs) &&
+        (rs != RetStat::ERROR_TRANSPORT_BUSY || timeout == timeoutMsInfinite))
     {
         return rs;
     }
+    // On ERROR_TRANSPORT_BUSY (with a finite timeout) the TX queue was full;
+    // SendBuffer holds the encoded packet. Fall through to arm the timeout so
+    // handleTimeoutOrRetry() retransmits without blocking the event loop.
     rs = setupResponseWait<R>(timeout, retry);
     if (isError(rs))
     {
