@@ -164,6 +164,7 @@ RetStat ConnectionClass::refreshMeasurementsInternal()
     stateEnabled = true;
     retryPktCount = 0;
     retryGetVersionCount = 0;
+    respondIfReadyCount = 0;
     CombinedMeasurementTranscript.clear();
     auto rs = tryGetVersion();
     SPDMCPP_LOG_TRACE_RS(Log, rs);
@@ -176,6 +177,7 @@ void ConnectionClass::resetConnection()
 
     retryPktCount = 0;
     retryGetVersionCount = 0;
+    respondIfReadyCount = 0;
     GotInfo = 0;
     CertificateSlotIdx = slotNum;
     MessageVersion = MessageVersionEnum::UNKNOWN;
@@ -1194,6 +1196,21 @@ RetStat ConnectionClass::handleRecv(EventReceiveClass& event)
         if (err.Min.Header.Param1 ==
             PacketErrorResponseVar::ErrorCodeResponseNotReady)
         {
+            // Bound the number of RESPOND_IF_READY poll cycles a responder can
+            // force; treat exhaustion as a responder error (fail-closed).
+            respondIfReadyCount += 1;
+            if (respondIfReadyCount > maxRespondIfReadyRetries)
+            {
+                if (Log.logLevel >= spdmcpp::LogClass::Level::Error)
+                {
+                    Log.iprintln(
+                        "RESPOND_IF_READY retry count exceeded, failing");
+                }
+                respondIfReadyCount = 0;
+                respIfReadyToken = std::nullopt;
+                WaitingForResponse = RequestResponseEnum::INVALID;
+                return RetStat::ERROR_RESPONSE;
+            }
             if (err.ExtendedErrorData.size() <
                 PacketErrorResponseVar::ExtErrOffsEOE)
             {
