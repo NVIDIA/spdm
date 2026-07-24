@@ -1239,4 +1239,70 @@ TEST(Connection, ResponseNotReadyTriggersDelay)
     rs = fix.handleRecv();
     EXPECT_EQ(rs, RetStat::OK);
 }
+
+// Receiving a valid expected response after ResponseNotReady must clear
+// respIfReadyToken so a subsequent timeout retries the current request rather
+// than sending a stale RESPOND_IF_READY poll (fix for NVBug 6427370).
+TEST(Connection, NormalResponseAfterNotReadyClearsToken)
+{
+    ConnectionFixture fix;
+    fix.Connection.refreshMeasurements(0);
+
+    // Consume the GetVersion request from the write queue
+    PacketGetVersionRequest req;
+    auto rs = fix.interpret(req, MessageHashEnum::NUM);
+    ASSERT_EQ(rs, RetStat::OK);
+
+    // Push ResponseNotReady — this sets respIfReadyToken
+    PacketErrorResponseVar errResp;
+    errResp.Min.Header.MessageVersion = MessageVersionEnum::SPDM_1_1;
+    errResp.Min.Header.Param1 =
+        PacketErrorResponseVar::ErrorCodeResponseNotReady;
+    errResp.ExtendedErrorData.resize(PacketErrorResponseVar::ExtErrOffsEOE);
+    errResp.ExtendedErrorData
+        [PacketErrorResponseVar::ExtErrOffsNotReadyRTDExponent] = 1;
+    errResp
+        .ExtendedErrorData[PacketErrorResponseVar::ExtErrOffsReadyRequestCode] =
+        0;
+    errResp.ExtendedErrorData[PacketErrorResponseVar::ExtErrOffsNotReadyToken] =
+        7;
+    errResp.ExtendedErrorData[PacketErrorResponseVar::ExtErrOffsNotReadyRTDM] =
+        2;
+    rs = fix.push(errResp, MessageHashEnum::NUM);
+    ASSERT_EQ(rs, RetStat::OK);
+    rs = fix.handleRecv();
+    ASSERT_EQ(rs, RetStat::OK);
+
+    // Push the valid version response — fix clears respIfReadyToken here
+    PacketVersionResponseVar verResp;
+    verResp.Min.Header.MessageVersion = MessageVersionEnum::SPDM_1_0;
+    PacketVersionNumber ver;
+    ver.setMajor(1);
+    ver.setMinor(1);
+    verResp.VersionNumberEntries.push_back(ver);
+    rs = fix.push(verResp, MessageHashEnum::NUM);
+    ASSERT_EQ(rs, RetStat::OK);
+    rs = fix.handleRecv();
+    ASSERT_EQ(rs, RetStat::OK);
+
+    // Consume the GetCapabilities request sent after the version exchange
+    PacketGetCapabilitiesRequest capReq;
+    rs = fix.interpret(capReq, MessageHashEnum::NUM);
+    ASSERT_EQ(rs, RetStat::OK);
+
+    // Fire a timeout — with the fix the token is cleared so
+    // handleTimeoutOrRetry retransmits GetCapabilities (returns OK).
+    // Without the fix respIfReadyToken would still be set and
+    // handleResponseIfReadyDelay would fire, sending a stale RESPOND_IF_READY.
+    EventTimeoutClass timeoutEv("pcie");
+    rs = fix.Connection.handleEvent(timeoutEv);
+    EXPECT_EQ(rs, RetStat::OK);
+    EXPECT_TRUE(fix.Connection.isWaitingForResponse());
+
+    // Verify timeout retransmitted GetCapabilities, not a stale
+    // RESPOND_IF_READY.
+    PacketGetCapabilitiesRequest capRetryReq;
+    rs = fix.interpret(capRetryReq, MessageHashEnum::NUM);
+    EXPECT_EQ(rs, RetStat::OK);
+}
 #endif
