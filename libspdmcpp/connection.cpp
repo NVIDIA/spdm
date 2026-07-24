@@ -1269,6 +1269,11 @@ RetStat ConnectionClass::handleRecv(EventReceiveClass& event)
         return retryTimeout(RetStat::ERROR_WRONG_REQUEST_RESPONSE_CODE);
     }
     WaitingForResponse = RequestResponseEnum::INVALID;
+    // The expected normal response supersedes any pending respond-if-ready
+    // poll; drop the stale token so a later timeout is not misrouted to the
+    // delay handler. Done only after validation so an unexpected or malformed
+    // frame cannot clear an active token.
+    respIfReadyToken = std::nullopt;
 
     RetStat rs = RetStat::ERROR_UNKNOWN;
 
