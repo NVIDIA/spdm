@@ -896,6 +896,11 @@ class ConnectionClass : public NonCopyable
     static constexpr auto maxGetVersionRetries = 6U;
     uint8_t retryGetVersionCount{};
 
+    /// Bound on the number of RESPOND_IF_READY poll cycles a responder can
+    /// force
+    static constexpr auto maxRespondIfReadyRetries = 4U;
+    uint8_t respondIfReadyCount{};
+
     /// Response if ready token value
     std::optional<uint8_t> respIfReadyToken;
 
