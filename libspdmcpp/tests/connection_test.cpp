@@ -1240,6 +1240,64 @@ TEST(Connection, ResponseNotReadyTriggersDelay)
     EXPECT_EQ(rs, RetStat::OK);
 }
 
+// RTDExp=255 is clamped to 31 (overflow guard); RTDM=255 pushes the
+// computed ms above maxMs, which is clamped to ~35 min.
+TEST(Connection, ResponseNotReadyUpperClamp)
+{
+    ConnectionFixture fix;
+    fix.Connection.refreshMeasurements(0);
+    PacketGetVersionRequest req;
+    auto rs = fix.interpret(req, MessageHashEnum::NUM);
+    ASSERT_EQ(rs, RetStat::OK);
+    PacketErrorResponseVar errResp;
+    errResp.Min.Header.MessageVersion = MessageVersionEnum::SPDM_1_1;
+    errResp.Min.Header.Param1 =
+        PacketErrorResponseVar::ErrorCodeResponseNotReady;
+    errResp.ExtendedErrorData.resize(PacketErrorResponseVar::ExtErrOffsEOE);
+    errResp.ExtendedErrorData
+        [PacketErrorResponseVar::ExtErrOffsNotReadyRTDExponent] = 255;
+    errResp
+        .ExtendedErrorData[PacketErrorResponseVar::ExtErrOffsReadyRequestCode] =
+        0;
+    errResp.ExtendedErrorData[PacketErrorResponseVar::ExtErrOffsNotReadyToken] =
+        0;
+    errResp.ExtendedErrorData[PacketErrorResponseVar::ExtErrOffsNotReadyRTDM] =
+        255;
+    rs = fix.push(errResp, MessageHashEnum::NUM);
+    ASSERT_EQ(rs, RetStat::OK);
+    rs = fix.handleRecv();
+    EXPECT_EQ(rs, RetStat::OK);
+}
+
+// RTDExp=0 and RTDM=0 produce sub-10 ms; the result is clamped to
+// the lower bound (minMs = 10 ms).
+TEST(Connection, ResponseNotReadyLowerClamp)
+{
+    ConnectionFixture fix;
+    fix.Connection.refreshMeasurements(0);
+    PacketGetVersionRequest req;
+    auto rs = fix.interpret(req, MessageHashEnum::NUM);
+    ASSERT_EQ(rs, RetStat::OK);
+    PacketErrorResponseVar errResp;
+    errResp.Min.Header.MessageVersion = MessageVersionEnum::SPDM_1_1;
+    errResp.Min.Header.Param1 =
+        PacketErrorResponseVar::ErrorCodeResponseNotReady;
+    errResp.ExtendedErrorData.resize(PacketErrorResponseVar::ExtErrOffsEOE);
+    errResp.ExtendedErrorData
+        [PacketErrorResponseVar::ExtErrOffsNotReadyRTDExponent] = 0;
+    errResp
+        .ExtendedErrorData[PacketErrorResponseVar::ExtErrOffsReadyRequestCode] =
+        0;
+    errResp.ExtendedErrorData[PacketErrorResponseVar::ExtErrOffsNotReadyToken] =
+        0;
+    errResp.ExtendedErrorData[PacketErrorResponseVar::ExtErrOffsNotReadyRTDM] =
+        0;
+    rs = fix.push(errResp, MessageHashEnum::NUM);
+    ASSERT_EQ(rs, RetStat::OK);
+    rs = fix.handleRecv();
+    EXPECT_EQ(rs, RetStat::OK);
+}
+
 // Receiving a valid expected response after ResponseNotReady must clear
 // respIfReadyToken so a subsequent timeout retries the current request rather
 // than sending a stale RESPOND_IF_READY poll (fix for NVBug 6427370).
