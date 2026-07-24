@@ -314,6 +314,19 @@ class MctpIoClass : public IOClass
         // NOLINTNEXTLINE cppcoreguidelines-avoid-c-arrays
         struct sockaddr_un addr{};
         addr.sun_family = AF_UNIX;
+        constexpr size_t maxSunPath =
+            sizeof(addr.sun_path) - 1; // leave room for NUL
+        if (path.length() > maxSunPath)
+        {
+            if (Log.logLevel >= LogClass::Level::Critical)
+            {
+                Log.iprint("createSocket: socket path too long (");
+                Log.print(path.length());
+                Log.println("); max allowed: " + std::to_string(maxSunPath));
+            }
+            deleteSocket();
+            return false;
+        }
         // NOLINTNEXTLINE cppcoreguidelines-pro-bounds-array-to-pointer-decay
         memcpy(addr.sun_path, path.data(), path.length());
 
