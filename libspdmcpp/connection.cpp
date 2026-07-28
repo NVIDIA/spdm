@@ -773,8 +773,13 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
     std::vector<uint8_t>& cert = slot.Certificates;
     const size_t headerOff =
         ResponseBufferSPDMOffset + sizeof(PacketCertificateResponseMin);
+    // Reject a chunk that doesn't fit the received data, or that carries no
+    // data while claiming more remains (no forward progress, can be repeated
+    // forever to livelock cert retrieval). Both retry a bounded number of
+    // times, then fail closed.
     if (headerOff > getResponseBufferRef().size() ||
-        resp.Min.PortionLength > getResponseBufferRef().size() - headerOff)
+        resp.Min.PortionLength > getResponseBufferRef().size() - headerOff ||
+        (resp.Min.PortionLength == 0 && resp.Min.RemainderLength != 0))
     {
         rs = RetStat::ERROR_CERTIFICATE_CHAIN_SIZE_INVALID;
         if (retryCertCount < numCertRetries)
@@ -782,7 +787,16 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
             ++retryCertCount;
             if (Log.logLevel >= LogClass::Level::Error)
             {
-                Log.print("Try retry certificate (invalid chunk size) ");
+                if (resp.Min.PortionLength == 0 &&
+                    resp.Min.RemainderLength != 0)
+                {
+                    Log.print(
+                        "Zero portion length while certificate is pending ");
+                }
+                else
+                {
+                    Log.print("Try retry certificate (invalid chunk size) ");
+                }
                 Log.print(retryCertCount);
                 Log.print("/");
                 Log.print(numCertRetries);
