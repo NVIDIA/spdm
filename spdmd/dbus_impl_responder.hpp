@@ -166,6 +166,20 @@ class Responder :
     spdmcpp::RetStat handleEvent(
         spdmcpp::EventClass& event) // cppcheck-suppress constParameter
     {
+        // eventHandler is null from Responder construction (at discovery) until
+        // the first refresh()/refreshSerialNumber() sets it. An unsolicited
+        // MCTP SPDM packet for a discovered EID reaches here in that window and
+        // would call through a null member-function pointer, crashing the
+        // daemon; with Restart=always the objects are re-created with
+        // eventHandler null again, making it an indefinitely repeatable crash
+        // loop. Drop the event instead.
+        if (eventHandler == nullptr)
+        {
+            getLog().iprintln(
+                "WARNING - handleEvent ignored: unsolicited packet before any "
+                "refresh (eventHandler unset)");
+            return spdmcpp::RetStat::ERROR_UNKNOWN;
+        }
         return (this->*eventHandler)(event);
     }
 
