@@ -96,6 +96,12 @@ struct PacketMeasurementsResponseVar // TODO all variable packets don't need
 
     RetStat finalize()
     {
+        if (MeasurementBlockVector.size() > std::numeric_limits<uint8_t>::max())
+        {
+            return RetStat::ERROR_UNKNOWN;
+        }
+        Min.NumberOfBlocks =
+            static_cast<uint8_t>(MeasurementBlockVector.size());
         uint32_t len = 0;
         len += std::accumulate(
             MeasurementBlockVector.begin(), MeasurementBlockVector.end(), 0,
@@ -214,6 +220,10 @@ struct PacketMeasurementsResponseVar // TODO all variable packets don't need
             }
         }
         if (off != end)
+        {
+            return RetStat::ERROR_UNKNOWN;
+        }
+        if (p.MeasurementBlockVector.size() != p.Min.NumberOfBlocks)
         {
             return RetStat::ERROR_UNKNOWN;
         }
