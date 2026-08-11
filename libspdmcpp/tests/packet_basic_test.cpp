@@ -752,6 +752,81 @@ TEST(packet_pseudorandom_encode_decode, PacketMeasurementsResponseVar_1)
     EXPECT_TRUE(packetEncodeDecode(p, info));
 }
 
+TEST(PacketMeasurementsResponseVar_finalize, sets_NumberOfBlocks)
+{
+    PacketMeasurementsResponseVar p;
+    p.MeasurementBlockVector.resize(2);
+    for (auto& b : p.MeasurementBlockVector)
+    {
+        fillPseudoRandomType(b.Min);
+        b.MeasurementVector.resize(4);
+        fillPseudoRandom(b.MeasurementVector);
+        EXPECT_EQ(b.finalize(), RetStat::OK);
+    }
+    EXPECT_EQ(p.finalize(), RetStat::OK);
+    EXPECT_EQ(p.Min.NumberOfBlocks, 2);
+}
+
+TEST(PacketMeasurementsResponseVar_finalize, overflow_guard)
+{
+    PacketMeasurementsResponseVar p;
+    // 256 blocks exceeds uint8_t::max — finalize must reject
+    p.MeasurementBlockVector.resize(256);
+    for (auto& b : p.MeasurementBlockVector)
+    {
+        b.MeasurementVector.resize(1);
+        b.MeasurementVector[0] = 0xAB;
+        EXPECT_EQ(b.finalize(), RetStat::OK);
+    }
+    EXPECT_EQ(p.finalize(), RetStat::ERROR_UNKNOWN);
+}
+
+TEST(PacketMeasurementsResponseVar_finalize, max_uint8_boundary)
+{
+    PacketMeasurementsResponseVar p;
+    // 255 blocks == uint8_t::max — finalize must succeed
+    p.MeasurementBlockVector.resize(255);
+    for (auto& b : p.MeasurementBlockVector)
+    {
+        b.MeasurementVector.resize(1);
+        b.MeasurementVector[0] = 0xAB;
+        EXPECT_EQ(b.finalize(), RetStat::OK);
+    }
+    EXPECT_EQ(p.finalize(), RetStat::OK);
+    EXPECT_EQ(p.Min.NumberOfBlocks, 255);
+}
+
+TEST(PacketMeasurementsResponseVar_decode, mismatch_NumberOfBlocks)
+{
+    PacketDecodeInfo info;
+    info.GetMeasurementsParam1 = 0;
+    info.BaseHashSize = 32;
+    info.SignatureSize = 0;
+
+    PacketMeasurementsResponseVar p;
+    p.MeasurementBlockVector.resize(2);
+    for (auto& b : p.MeasurementBlockVector)
+    {
+        fillPseudoRandomType(b.Min);
+        b.MeasurementVector.resize(4);
+        fillPseudoRandom(b.MeasurementVector);
+        EXPECT_EQ(b.finalize(), RetStat::OK);
+    }
+    EXPECT_EQ(p.finalize(), RetStat::OK);
+
+    std::vector<uint8_t> buf;
+    EXPECT_EQ(packetEncode(p, buf), RetStat::OK);
+
+    // NumberOfBlocks is at byte offset 4 (after 4-byte PacketMessageHeader).
+    // Corrupt it so declared count != actual encoded blocks.
+    buf[4] = 99;
+
+    LogClass log(std::cerr);
+    PacketMeasurementsResponseVar q;
+    size_t off = 0;
+    EXPECT_EQ(packetDecode(log, q, buf, off, info), RetStat::ERROR_UNKNOWN);
+}
+
 TEST(packet_spdm12_encode_decode, PacketGetCapabilitiesRequest_SPDM12)
 {
     LogClass log(std::cerr);
