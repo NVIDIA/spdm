@@ -96,10 +96,17 @@ namespace
  */
 auto calcResponseIfReadyWaitTimeMs(uint8_t RTDExp, uint8_t RTDM)
 {
-    unsigned minTime = 1U << RTDExp;
-    unsigned maxTime = minTime * RTDM;
-    unsigned halfTime = minTime + (maxTime - minTime) / 2U;
-    return halfTime / 1000U;
+    // RTDExp is an untrusted responder byte; clamp to avoid UB shift and
+    // overflow. Max of 31 matches libspdm LIBSPDM_MAX_RDT_EXPONENT.
+    constexpr unsigned maxExp = 31U; // matches libspdm LIBSPDM_MAX_RDT_EXPONENT
+    unsigned exp = RTDExp > maxExp ? maxExp : RTDExp;
+    uint64_t minTime = 1ULL << exp;
+    uint64_t maxTime = minTime * (RTDM == 0 ? 1U : RTDM);
+    uint64_t halfTime = minTime + (maxTime - minTime) / 2U;
+    uint64_t ms = halfTime / 1000U;
+    constexpr uint64_t minMs = 10U,
+                       maxMs = (1ULL << 31) / 1000U; // [10ms, ~35 min]
+    return ms < minMs ? minMs : (ms > maxMs ? maxMs : ms);
 }
 
 } // namespace
