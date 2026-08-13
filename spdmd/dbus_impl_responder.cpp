@@ -523,7 +523,10 @@ spdmcpp::RetStat
         const ConnectionClass::DMTFMeasurementsContainer& src =
             connection.getDMTFMeasurements();
         auto iter = src.find(FETCH_SERIALNUMBER_FROM_RESPONDER);
-        if (iter != src.end() && iter->second.Min.Type == 0x82)
+        constexpr size_t maxSerialBytes = 256;
+        if (iter != src.end() && iter->second.Min.Type == 0x82 &&
+            !iter->second.ValueVector.empty() &&
+            iter->second.ValueVector.size() <= maxSerialBytes)
         {
             // if available and has the correct type:
             // 0x80 "Raw bit stream"
