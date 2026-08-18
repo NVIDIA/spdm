@@ -47,12 +47,20 @@ namespace spdmd
 /// string (Idle / Collecting / Success / PartialSuccess / Error).
 struct CompositeStatus
 {
+    struct DeviceFailure
+    {
+        std::uint8_t eid = 0;
+        std::string environmentId;
+        std::string errorMsg;
+    };
+
     std::size_t totalDevices = 0;
     std::size_t devicesSucceeded = 0;
     std::size_t devicesFailed = 0;
     bool tokenProduced = false;
     std::string platformAttesterStatus; // Ready / SoftwareMock / Unavailable
     std::string attesterErrorMsg;       // empty if attestation succeeded
+    std::vector<DeviceFailure> deviceFailures;
 
     std::string toStatusString() const;
 };

@@ -60,8 +60,8 @@ class CollectionPlan
     };
 
     /// Validate an env.* identifier per the composite attestation profile:
-    /// lowercase ASCII,
-    /// dot-separated, first component "env", <= 64 bytes.
+    /// lowercase ASCII, dot-separated, first component "env", at least one
+    /// target component, <= 64 bytes.
     static bool isValidEnvId(std::string_view id);
 
     /// Add a mapping rule. Returns false if env is invalid.
@@ -99,5 +99,15 @@ class CollectionPlan
     std::vector<Entry> entries;
     std::optional<std::string> corimLocator;
 };
+
+struct ParsedCompositeConfig
+{
+    CollectionPlan plan;
+    std::vector<std::uint8_t> skipDevices;
+    bool allowUnknownEnvironments = false;
+};
+
+std::optional<ParsedCompositeConfig>
+    parseCompositeConfig(std::string_view json, std::string& err);
 
 } // namespace spdmd::composite

@@ -12,7 +12,6 @@ composite_unit_tests = {
     'bundle_assembler_test': files('bundle_assembler_test.cpp'),
     'evidence_builder_test': files('evidence_builder_test.cpp'),
     'evidence_pattern_test': files('evidence_pattern_test.cpp'),
-    'pem_test': files('pem_test.cpp'),
 }
 
 foreach test_name, test_sources : composite_unit_tests

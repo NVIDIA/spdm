@@ -21,6 +21,7 @@
 
 #include <mbedtls/base64.h>
 
+#include <stdexcept>
 #include <string>
 
 namespace spdmd::mock_attester::eat
@@ -69,8 +70,13 @@ std::vector<std::uint8_t>
 std::vector<std::uint8_t>
     encodeMeasurement(const composite::LeadAttesterMeasurement& m)
 {
+    if (!m.contentFormat)
+    {
+        throw std::invalid_argument(
+            "Lead Attester measurement content-format is required");
+    }
     cbor::Map em;
-    em.addText(kMeasContentFormat, cbor::uintVal(m.contentFormat));
+    em.addText(kMeasContentFormat, cbor::uintVal(*m.contentFormat));
     em.addText(kMeasValue, cbor::bytesVal(m.value));
     return em.encode();
 }

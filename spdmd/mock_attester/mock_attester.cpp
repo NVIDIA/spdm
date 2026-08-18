@@ -277,7 +277,7 @@ struct MockAttester::Impl
         std::vector<composite::LeadAttesterMeasurement> measurements;
         {
             composite::LeadAttesterMeasurement m;
-            m.contentFormat = 0;
+            m.contentFormat = 42; // application/octet-stream
             m.value.assign(bmcMeasurement.begin(), bmcMeasurement.end());
             measurements.push_back(std::move(m));
         }

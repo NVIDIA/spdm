@@ -35,7 +35,7 @@ EvidenceBuilderInput baseSpdmInput()
     input.spdmVersion = 0x12;
     input.measurementSpecification = kSpdmMeasurementSpecDmtf;
     input.signedMeasurements = {0x01, 0x02, 0x03};
-    input.certificateChainObject = {0x30, 0x82, 0x01, 0x02};
+    input.certificateChainDer = {0x30, 0x82, 0x01, 0x02};
     return input;
 }
 
@@ -52,7 +52,7 @@ TEST(EvidenceBuilder, RefreshFailurePropagatesError)
     EXPECT_EQ(ev.errorMsg, "timeout");
 }
 
-TEST(EvidenceBuilder, SpdmEvidenceUsesRawCertificateChainObject)
+TEST(EvidenceBuilder, SpdmEvidenceUsesDerCertificateChain)
 {
     auto input = baseSpdmInput();
     auto ev = buildCollectedEvidence(input);
@@ -61,7 +61,7 @@ TEST(EvidenceBuilder, SpdmEvidenceUsesRawCertificateChainObject)
     EXPECT_EQ(ev.pattern, EvidencePattern::SpdmMeasurements);
     EXPECT_EQ(ev.signedMeasurements,
               (std::vector<std::uint8_t>{0x01, 0x02, 0x03}));
-    EXPECT_EQ(ev.certChainSpdm,
+    EXPECT_EQ(ev.certificateChainDer,
               (std::vector<std::uint8_t>{0x30, 0x82, 0x01, 0x02}));
     EXPECT_FALSE(ev.includeVca);
 }
@@ -98,14 +98,14 @@ TEST(EvidenceBuilder, MissingSignedMeasurementsFails)
     EXPECT_EQ(ev.errorMsg, "missing SPDM signed measurements");
 }
 
-TEST(EvidenceBuilder, MissingCertificateChainObjectFails)
+TEST(EvidenceBuilder, MissingDerCertificateChainFails)
 {
     auto input = baseSpdmInput();
-    input.certificateChainObject.clear();
+    input.certificateChainDer.clear();
 
     auto ev = buildCollectedEvidence(input);
     EXPECT_FALSE(ev.success);
-    EXPECT_EQ(ev.errorMsg, "missing SPDM certificate chain object");
+    EXPECT_EQ(ev.errorMsg, "missing DER certificate chain");
 }
 
 TEST(EvidenceBuilder, EatMeasurementSpecWithTokenBuildsDeviceEatEvidence)
@@ -120,7 +120,7 @@ TEST(EvidenceBuilder, EatMeasurementSpecWithTokenBuildsDeviceEatEvidence)
     EXPECT_EQ(ev.deviceTokenFormat, "application/eat+cwt");
     EXPECT_EQ(ev.deviceToken, (std::vector<std::uint8_t>{0xD8, 0x3D, 0x84}));
     EXPECT_TRUE(ev.signedMeasurements.empty());
-    EXPECT_TRUE(ev.certChainSpdm.empty());
+    EXPECT_TRUE(ev.certificateChainDer.empty());
 }
 
 TEST(EvidenceBuilder, UnknownEnvironmentDetection)

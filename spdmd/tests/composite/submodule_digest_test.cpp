@@ -70,7 +70,7 @@ TEST(SubmoduleDigest, RecordMatchesClaimsSetDigest)
     e.success = true;
     e.pattern = EvidencePattern::SpdmMeasurements;
     e.signedMeasurements = {0x01, 0x02, 0x03};
-    e.certChainSpdm = {0xAA, 0xBB};
+    e.certificateChainDer = {0x30, 0x01, 0xAA};
 
     auto cs = buildClaimsSet(e);
     auto rec = makeSubmoduleRecord(e.environmentId, cs);
@@ -91,7 +91,7 @@ TEST(SubmoduleDigest, DigestIsOverUnwrappedBytes)
     CollectedEvidence a;
     a.success = true;
     a.signedMeasurements = {0x01};
-    a.certChainSpdm = {0x02};
+    a.certificateChainDer = {0x30, 0x01, 0x02};
     CollectedEvidence b = a;
     b.signedMeasurements = {0x09};
 

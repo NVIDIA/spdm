@@ -19,7 +19,6 @@
 
 #include "composite/evidence_builder.hpp"
 
-#include <nlohmann/json.hpp>
 #include <sdbusplus/exception.hpp>
 
 #include <algorithm>
@@ -41,40 +40,16 @@ CompositeConfig loadCompositeConfig(const std::string& path)
     }
     std::stringstream ss;
     ss << f.rdbuf();
-    nlohmann::json doc =
-        nlohmann::json::parse(ss.str(), nullptr, false /*no exceptions*/);
-    if (doc.is_object())
-    {
-        if (auto it = doc.find("allowUnknownEnvironments");
-            it != doc.end() && it->is_boolean())
-        {
-            cfg.allowUnknownEnvironments = it->get<bool>();
-        }
-        // Endpoints listed in skipDevices are discovered SPDM responders that
-        // must not contribute a composite submodule (for example a platform
-        // Root of Trust that also answers SPDM but signs the composite EAT
-        // rather than being measured by it).
-        if (auto it = doc.find("skipDevices");
-            it != doc.end() && it->is_array())
-        {
-            for (const auto& eid : *it)
-            {
-                if (eid.is_number_unsigned() && eid.get<unsigned>() <= 0xff)
-                {
-                    cfg.skipDevices.push_back(
-                        static_cast<std::uint8_t>(eid.get<unsigned>()));
-                }
-            }
-        }
-    }
     std::string err;
-    if (auto plan = composite::CollectionPlan::fromJson(ss.str(), err))
+    if (auto parsed = composite::parseCompositeConfig(ss.str(), err))
     {
-        cfg.plan = std::move(*plan);
+        cfg.plan = std::move(parsed->plan);
+        cfg.skipDevices = std::move(parsed->skipDevices);
+        cfg.allowUnknownEnvironments = parsed->allowUnknownEnvironments;
     }
     else
     {
-        std::cerr << "composite.json: " << err << " — using defaults\n";
+        std::cerr << err << " - using defaults\n";
     }
     return cfg;
 }
@@ -247,8 +222,7 @@ composite::CollectedEvidence
 
     auto sm = resp.signedMeasurements();
     input.signedMeasurements.assign(sm.begin(), sm.end());
-    (void)resp.certificateChainObject(input.certificateChainObject,
-                                      resp.slot());
+    (void)resp.certificateChainDer(input.certificateChainDer, resp.slot());
 
     const auto& vca = resp.vcaTranscript();
     input.vcaTranscript.assign(vca.begin(), vca.end());
@@ -300,7 +274,14 @@ void DbusImplComposite::finalize()
     auto res = orchestrator.produce(std::span<const std::uint8_t, 32>{nonce},
                                     std::span{evidences},
                                     config.plan.platformCorimLocator());
-    if (res.success && res.status.devicesSucceeded > 0)
+    for (const auto& failure : res.status.deviceFailures)
+    {
+        std::cerr << "composite collection failed for "
+                  << failure.environmentId << " (EID "
+                  << static_cast<unsigned>(failure.eid)
+                  << "): " << failure.errorMsg << '\n';
+    }
+    if (res.success)
     {
         bundle = std::move(res.bundle);
         if (iface)

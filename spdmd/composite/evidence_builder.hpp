@@ -38,7 +38,7 @@ struct EvidenceBuilderInput
     std::uint8_t measurementSpecification = kSpdmMeasurementSpecDmtf;
 
     std::vector<std::uint8_t> signedMeasurements;
-    std::vector<std::uint8_t> certificateChainObject;
+    std::vector<std::uint8_t> certificateChainDer;
     std::vector<std::uint8_t> vcaTranscript;
     std::vector<std::uint8_t> deviceEatToken;
 };

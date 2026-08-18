@@ -46,7 +46,7 @@ composite::CollectedEvidence spdmDev(const std::string& env, std::uint8_t eid,
     e.success = true;
     e.pattern = composite::EvidencePattern::SpdmMeasurements;
     e.signedMeasurements = {fill, std::uint8_t(fill + 1), 0x03};
-    e.certChainSpdm = {0xAA, fill};
+    e.certificateChainDer = {0x30, 0x01, fill};
     return e;
 }
 
@@ -105,6 +105,10 @@ TEST(CompositeOrchestrator, PartialSuccessExcludesFailedDevice)
     EXPECT_EQ(res.status.devicesSucceeded, 1u);
     EXPECT_EQ(res.status.devicesFailed, 1u);
     EXPECT_EQ(res.status.toStatusString(), "PartialSuccess");
+    ASSERT_EQ(res.status.deviceFailures.size(), 1u);
+    EXPECT_EQ(res.status.deviceFailures[0].eid, 64u);
+    EXPECT_EQ(res.status.deviceFailures[0].environmentId, "env.nic.0");
+    EXPECT_EQ(res.status.deviceFailures[0].errorMsg, "collection failed");
 
     // The failed device must appear in neither submods nor the detached
     // Claims-Set map.
@@ -112,6 +116,57 @@ TEST(CompositeOrchestrator, PartialSuccessExcludesFailedDevice)
     auto csMap = bundle->tagged->array[1];
     EXPECT_TRUE(csMap->atText("env.gpu.0"));
     EXPECT_EQ(csMap->atText("env.nic.0"), nullptr);
+}
+
+TEST(CompositeOrchestrator, AllFailedDevicesStillProduceBundle)
+{
+    mock_attester::MockAttester att;
+    CompositeOrchestrator orch(att);
+    std::vector<composite::CollectedEvidence> evs{
+        failedDev("env.gpu.0", 13), failedDev("env.nic.0", 64)};
+
+    auto res = orch.produce(nonce(0x03), evs);
+
+    ASSERT_TRUE(res.success) << res.errorMsg;
+    EXPECT_EQ(res.status.devicesSucceeded, 0u);
+    EXPECT_EQ(res.status.devicesFailed, 2u);
+    EXPECT_EQ(res.status.toStatusString(), "PartialSuccess");
+    auto bundle = cbortest::decode(res.bundle);
+    auto csMap = bundle->tagged->array[1];
+    ASSERT_TRUE(csMap->isMap());
+    EXPECT_TRUE(csMap->map.empty());
+}
+
+TEST(CompositeOrchestrator, EmptyEvidenceStillProducesBundle)
+{
+    mock_attester::MockAttester att;
+    CompositeOrchestrator orch(att);
+    std::vector<composite::CollectedEvidence> evs;
+
+    auto res = orch.produce(nonce(0x04), evs);
+
+    ASSERT_TRUE(res.success) << res.errorMsg;
+    EXPECT_EQ(res.status.toStatusString(), "Success");
+    auto bundle = cbortest::decode(res.bundle);
+    EXPECT_TRUE(bundle->tagged->array[1]->map.empty());
+}
+
+TEST(CompositeOrchestrator, MalformedEvidenceReportsFailureReason)
+{
+    mock_attester::MockAttester att;
+    CompositeOrchestrator orch(att);
+    auto malformed = spdmDev("env.gpu.0", 13, 0x10);
+    malformed.signedMeasurements.clear();
+    std::vector<composite::CollectedEvidence> evs{std::move(malformed)};
+
+    auto res = orch.produce(nonce(0x05), evs);
+
+    ASSERT_TRUE(res.success) << res.errorMsg;
+    ASSERT_EQ(res.status.deviceFailures.size(), 1u);
+    EXPECT_EQ(res.status.deviceFailures[0].environmentId, "env.gpu.0");
+    EXPECT_NE(res.status.deviceFailures[0].errorMsg.find(
+                  "signed_measurements is empty"),
+              std::string::npos);
 }
 
 // The core the composite attestation profile step-7 verifier check.

@@ -20,6 +20,7 @@
 #include <mbedtls/md.h>
 
 #include <stdexcept>
+#include <string>
 #include <utility>
 
 namespace spdmd::composite
@@ -30,10 +31,15 @@ std::array<std::uint8_t, kSha384Len> sha384(std::span<const std::uint8_t> b)
     std::array<std::uint8_t, kSha384Len> out{};
     const mbedtls_md_info_t* info =
         mbedtls_md_info_from_type(MBEDTLS_MD_SHA384);
-    if (info == nullptr ||
-        mbedtls_md(info, b.data(), b.size(), out.data()) != 0)
+    if (info == nullptr)
     {
-        throw std::runtime_error("SubmoduleDigest: SHA-384 failed");
+        throw std::runtime_error("SubmoduleDigest: SHA-384 is unavailable");
+    }
+    const int rc = mbedtls_md(info, b.data(), b.size(), out.data());
+    if (rc != 0)
+    {
+        throw std::runtime_error("SubmoduleDigest: SHA-384 failed: " +
+                                 std::to_string(rc));
     }
     return out;
 }

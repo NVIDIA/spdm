@@ -49,9 +49,7 @@ enum class PlatformAttesterStatus
 {
     Unavailable,
     Ready,
-#ifdef ATTESTER_BACKEND_MOCK
     SoftwareMock,
-#endif
 };
 
 inline std::string_view toString(PlatformAttesterStatus status)
@@ -62,10 +60,8 @@ inline std::string_view toString(PlatformAttesterStatus status)
             return "Unavailable";
         case PlatformAttesterStatus::Ready:
             return "Ready";
-#ifdef ATTESTER_BACKEND_MOCK
         case PlatformAttesterStatus::SoftwareMock:
             return "SoftwareMock";
-#endif
     }
     return "Unavailable";
 }

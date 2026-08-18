@@ -24,6 +24,7 @@
 //
 //   Pattern A / C  -> spdm-evidence-claims-set
 //                       { "signed_measurements", "cert_chain", ?"vca" }
+//                     cert_chain is concatenated DER certificates.
 //   Pattern B      -> device-eat-claims-set
 //                       { "token_format", "device_token" }
 //
@@ -45,7 +46,7 @@ namespace spdmd::composite
 /// CoAP Content-Formats used by the optional typed-value wrapping. These
 /// are profile-local placeholders pending registration.
 inline constexpr std::uint64_t kCfSpdmMeasurements = 65000;
-inline constexpr std::uint64_t kCfSpdmCertChain = 65001;
+inline constexpr std::uint64_t kCfConcatenatedDerCertificates = 65001;
 inline constexpr std::uint64_t kCfSpdmVca = 65002;
 
 /// Build the deterministic CBOR detached Claims-Set for one successfully

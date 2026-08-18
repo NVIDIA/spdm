@@ -80,11 +80,11 @@ CollectedEvidence buildCollectedEvidence(const EvidenceBuilderInput& input)
                                   "missing SPDM signed measurements");
     }
 
-    ev.certChainSpdm = input.certificateChainObject;
-    if (ev.certChainSpdm.empty())
+    ev.certificateChainDer = input.certificateChainDer;
+    if (ev.certificateChainDer.empty())
     {
         return makeFailedEvidence(input.eid, input.environmentId,
-                                  "missing SPDM certificate chain object");
+                                  "missing DER certificate chain");
     }
 
     if (isV10or11(input.spdmVersion))

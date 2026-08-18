@@ -31,13 +31,14 @@ namespace
 
 TEST(CollectionPlan, EnvIdValidation)
 {
-    EXPECT_TRUE(CollectionPlan::isValidEnvId("env"));
     EXPECT_TRUE(CollectionPlan::isValidEnvId("env.gpu.0"));
     EXPECT_TRUE(CollectionPlan::isValidEnvId("env.nic.primary"));
     EXPECT_TRUE(CollectionPlan::isValidEnvId("env.m2.boot"));
     EXPECT_TRUE(CollectionPlan::isValidEnvId("env.pcie.4"));
+    EXPECT_TRUE(CollectionPlan::isValidEnvId("env.unknown.14"));
 
     EXPECT_FALSE(CollectionPlan::isValidEnvId(""));
+    EXPECT_FALSE(CollectionPlan::isValidEnvId("env"));       // no target
     EXPECT_FALSE(CollectionPlan::isValidEnvId("gpu.0"));     // no env prefix
     EXPECT_FALSE(CollectionPlan::isValidEnvId("ENV.gpu.0")); // uppercase
     EXPECT_FALSE(CollectionPlan::isValidEnvId("env.GPU"));   // uppercase
@@ -115,6 +116,25 @@ TEST(CollectionPlan, FromJsonValid)
     EXPECT_EQ(plan->resolveByEid(7), "env.unknown.7");
 }
 
+TEST(CollectionPlan, ParseCompositeConfig)
+{
+    const std::string json = R"({
+        "allowUnknownEnvironments": true,
+        "skipDevices": [12, 64, 256, 4294967309, "bad"],
+        "environments": [
+            { "env": "env.gpu.0", "match": { "mctpEid": 13 } }
+        ]
+    })";
+
+    std::string err;
+    auto config = parseCompositeConfig(json, err);
+    ASSERT_TRUE(config.has_value()) << err;
+    EXPECT_TRUE(config->allowUnknownEnvironments);
+    EXPECT_EQ(config->skipDevices,
+              (std::vector<std::uint8_t>{12, 64}));
+    EXPECT_EQ(config->plan.resolveByEid(13), "env.gpu.0");
+}
+
 TEST(CollectionPlan, FromJsonRejectsInvalidEnv)
 {
     const std::string json = R"({
@@ -124,6 +144,27 @@ TEST(CollectionPlan, FromJsonRejectsInvalidEnv)
     auto plan = CollectionPlan::fromJson(json, err);
     EXPECT_FALSE(plan.has_value());
     EXPECT_FALSE(err.empty());
+}
+
+TEST(CollectionPlan, FromJsonRejectsMalformedMatch)
+{
+    const std::vector<std::string> invalid{
+        R"({"environments":[{"env":"env.gpu.0"}]})",
+        R"({"environments":[{"env":"env.gpu.0","match":[]}]})",
+        R"({"environments":[{"env":"env.gpu.0","match":{}}]})",
+        R"({"environments":[{"env":"env.gpu.0","match":{"unknown":1}}]})",
+        R"({"environments":[{"env":"env.gpu.0","match":{"mctpEid":269}}]})",
+        R"({"environments":[{"env":"env.gpu.0","match":{"mctpEid":4294967309}}]})",
+        R"({"environments":[{"env":"env.gpu.0","match":{"mctpEid":"13"}}]})",
+        R"({"environments":[{"env":"env.gpu.0","match":{"pcieBdf":1}}]})",
+    };
+
+    for (const auto& json : invalid)
+    {
+        std::string err;
+        EXPECT_FALSE(CollectionPlan::fromJson(json, err).has_value()) << json;
+        EXPECT_FALSE(err.empty()) << json;
+    }
 }
 
 TEST(CollectionPlan, FromJsonEmptyPlanIsValid)

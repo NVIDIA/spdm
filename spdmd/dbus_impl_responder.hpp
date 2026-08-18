@@ -181,10 +181,10 @@ class Responder :
         return connection.getVcaTranscript();
     }
 
-    bool certificateChainObject(std::vector<uint8_t>& certChain,
-                                uint8_t slotIdx) const
+    bool certificateChainDer(std::vector<uint8_t>& certificateChainDer,
+                             uint8_t slotIdx) const
     {
-        return connection.getCertificateChainObject(certChain, slotIdx);
+        return connection.getCertificatesDER(certificateChainDer, slotIdx);
     }
 
     /** @brief Event callback for receiving events

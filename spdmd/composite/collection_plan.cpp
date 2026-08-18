@@ -25,16 +25,127 @@
 namespace spdmd::composite
 {
 
+namespace
+{
+
+std::optional<CollectionPlan> collectionPlanFromDocument(
+    const nlohmann::json& doc, std::string& err)
+{
+    if (doc.is_discarded() || !doc.is_object())
+    {
+        err = "composite.json: not a JSON object";
+        return std::nullopt;
+    }
+
+    CollectionPlan plan;
+
+    if (auto it = doc.find("platformCorimLocator"); it != doc.end())
+    {
+        if (!it->is_string())
+        {
+            err = "composite.json: platformCorimLocator must be a string";
+            return std::nullopt;
+        }
+        plan.setPlatformCorimLocator(it->get<std::string>());
+    }
+
+    auto envs = doc.find("environments");
+    if (envs == doc.end())
+    {
+        return plan;
+    }
+    if (!envs->is_array())
+    {
+        err = "composite.json: environments must be an array";
+        return std::nullopt;
+    }
+
+    for (const auto& item : *envs)
+    {
+        if (!item.is_object() || !item.contains("env") ||
+            !item["env"].is_string())
+        {
+            err = "composite.json: each environment needs a string 'env'";
+            return std::nullopt;
+        }
+        CollectionPlan::Entry entry;
+        entry.env = item["env"].get<std::string>();
+
+        auto match = item.find("match");
+        if (match == item.end() || !match->is_object())
+        {
+            err = "composite.json: environment match must be an object";
+            return std::nullopt;
+        }
+
+        bool hasPredicate = false;
+        if (auto value = match->find("mctpEid"); value != match->end())
+        {
+            if (!value->is_number_unsigned() ||
+                value->get<std::uint64_t>() > 0xff)
+            {
+                err = "composite.json: mctpEid must be an unsigned byte";
+                return std::nullopt;
+            }
+            entry.mctpEid =
+                static_cast<std::uint8_t>(value->get<std::uint64_t>());
+            hasPredicate = true;
+        }
+        if (auto value = match->find("redfishUri"); value != match->end())
+        {
+            if (!value->is_string())
+            {
+                err = "composite.json: redfishUri must be a string";
+                return std::nullopt;
+            }
+            entry.redfishUri = value->get<std::string>();
+            hasPredicate = true;
+        }
+        if (auto value = match->find("pcieBdf"); value != match->end())
+        {
+            if (!value->is_string())
+            {
+                err = "composite.json: pcieBdf must be a string";
+                return std::nullopt;
+            }
+            entry.pcieBdf = value->get<std::string>();
+            hasPredicate = true;
+        }
+        if (auto value = match->find("i2cAddr"); value != match->end())
+        {
+            if (!value->is_string())
+            {
+                err = "composite.json: i2cAddr must be a string";
+                return std::nullopt;
+            }
+            entry.i2cAddr = value->get<std::string>();
+            hasPredicate = true;
+        }
+        if (!hasPredicate)
+        {
+            err = "composite.json: environment match needs a supported "
+                  "predicate";
+            return std::nullopt;
+        }
+
+        if (!plan.addEntry(std::move(entry)))
+        {
+            err = "composite.json: invalid env id (must be env.* per "
+                  "the composite attestation profile)";
+            return std::nullopt;
+        }
+    }
+
+    return plan;
+}
+
+} // namespace
+
 bool CollectionPlan::isValidEnvId(std::string_view id)
 {
     if (id.empty() || id.size() > 64)
     {
         return false;
-    }
-    // Must start with "env" and be either "env" or "env.".
-    if (id == "env")
-    {
-        return true;
     }
     if (id.size() < 5 || id.substr(0, 4) != "env.")
     {
@@ -119,77 +230,48 @@ std::optional<CollectionPlan> CollectionPlan::fromJson(std::string_view json,
 {
     nlohmann::json doc =
         nlohmann::json::parse(json, nullptr, false /*no exceptions*/);
+    return collectionPlanFromDocument(doc, err);
+}
+
+std::optional<ParsedCompositeConfig>
+    parseCompositeConfig(std::string_view json, std::string& err)
+{
+    nlohmann::json doc =
+        nlohmann::json::parse(json, nullptr, false /*no exceptions*/);
     if (doc.is_discarded() || !doc.is_object())
     {
         err = "composite.json: not a JSON object";
         return std::nullopt;
     }
 
-    CollectionPlan plan;
-
-    if (auto it = doc.find("platformCorimLocator"); it != doc.end())
+    auto plan = collectionPlanFromDocument(doc, err);
+    if (!plan)
     {
-        if (!it->is_string())
-        {
-            err = "composite.json: platformCorimLocator must be a string";
-            return std::nullopt;
-        }
-        plan.setPlatformCorimLocator(it->get<std::string>());
-    }
-
-    auto envs = doc.find("environments");
-    if (envs == doc.end())
-    {
-        return plan; // empty plan is valid (everything resolves to fallback)
-    }
-    if (!envs->is_array())
-    {
-        err = "composite.json: environments must be an array";
         return std::nullopt;
     }
 
-    for (const auto& item : *envs)
+    ParsedCompositeConfig config;
+    config.plan = std::move(*plan);
+    if (auto it = doc.find("allowUnknownEnvironments");
+        it != doc.end() && it->is_boolean())
     {
-        if (!item.is_object() || !item.contains("env") ||
-            !item["env"].is_string())
+        config.allowUnknownEnvironments = it->get<bool>();
+    }
+    if (auto it = doc.find("skipDevices");
+        it != doc.end() && it->is_array())
+    {
+        for (const auto& eid : *it)
         {
-            err = "composite.json: each environment needs a string 'env'";
-            return std::nullopt;
-        }
-        Entry e;
-        e.env = item["env"].get<std::string>();
-
-        if (auto m = item.find("match"); m != item.end() && m->is_object())
-        {
-            if (auto v = m->find("mctpEid");
-                v != m->end() && v->is_number_unsigned())
+            if (eid.is_number_unsigned() &&
+                eid.get<std::uint64_t>() <= 0xff)
             {
-                e.mctpEid =
-                    static_cast<std::uint8_t>(v->get<unsigned>() & 0xFFU);
+                config.skipDevices.push_back(
+                    static_cast<std::uint8_t>(eid.get<std::uint64_t>()));
             }
-            if (auto v = m->find("redfishUri"); v != m->end() && v->is_string())
-            {
-                e.redfishUri = v->get<std::string>();
-            }
-            if (auto v = m->find("pcieBdf"); v != m->end() && v->is_string())
-            {
-                e.pcieBdf = v->get<std::string>();
-            }
-            if (auto v = m->find("i2cAddr"); v != m->end() && v->is_string())
-            {
-                e.i2cAddr = v->get<std::string>();
-            }
-        }
-
-        if (!plan.addEntry(std::move(e)))
-        {
-            err = "composite.json: invalid env id (must be env.* per "
-                  "the composite attestation profile)";
-            return std::nullopt;
         }
     }
 
-    return plan;
+    return config;
 }
 
 } // namespace spdmd::composite

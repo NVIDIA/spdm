@@ -27,8 +27,10 @@
 #include <bit>
 #include <fstream>
 #include <functional>
+#include <mutex>
 #include <ranges>
 #include <type_traits>
+#include <unordered_map>
 
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs)                                 \
@@ -88,6 +90,35 @@ namespace spdmcpp
 
 namespace
 {
+
+std::mutex measurementSpecificationsMutex;
+std::unordered_map<const ConnectionClass*, uint8_t>
+    connectionMeasurementSpecifications;
+
+uint8_t getMeasurementSpecifications(const ConnectionClass* connection)
+{
+    std::lock_guard lock(measurementSpecificationsMutex);
+    if (auto it = connectionMeasurementSpecifications.find(connection);
+        it != connectionMeasurementSpecifications.end())
+    {
+        return it->second;
+    }
+    return ConnectionClass::measurementSpecificationDmtf;
+}
+
+void setMeasurementSpecifications(const ConnectionClass* connection,
+                                  uint8_t specifications)
+{
+    std::lock_guard lock(measurementSpecificationsMutex);
+    connectionMeasurementSpecifications[connection] = specifications;
+}
+
+void eraseMeasurementSpecifications(const ConnectionClass* connection)
+{
+    std::lock_guard lock(measurementSpecificationsMutex);
+    connectionMeasurementSpecifications.erase(connection);
+}
+
 /**
  * @param[in] RTDExp Exponent value of base wait time
  * @param[in] RTDM RTDM multiplier for maximum allowed time
@@ -106,10 +137,22 @@ auto calcResponseIfReadyWaitTimeMs(uint8_t RTDExp, uint8_t RTDM)
 
 ConnectionClass::ConnectionClass(const ContextClass& cont, LogClass& log,
                                  uint8_t eid, std::string sockPath) :
-    context(cont),
-    Log(log), sockPath(std::move(sockPath)), m_eid(eid)
+    context(cont), Log(log), sockPath(std::move(sockPath)), m_eid(eid)
 {
     resetConnection();
+}
+
+ConnectionClass::ConnectionClass(const ContextClass& cont, LogClass& log,
+                                 uint8_t eid, std::string sockPath,
+                                 uint8_t measurementSpecifications) :
+    ConnectionClass(cont, log, eid, std::move(sockPath))
+{
+    setMeasurementSpecifications(this, measurementSpecifications);
+}
+
+ConnectionClass::~ConnectionClass()
+{
+    eraseMeasurementSpecifications(this);
 }
 
 RetStat ConnectionClass::refreshMeasurements(SlotIdx slotidx)
@@ -222,21 +265,6 @@ bool ConnectionClass::getCertificatesDER(std::vector<uint8_t>& buf,
     buf.resize(src.size());
     std::copy(src.begin(), src.end(), buf.begin());
     return true;
-}
-
-bool ConnectionClass::getCertificateChainObject(std::vector<uint8_t>& buf,
-                                                SlotIdx slotidx) const
-{
-    SPDMCPP_LOG_TRACE_FUNC(Log);
-    buf.clear();
-
-    if (!slotHasInfo(slotidx, SlotInfoEnum::CERTIFICATES))
-    {
-        return false;
-    }
-
-    buf = Slots[slotidx].Certificates;
-    return !buf.empty();
 }
 
 bool ConnectionClass::getCertificatesPEM(std::string& str,
@@ -554,7 +582,7 @@ RetStat ConnectionClass::tryNegotiateAlgorithms()
 
     PacketNegotiateAlgorithmsRequestVar request;
     request.Min.Header.MessageVersion = MessageVersion;
-    request.Min.MeasurementSpecification = measurementSpecificationDmtf;
+    request.Min.MeasurementSpecification = getMeasurementSpecifications(this);
 
     request.Min.BaseAsymAlgo = BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P256 |
                                BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P384 |
@@ -606,6 +634,19 @@ RetStat ConnectionClass::handleRecv<PacketAlgorithmsResponseVar>()
         resp.Min.Reserved2 != 0 || resp.Min.Reserved3 != 0)
     {
         rs = RetStat::ERROR_INVALID_RESERVED;
+        SPDMCPP_CONNECTION_RS_ERROR_RETURN_WITH_VERSION(rs);
+    }
+    const uint8_t selectedMeasurementSpecification =
+        resp.Min.MeasurementSpecification;
+    const uint8_t supportedMeasurementSpecifications =
+        getMeasurementSpecifications(this);
+    if ((!skipMeasurements() && selectedMeasurementSpecification == 0) ||
+        (selectedMeasurementSpecification != 0 &&
+         (std::popcount(selectedMeasurementSpecification) != 1 ||
+          (selectedMeasurementSpecification &
+           supportedMeasurementSpecifications) == 0)))
+    {
+        rs = RetStat::ERROR_WRONG_ALGO_BITS;
         SPDMCPP_CONNECTION_RS_ERROR_RETURN_WITH_VERSION(rs);
     }
     if (std::popcount(
@@ -975,6 +1016,12 @@ RetStat ConnectionClass::handleRecv<PacketMeasurementsResponseVar>()
     // parse and store DMTF Measurements
     for (const auto& block : resp.MeasurementBlockVector)
     {
+        if (block.Min.MeasurementSpecification !=
+            Algorithms.Min.MeasurementSpecification)
+        {
+            rs = RetStat::ERROR_WRONG_ALGO_BITS;
+            SPDMCPP_CONNECTION_RS_ERROR_RETURN_WITH_VERSION(rs);
+        }
         if (block.Min.MeasurementSpecification == measurementSpecificationDmtf)
         {
             if (DMTFMeasurements.find(block.Min.Index) !=

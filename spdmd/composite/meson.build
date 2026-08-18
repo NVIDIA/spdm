@@ -15,7 +15,6 @@ composite_sources = files(
     'evidence_builder.cpp',
     'bundle_assembler.cpp',
     'composite_orchestrator.cpp',
-    'pem.cpp',
 )
 
 # '.' resolves "cbor_det.hpp"; '..' resolves "composite/..." and

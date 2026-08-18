@@ -39,7 +39,7 @@ CollectedEvidence spdmDevice(bool withVca)
     e.success = true;
     e.pattern = EvidencePattern::SpdmMeasurements;
     e.signedMeasurements = {0x01, 0x02, 0x03, 0x04};
-    e.certChainSpdm = {0xAA, 0xBB, 0xCC};
+    e.certificateChainDer = {0x30, 0x01, 0xAA, 0x30, 0x01, 0xBB};
     if (withVca)
     {
         e.vca = {0x10, 0x20};
@@ -73,7 +73,9 @@ TEST(ClaimsSetBuilder, SpdmPatternFieldsNoVca)
 
     auto cc = root->atText("cert_chain");
     ASSERT_TRUE(cc && cc->isBytes());
-    EXPECT_EQ(cc->bytes, (std::vector<std::uint8_t>{0xAA, 0xBB, 0xCC}));
+    EXPECT_EQ(cc->bytes,
+              (std::vector<std::uint8_t>{0x30, 0x01, 0xAA, 0x30, 0x01,
+                                         0xBB}));
 
     EXPECT_EQ(root->atText("vca"), nullptr);
 }
@@ -115,6 +117,22 @@ TEST(ClaimsSetBuilder, TypedValuesWrapSpdmFields)
     EXPECT_TRUE(sm->array[0]->isUint());
     EXPECT_EQ(sm->array[0]->uarg, kCfSpdmMeasurements);
     EXPECT_TRUE(sm->array[1]->isBytes());
+
+    auto certChain = root->atText("cert_chain");
+    ASSERT_TRUE(certChain && certChain->isArray());
+    ASSERT_EQ(certChain->array.size(), 2u);
+    EXPECT_EQ(certChain->array[0]->uarg,
+              kCfConcatenatedDerCertificates);
+    EXPECT_EQ(certChain->array[1]->bytes,
+              spdmDevice(false).certificateChainDer);
+}
+
+TEST(ClaimsSetBuilder, TypedValuesDoNotWrapDeviceEatFields)
+{
+    auto cs = buildClaimsSet(eatDevice(), /*typedValues=*/true);
+    auto root = cbortest::decode(cs);
+    auto token = root->atText("device_token");
+    ASSERT_TRUE(token && token->isBytes());
 }
 
 TEST(ClaimsSetBuilder, Deterministic)
@@ -133,7 +151,7 @@ TEST(ClaimsSetBuilder, ThrowsOnEmptySignedMeasurements)
 TEST(ClaimsSetBuilder, ThrowsOnEmptyCertChain)
 {
     auto e = spdmDevice(false);
-    e.certChainSpdm.clear();
+    e.certificateChainDer.clear();
     EXPECT_THROW(buildClaimsSet(e), std::invalid_argument);
 }
 

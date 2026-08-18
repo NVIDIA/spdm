@@ -34,8 +34,7 @@ constexpr const char* kKeyVca = "vca";
 constexpr const char* kKeyTokenFormat = "token_format";
 constexpr const char* kKeyDeviceToken = "device_token";
 
-/// Encode a byte field either plain (bstr) or CMW-style typed
-/// ([content-format, value]).
+/// Encode a Pattern A/C byte field either plain or CMW-style typed.
 std::vector<std::uint8_t> byteField(std::span<const std::uint8_t> bytes,
                                     bool typedValues,
                                     std::uint64_t contentFormat)
@@ -58,7 +57,7 @@ std::vector<std::uint8_t> buildSpdmEvidence(const CollectedEvidence& ev,
         throw std::invalid_argument(
             "buildClaimsSet: signed_measurements is empty");
     }
-    if (ev.certChainSpdm.empty())
+    if (ev.certificateChainDer.empty())
     {
         throw std::invalid_argument("buildClaimsSet: cert_chain is empty");
     }
@@ -71,8 +70,8 @@ std::vector<std::uint8_t> buildSpdmEvidence(const CollectedEvidence& ev,
     m.addText(
         kKeySignedMeasurements,
         byteField(ev.signedMeasurements, typedValues, kCfSpdmMeasurements));
-    m.addText(kKeyCertChain,
-              byteField(ev.certChainSpdm, typedValues, kCfSpdmCertChain));
+    m.addText(kKeyCertChain, byteField(ev.certificateChainDer, typedValues,
+                                      kCfConcatenatedDerCertificates));
     if (ev.includeVca)
     {
         m.addText(kKeyVca, byteField(ev.vca, typedValues, kCfSpdmVca));

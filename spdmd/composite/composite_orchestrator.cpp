@@ -38,10 +38,6 @@ std::string CompositeStatus::toStatusString() const
     {
         return "Success";
     }
-    if (devicesSucceeded == 0)
-    {
-        return "Error";
-    }
     return "PartialSuccess";
 }
 
@@ -72,6 +68,9 @@ CompositeOrchestrator::Result CompositeOrchestrator::produce(
         if (!ev.success)
         {
             ++out.status.devicesFailed;
+            out.status.deviceFailures.push_back(
+                {ev.eid, ev.environmentId,
+                 ev.errorMsg.empty() ? "collection failed" : ev.errorMsg});
             continue;
         }
         try
@@ -84,6 +83,8 @@ CompositeOrchestrator::Result CompositeOrchestrator::produce(
         catch (const std::exception& e)
         {
             ++out.status.devicesFailed;
+            out.status.deviceFailures.push_back(
+                {ev.eid, ev.environmentId, e.what()});
             // A malformed device is treated as a collection failure; it
             // contributes no Claims-Set and no submod.
         }

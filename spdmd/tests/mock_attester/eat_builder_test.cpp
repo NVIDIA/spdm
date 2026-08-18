@@ -69,7 +69,7 @@ std::vector<std::uint8_t> buildSample(bool withCorim,
     std::vector<std::uint8_t> ueid{0x01, 0x02, 0x03, 0x04};
     std::vector<LeadAttesterMeasurement> meas;
     LeadAttesterMeasurement m;
-    m.contentFormat = 0;
+    m.contentFormat = 42;
     m.value = {0xDE, 0xAD, 0xBE, 0xEF};
     meas.push_back(m);
 
@@ -143,9 +143,23 @@ TEST(EatBuilder, MeasurementsArrayShape)
     ASSERT_TRUE(entry->isMap());
     auto cf = entry->atText("content-format");
     ASSERT_TRUE(cf && cf->isUint());
+    EXPECT_EQ(cf->uarg, 42u);
     auto val = entry->atText("value");
     ASSERT_TRUE(val && val->isBytes());
     EXPECT_EQ(val->bytes, (std::vector<std::uint8_t>{0xDE, 0xAD, 0xBE, 0xEF}));
+}
+
+TEST(EatBuilder, MeasurementRequiresContentFormat)
+{
+    auto nonce = nonceFill(0xAB);
+    std::vector<std::uint8_t> ueid{0x01};
+    std::vector<LeadAttesterMeasurement> meas(1);
+    meas[0].value = {0xDE};
+
+    EXPECT_THROW(buildCompositeClaims(
+                     std::span<const std::uint8_t, 32>{nonce}, ueid,
+                     "tag:example,2026:profile", {}, meas, std::nullopt),
+                 std::invalid_argument);
 }
 
 TEST(EatBuilder, OptionalCorimLocator)

@@ -103,8 +103,8 @@ struct CollectedEvidence
     // --- Pattern A / C inputs ---
     /// Redfish/SPDM SignedMeasurements value, verbatim.
     std::vector<std::uint8_t> signedMeasurements;
-    /// Raw reassembled SPDM certificate-chain object (not PEM).
-    std::vector<std::uint8_t> certChainSpdm;
+    /// Concatenated DER certificates, excluding the SPDM header and RootHash.
+    std::vector<std::uint8_t> certificateChainDer;
     /// Observed VCA transcript; required for SPDM 1.0/1.1, omitted for
     /// 1.2+. Included only when @ref includeVca is true.
     std::vector<std::uint8_t> vca;
@@ -130,8 +130,8 @@ struct SubmoduleRecord
 /// Authored entirely by the Lead Attester; the mock backend fills it.
 struct LeadAttesterMeasurement
 {
-    std::uint64_t contentFormat = 0; // CoAP Content-Format
-    std::vector<std::uint8_t> value; // opaque payload bytes
+    std::optional<std::uint64_t> contentFormat; // CoAP Content-Format
+    std::vector<std::uint8_t> value;            // opaque payload bytes
 };
 
 /// Request handed to the Lead Attester. Note: no eat_profile — the RoT

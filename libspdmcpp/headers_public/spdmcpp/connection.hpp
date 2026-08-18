@@ -165,7 +165,12 @@ class ConnectionClass : public NonCopyable
     explicit ConnectionClass(const ContextClass& context, LogClass& log,
                              uint8_t eid, std::string sockPath);
 
-    ~ConnectionClass() = default;
+    /** @brief Constructor with explicit requester measurement specifications.
+     */
+    ConnectionClass(const ContextClass& context, LogClass& log, uint8_t eid,
+                    std::string sockPath, uint8_t measurementSpecifications);
+
+    ~ConnectionClass();
 
     /** @brief get send timeout during the connection
      *
@@ -366,21 +371,8 @@ class ConnectionClass : public NonCopyable
         return MessageVersion;
     }
 
-    /** @brief Returns the certificate chain for the given slot index
-     *  @details Note this function will return false if the certificate chain
-     * was not fetched for the given slot (even if it is available on the device
-     * itself)
-     *  @param[out] buf - the buffer into which the certificate chain is written
-     *  @returns true if the certificate chain was available and written into
-     * buf, false otherwise
-     */
-    bool getCertificateChainObject(std::vector<uint8_t>& buf,
-                                   SlotIdx slotidx) const;
-
     /** @brief Returns the DER certificate chain for the given slot index
      *  @details This strips the SPDM certificate-chain header and RootHash.
-     * Use getCertificateChainObject() when the verifier needs native SPDM
-     * evidence bytes.
      *  @param[out] buf - the buffer into which the DER chain is written
      *  @returns true if the certificate chain was available and written into
      * buf, false otherwise
@@ -439,7 +431,7 @@ class ConnectionClass : public NonCopyable
         return CombinedMeasurementTranscript;
     }
 
-    /** @brief VERSION/CAPABILITIES/ALGORITHMS transcript bytes. */
+    /** @brief VERSION, CAPABILITIES, and ALGORITHMS request/response bytes. */
     const std::vector<uint8_t>& getVcaTranscript() const
     {
         return refBuf(BufEnum::A);
