@@ -36,6 +36,7 @@
 #include <spdmcpp/connection.hpp>
 #include <spdmcpp/mctp_support.hpp>
 
+#include <functional>
 #include <map>
 #include <memory>
 
@@ -71,8 +72,8 @@ class MctpTransportClass : public spdmcpp::MctpTransportClass
   public:
     MctpTransportClass(uint8_t eid, Responder& resp, std::string medium,
                        spdmcpp::LogClass& logIn) :
-        spdmcpp::MctpTransportClass(eid), transportMedium(std::move(medium)),
-        responder(resp), log(logIn)
+        spdmcpp::MctpTransportClass(eid),
+        transportMedium(std::move(medium)), responder(resp), log(logIn)
     {}
     ~MctpTransportClass() override = default;
 
@@ -159,6 +160,33 @@ class Responder :
         return eid;
     }
 
+    void setRefreshCompleteCallback(
+        std::function<void(uint8_t eid, bool success)> cb)
+    {
+        refreshCompleteCb = std::move(cb);
+    }
+
+    uint8_t measurementSpecification() const
+    {
+        return connection.getMeasurementSpecification();
+    }
+
+    const std::vector<uint8_t>& deviceEatToken() const
+    {
+        return connection.getDeviceEatToken();
+    }
+
+    const std::vector<uint8_t>& vcaTranscript() const
+    {
+        return connection.getVcaTranscript();
+    }
+
+    bool certificateChainDer(std::vector<uint8_t>& certificateChainDer,
+                             uint8_t slotIdx) const
+    {
+        return connection.getCertificatesDER(certificateChainDer, slotIdx);
+    }
+
     /** @brief Event callback for receiving events
      *  @param[inout] bus - Buffer containing the data, note that after the call
      * the contents of buf will be effectively clobbered
@@ -222,6 +250,8 @@ class Responder :
 #if FETCH_SERIALNUMBER_FROM_RESPONDER != 0
     spdmcpp::RetStat handleEventForSerialNumber(spdmcpp::EventClass& event);
 #endif
+
+    std::function<void(uint8_t eid, bool success)> refreshCompleteCb;
 
   private:
     /** @brief Update serial number in the inventory

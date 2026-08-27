@@ -30,6 +30,20 @@ namespace spdmd
 namespace dbus_api
 {
 
+namespace
+{
+
+#ifdef ENABLE_COMPOSITE_ATTESTATION
+constexpr std::uint8_t requesterMeasurementSpecifications =
+    spdmcpp::ConnectionClass::measurementSpecificationDmtf |
+    spdmcpp::ConnectionClass::measurementSpecificationEat;
+#else
+constexpr std::uint8_t requesterMeasurementSpecifications =
+    spdmcpp::ConnectionClass::measurementSpecificationDmtf;
+#endif
+
+} // namespace
+
 /**
  * @brief Convert SPDM version to string
  *
@@ -58,7 +72,8 @@ Responder::Responder(SpdmdAppContext& appCtx, const std::string& path,
                      std::string socketPath) :
     ResponderIntf(appCtx.getConn(), path.c_str(), action::defer_emit),
     appContext(appCtx), log(appCtx.getLog()),
-    connection(appCtx.context, log, eid, std::move(socketPath)),
+    connection(appCtx.context, log, eid, std::move(socketPath),
+               requesterMeasurementSpecifications),
     transport(eid, *this, std::move(transportMedium), log),
     inventoryPath(invPath), bindingType(bindingType), eid(eid)
 {
@@ -325,6 +340,11 @@ void Responder::handleError(spdmcpp::RetStat rs)
             appContext.reportError(std::string("SPDM other error: ") +
                                    get_cstr(rs) + " on " + dbgIdName);
     }
+
+    if (refreshCompleteCb)
+    {
+        refreshCompleteCb(eid, false);
+    }
 }
 
 spdmcpp::RetStat Responder::handleEventForRefresh(spdmcpp::EventClass& ev)
@@ -355,6 +375,10 @@ spdmcpp::RetStat Responder::handleEventForRefresh(spdmcpp::EventClass& ev)
         syncSlotsInfo();
         updateLastUpdateTime();
         status(SPDMStatus::Success);
+        if (refreshCompleteCb)
+        {
+            refreshCompleteCb(eid, true);
+        }
     }
     else if (connection.slotHasInfo(slotidx, SlotInfoEnum::CERTIFICATES))
     {
