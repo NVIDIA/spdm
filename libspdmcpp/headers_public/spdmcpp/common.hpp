@@ -206,14 +206,26 @@ class TransportClass : public NonCopyable
     }
 
   protected:
+    /** @brief function to help with reading simple statically sized headers
+     * from buf
+     */
+    template <class T>
+    static T getHeaderRef(const std::vector<uint8_t>& buf,
+                          const LayerState& lay)
+    {
+        T result{};
+        std::memcpy(&result, &buf[lay.getOffset()], sizeof(T));
+        return result;
+    }
+
     /** @brief function to help with writing simple statically sized headers
      * into buf
      */
     template <class T>
-    static T& getHeaderRef(std::vector<uint8_t>& buf, LayerState& lay)
+    static void setHeaderRef(std::vector<uint8_t>& buf, const LayerState& lay,
+                             const T& value)
     {
-        // NOLINTNEXTLINE cppcoreguidelines-pro-type-reinterpret-cast
-        return *reinterpret_cast<T*>(&buf[lay.getOffset()]);
+        std::memcpy(&buf[lay.getOffset()], &value, sizeof(T));
     }
 
     /** @brief helper for checking if the buffer is large enough

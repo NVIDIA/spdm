@@ -1214,4 +1214,44 @@ TEST(packet_version, GetMessageVersion_AllVersions)
     }
 }
 
+// Verify that packetDecodeBasic reads a uint32_t correctly when the value
+// starts at an unaligned byte offset — the scenario fixed by replacing
+// reinterpret_cast with memcpy in packetDecodeBasic.
+TEST(packet_decode_alignment, uint32_at_odd_offset)
+{
+    LogClass log(std::cerr);
+    // Pad byte forces the uint32_t to start at offset 1 (not 4-byte aligned).
+    std::vector<uint8_t> buf = {0x00, 0x01, 0x02, 0x03, 0x04};
+    uint32_t decoded{};
+    size_t off = 1;
+    ASSERT_EQ(packetDecodeBasic(log, decoded, buf, off), RetStat::OK);
+    EXPECT_EQ(decoded, 0x04030201u);
+    EXPECT_EQ(off, buf.size());
+}
+
+// Verify that packetDecodeInternal reads a struct with uint32_t fields
+// correctly when the struct starts at an unaligned offset.
+TEST(packet_decode_alignment, struct_with_uint32_at_odd_offset)
+{
+    LogClass log(std::cerr);
+    PacketGetCapabilitiesRequest src{};
+    src.Header.MessageVersion = MessageVersionEnum::SPDM_1_2;
+    src.CTExponent = 5;
+    src.DataTransferSize = 0x12345678u;
+    src.MaxSPDMmsgSize = 0xDEADBEEFu;
+
+    std::vector<uint8_t> buf;
+    size_t enc_off = 0;
+    ASSERT_EQ(packetEncodeInternal(src, buf, enc_off), RetStat::OK);
+    buf.insert(buf.begin(), 0x00); // pad byte forces struct to odd offset
+
+    PacketGetCapabilitiesRequest decoded{};
+    size_t off = 1;
+    ASSERT_EQ(packetDecodeInternal(log, decoded, buf, off), RetStat::OK);
+    EXPECT_EQ(decoded.DataTransferSize, 0x12345678u);
+    EXPECT_EQ(decoded.MaxSPDMmsgSize, 0xDEADBEEFu);
+    EXPECT_EQ(decoded.CTExponent, 5);
+    EXPECT_EQ(off, buf.size());
+}
+
 #endif

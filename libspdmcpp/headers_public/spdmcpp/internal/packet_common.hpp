@@ -40,8 +40,9 @@ template <typename T>
         SPDMCPP_LOG_TRACE(logg, buf.size());
         return RetStat::ERROR_BUFFER_TOO_SMALL;
     }
-    // NOLINTNEXTLINE cppcoreguidelines-pro-type-reinterpret-cast
-    endianHostSpdmCopy(*reinterpret_cast<const T*>(&buf[start]), p);
+    T encoded{};
+    std::memcpy(&encoded, buf.data() + start, sizeof(T));
+    endianHostSpdmCopy(encoded, p);
     start += sizeof(T);
     return RetStat::OK;
 }
@@ -67,8 +68,9 @@ template <typename T>
         SPDMCPP_LOG_TRACE(logg, buf.size());
         return RetStat::ERROR_BUFFER_TOO_SMALL;
     }
-    // NOLINTNEXTLINE cppcoreguidelines-pro-type-reinterpret-cast
-    endianHostSpdmCopy(*reinterpret_cast<const T*>(&buf[start]), p);
+    T encoded{};
+    std::memcpy(&encoded, buf.data() + start, sizeof(T));
+    endianHostSpdmCopy(encoded, p);
     start += sizeof(T);
     return RetStat::OK;
 }
