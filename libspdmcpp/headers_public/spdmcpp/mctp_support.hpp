@@ -70,10 +70,11 @@ class MctpTransportClass : public TransportClass
     }
     RetStat encodePost(std::vector<uint8_t>& buf, LayerState& lay) override
     {
-        auto& header = getHeaderRef<HeaderType>(buf, lay);
+        HeaderType header{};
         header.mctpTag(MCTP_TAG_SPDM);
         header.eid = EID;
         header.type = MCTPMessageTypeEnum::SPDM;
+        setHeaderRef(buf, lay, header);
         return RetStat::OK;
     }
 
@@ -84,7 +85,7 @@ class MctpTransportClass : public TransportClass
         {
             return RetStat::ERROR_BUFFER_TOO_SMALL;
         }
-        const auto& header = getHeaderRef<HeaderType>(buf, lay);
+        const auto header = getHeaderRef<HeaderType>(buf, lay);
         if (header.type != MCTPMessageTypeEnum::SPDM)
         {
             return RetStat::ERROR_WRONG_MCTP_TYPE;
@@ -122,7 +123,7 @@ class MctpTransportClass : public TransportClass
         {
             return RetStat::ERROR_BUFFER_TOO_SMALL;
         }
-        const auto& header = getHeaderRef<HeaderType>(buf, lay);
+        const auto header = getHeaderRef<HeaderType>(buf, lay);
         if (header.type != MCTPMessageTypeEnum::SPDM)
         {
             return RetStat::ERROR_WRONG_MCTP_TYPE;
