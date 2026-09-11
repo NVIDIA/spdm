@@ -22,6 +22,16 @@
 #include "spdmd_app.hpp"
 #include "spdmd_version.hpp"
 
+#ifdef ENABLE_COMPOSITE_ATTESTATION
+#include "composite/composite_orchestrator.hpp"
+#include "dbus_impl_composite.hpp"
+#include "platform_attester.hpp"
+
+#ifdef ATTESTER_BACKEND_MOCK
+#include "mock_attester/mock_attester.hpp"
+#endif
+#endif
+
 #include <CLI/CLI.hpp>
 
 #include <algorithm>
@@ -30,6 +40,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <vector>
 
 using namespace std;
@@ -42,6 +53,37 @@ constexpr auto spdmDefaultService = "xyz.openbmc_project.SPDM";
 
 namespace spdmd
 {
+
+#ifdef ENABLE_COMPOSITE_ATTESTATION
+namespace
+{
+
+std::unique_ptr<PlatformAttester> createConfiguredPlatformAttester()
+{
+    constexpr std::string_view backend = COMPOSITE_ATTESTER_BACKEND;
+
+    if (backend == "none")
+    {
+        return nullptr;
+    }
+
+    if (backend == "mock")
+    {
+#ifdef ATTESTER_BACKEND_MOCK
+        return std::make_unique<mock_attester::MockAttester>();
+#else
+        std::cerr << "PlatformAttester: backend 'mock' requested but "
+                     "ATTESTER_BACKEND_MOCK not compiled in.\n";
+        return nullptr;
+#endif
+    }
+
+    std::cerr << "PlatformAttester: unknown backend '" << backend << "'\n";
+    return nullptr;
+}
+
+} // namespace
+#endif
 
 SpdmdApp::SpdmdApp() : SpdmdAppContext(std::cout)
 {}
@@ -532,6 +574,31 @@ int main(int argc, char** argv)
 
         auto& conn = spdmApp.getConn();
         sdbusplus::server::manager_t objManager(conn, spdmRootObjectPath);
+
+#ifdef ENABLE_COMPOSITE_ATTESTATION
+        // Composite attestation: configured Lead Attester +
+        // orchestrator + tag-602 bundle producer. The CollectionPlan
+        // (env.* mapping + Platform CoRIM locator) is loaded from
+        // /etc/spdmd/composite.json when present.
+        auto attester = spdmd::createConfiguredPlatformAttester();
+        std::unique_ptr<spdmd::CompositeOrchestrator> orchestrator;
+        std::unique_ptr<sdbusplus::asio::object_server> compositeObjServer;
+        std::unique_ptr<spdmd::DbusImplComposite> compositeDbus;
+        if (attester)
+        {
+            orchestrator =
+                std::make_unique<spdmd::CompositeOrchestrator>(*attester);
+            compositeObjServer =
+                std::make_unique<sdbusplus::asio::object_server>(
+                    spdmApp.getConnPtr());
+            spdmd::CompositeConfig cc =
+                spdmd::loadCompositeConfig("/etc/spdmd/composite.json");
+            compositeDbus = std::make_unique<spdmd::DbusImplComposite>(
+                *compositeObjServer, *orchestrator, spdmApp.getResponders(),
+                spdmApp.getIo(), std::move(cc));
+        }
+#endif
+
         returnCode = spdmApp.loop();
     }
     catch (const std::exception& e)

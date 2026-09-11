@@ -72,3 +72,12 @@ foreach test_name, sources : special_tests
         workdir: meson.current_source_dir(),
     )
 endforeach
+
+if composite_attestation.enabled()
+    if attester_backend == 'mock'
+        subdir('mock_attester')
+    endif
+
+    # Vendor-neutral composite attestation unit tests (no backend required).
+    subdir('composite')
+endif

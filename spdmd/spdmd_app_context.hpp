@@ -31,6 +31,7 @@
 #include <xyz/openbmc_project/Logging/Entry/server.hpp>
 
 #include <chrono>
+#include <memory>
 #include <optional>
 #include <sstream>
 
@@ -127,6 +128,13 @@ class SpdmdAppContext
     auto& getConn()
     {
         return *conn;
+    }
+
+    /** @brief Get DBus connection shared pointer */
+    auto getConnPtr()
+    {
+        return std::shared_ptr<sdbusplus::asio::connection>(
+            conn.get(), [](sdbusplus::asio::connection*) {});
     }
 
     /** @brief GET IO context */
