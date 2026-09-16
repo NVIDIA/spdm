@@ -918,7 +918,10 @@ void MctpDiscovery::getMCTPObjectAsync(const std::string& uuid,
                 for (const auto& [objectPath, interfaces] : objTree)
                 {
                     std::string discoveredUuid = getUUID(interfaces);
-                    if (discoveredUuid == uuid)
+                    // A UUID identifies a device, not an endpoint
+                    // (DSP0236 8.17.8).
+                    if (discoveredUuid == uuid &&
+                        getEid(interfaces).has_value())
                     {
                         *found = true;
                         Object obj{objectPath, interfaces};
