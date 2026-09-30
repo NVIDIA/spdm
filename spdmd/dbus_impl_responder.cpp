@@ -123,7 +123,7 @@ void Responder::updateCapabilities()
 
 void Responder::updateAlgorithmsInfo()
 {
-    switch (connection.getMeasurementHashEnum())
+    switch (connection.getSignatureHashEnum())
     {
         case HashEnum::TPM_ALG_SHA_256:
             hashingAlgorithm(HashingAlgorithms::TPM_ALG_SHA_256);
