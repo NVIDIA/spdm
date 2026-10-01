@@ -17,3 +17,8 @@ option('use_fuzz', type: 'feature', description: 'Fuzz testing.', value: 'disabl
 option('enable-in-kernel-mctp', type: 'feature', value: 'disabled', description: 'Use the in-kernel MCTP stack instead of the demux daemon')
 
 option('csm_service_enabled', type: 'feature', description: 'Skip check for ccsm service if the service is disabled. Disable this flag on platforms where ccsm is not supported/enabled', value: 'enabled')
+
+# Composite attestation (BMC-mediated platform composite attestation).
+option('composite-attestation', type: 'feature', value: 'disabled', description: 'Build BMC-mediated composite attestation producer')
+# Selects the Lead Attester backend that signs the composite EAT.
+option('attester-backend', type: 'combo', choices: ['none', 'mock'], value: 'none', description: 'Lead Attester backend for composite attestation')

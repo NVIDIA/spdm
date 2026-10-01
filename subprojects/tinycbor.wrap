@@ -1,0 +1,9 @@
+[wrap-file]
+directory = tinycbor-0.6.0
+source_url = https://github.com/intel/tinycbor/archive/refs/tags/v0.6.0.tar.gz
+source_filename = tinycbor-0.6.0.tar.gz
+source_hash = 512e2c9fce74f60ef9ed3af59161e905f9e19f30a52e433fc55f39f4c70d27e4
+patch_directory = tinycbor
+
+[provide]
+tinycbor = tinycbor_dep

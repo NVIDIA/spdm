@@ -114,6 +114,11 @@ class SpdmdApp : public SpdmdAppContext
      */
     void discoveryUpdateResponder(const dbus_api::ResponderArgs& respArg);
 
+    auto& getResponders()
+    {
+        return responders;
+    }
+
   private:
     /** @brief SPDMD callback signal called
      *

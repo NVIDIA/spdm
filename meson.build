@@ -39,6 +39,10 @@ conf_data.set(
     get_option('discovery_only_from_mctp_control').enabled(),
 )
 conf_data.set('SPDM_JSON_CONF_FILE_NAME', get_option('conf_file_name'))
+conf_data.set_quoted(
+    'COMPOSITE_ATTESTER_BACKEND',
+    get_option('attester-backend'),
+)
 conf_data.set('USE_DEFAULT_DBUS', get_option('use_default_dbus').enabled())
 conf_data.set('MCTP_IN_KERNEL', get_option('enable-in-kernel-mctp').enabled())
 
@@ -99,6 +103,18 @@ else
         'nlohmann_json',
         fallback: ['nlohmann_json', 'nlohmann_json_dep'],
     )
+endif
+
+if get_option('composite-attestation').enabled()
+    # Composite attestation builds all CBOR through tinycbor (deterministic
+    # subset, with map-key ordering added by composite/cbor_det). Required by
+    # the producer core and the mock attester.
+    tinycbor_dep = dependency(
+        'tinycbor',
+        fallback: ['tinycbor', 'tinycbor_dep'],
+    )
+else
+    tinycbor_dep = dependency('', required: false, disabler: true)
 endif
 
 subdir('libspdmcpp')
