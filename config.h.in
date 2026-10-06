@@ -20,6 +20,9 @@
 #mesondefine COMPOSITE_ATTESTER_BACKEND
 
 // NOLINTNEXTLINE cppcoreguidelines-macro-usage
+#mesondefine NATIVE_EVIDENCE_CARRIAGE
+
+// NOLINTNEXTLINE cppcoreguidelines-macro-usage
 #mesondefine USE_DEFAULT_DBUS
 
 // NOLINTNEXTLINE cppcoreguidelines-macro-usage

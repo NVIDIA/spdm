@@ -18,6 +18,9 @@ option('enable-in-kernel-mctp', type: 'feature', value: 'disabled', description:
 
 option('csm_service_enabled', type: 'feature', description: 'Skip check for ccsm service if the service is disabled. Disable this flag on platforms where ccsm is not supported/enabled', value: 'enabled')
 
+# Requires composite-attestation; none selects record-cmw when it is enabled.
+option('native-evidence-carriage', type: 'combo', choices: ['none', 'direct-map', 'record-cmw'], value: 'none', description: 'Native Evidence carriage for composite detached submodules')
+
 # Composite attestation (BMC-mediated platform composite attestation).
 option('composite-attestation', type: 'feature', value: 'disabled', description: 'Build BMC-mediated composite attestation producer')
 # Selects the Lead Attester backend that signs the composite EAT.

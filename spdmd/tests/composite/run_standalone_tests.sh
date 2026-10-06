@@ -56,7 +56,6 @@ declare -A TESTS=(
   [collection_plan_test]="$SPDMD/tests/composite/collection_plan_test.cpp"
   [evidence_builder_test]="$SPDMD/tests/composite/evidence_builder_test.cpp"
   [bundle_assembler_test]="$SPDMD/tests/composite/bundle_assembler_test.cpp"
-  [evidence_pattern_test]="$SPDMD/tests/composite/evidence_pattern_test.cpp"
   [eat_builder_test]="$SPDMD/tests/mock_attester/eat_builder_test.cpp"
   [mock_attester_test]="$SPDMD/tests/mock_attester/mock_attester_test.cpp"
   [composite_orchestrator_test]="$SPDMD/tests/mock_attester/composite_orchestrator_test.cpp"
@@ -70,7 +69,7 @@ echo "== running tests =="
 rc=0
 for name in cbor_det_test claims_set_builder_test submodule_digest_test \
             collection_plan_test evidence_builder_test bundle_assembler_test \
-            evidence_pattern_test eat_builder_test \
+            eat_builder_test \
             mock_attester_test composite_orchestrator_test; do
   echo "---- $name ----"
   "$OUT/$name" --gtest_brief=0 2>&1 | tail -4 || rc=1

@@ -9,6 +9,23 @@ project(
 
 fs = import('fs')
 
+composite_attestation = get_option('composite-attestation')
+attester_backend = get_option('attester-backend')
+native_evidence_carriage = get_option('native-evidence-carriage')
+
+if composite_attestation.enabled()
+    if native_evidence_carriage == 'none'
+        native_evidence_carriage = 'record-cmw'
+    endif
+else
+    if attester_backend != 'none'
+        error('attester-backend requires composite-attestation=enabled')
+    endif
+    if native_evidence_carriage != 'none'
+        error('native-evidence-carriage requires composite-attestation=enabled')
+    endif
+endif
+
 if get_option('tests').enabled()
     gtest = dependency('gtest', main: true, disabler: true, required: false)
     gmock = dependency('gmock', disabler: true, required: false)
@@ -41,7 +58,11 @@ conf_data.set(
 conf_data.set('SPDM_JSON_CONF_FILE_NAME', get_option('conf_file_name'))
 conf_data.set_quoted(
     'COMPOSITE_ATTESTER_BACKEND',
-    get_option('attester-backend'),
+    attester_backend,
+)
+conf_data.set_quoted(
+    'NATIVE_EVIDENCE_CARRIAGE',
+    native_evidence_carriage,
 )
 conf_data.set('USE_DEFAULT_DBUS', get_option('use_default_dbus').enabled())
 conf_data.set('MCTP_IN_KERNEL', get_option('enable-in-kernel-mctp').enabled())

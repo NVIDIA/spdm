@@ -77,10 +77,10 @@ class CompositeOrchestrator
     };
 
     /// @param attester  Lead Attester to delegate signing to.
-    /// @param typedClaimsSets  Use CMW-style typed values in SPDM
-    ///        Claims-Sets (default off).
+    /// @param carriage Detached Claims-Set encoding.
     explicit CompositeOrchestrator(PlatformAttester& attester,
-                                   bool typedClaimsSets = false);
+                                   composite::EvidenceCarriage carriage =
+                                       composite::EvidenceCarriage::RecordCmw);
 
     /// Produce the composite bundle from collected evidence.
     ///
@@ -93,7 +93,7 @@ class CompositeOrchestrator
 
   private:
     PlatformAttester& attester;
-    bool typedClaimsSets;
+    composite::EvidenceCarriage carriage;
 };
 
 } // namespace spdmd

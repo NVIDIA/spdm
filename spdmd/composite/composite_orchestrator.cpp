@@ -23,6 +23,7 @@
 
 #include <algorithm>
 #include <exception>
+#include <stdexcept>
 #include <utility>
 
 namespace spdmd
@@ -41,8 +42,10 @@ std::string CompositeStatus::toStatusString() const
     return "PartialSuccess";
 }
 
-CompositeOrchestrator::CompositeOrchestrator(PlatformAttester& a, bool typed) :
-    attester(a), typedClaimsSets(typed)
+CompositeOrchestrator::CompositeOrchestrator(
+    PlatformAttester& a, composite::EvidenceCarriage selectedCarriage) :
+    attester(a),
+    carriage(selectedCarriage)
 {}
 
 CompositeOrchestrator::Result CompositeOrchestrator::produce(
@@ -57,6 +60,29 @@ CompositeOrchestrator::Result CompositeOrchestrator::produce(
 
     Result out;
     out.status.totalDevices = evidences.size();
+
+    for (std::size_t current = 0; current < evidences.size(); ++current)
+    {
+        const auto duplicate =
+            std::find_if(evidences.begin(), evidences.begin() + current,
+                         [&](const auto& evidence) {
+                             return evidence.environmentId ==
+                                    evidences[current].environmentId;
+                         });
+        if (duplicate != evidences.begin() + current)
+        {
+            const auto& evidence = evidences[current];
+            out.errorMsg =
+                "duplicate environment ID: " + evidence.environmentId;
+            out.status.devicesFailed = 1;
+            out.status.deviceFailures.push_back({evidence.eid,
+                                                 evidence.environmentId,
+                                                 "duplicate environment ID"});
+            out.status.platformAttesterStatus =
+                std::string{toString(attester.getStatus())};
+            return out;
+        }
+    }
 
     // 1. Build detached Claims-Sets + digests for successful devices.
     std::vector<std::pair<std::string, std::vector<std::uint8_t>>>
@@ -75,7 +101,7 @@ CompositeOrchestrator::Result CompositeOrchestrator::produce(
         }
         try
         {
-            std::vector<std::uint8_t> cs = buildClaimsSet(ev, typedClaimsSets);
+            std::vector<std::uint8_t> cs = buildClaimsSet(ev, carriage);
             records.push_back(makeSubmoduleRecord(ev.environmentId, cs));
             detachedClaimsSets.emplace_back(ev.environmentId, std::move(cs));
             ++out.status.devicesSucceeded;
@@ -88,6 +114,15 @@ CompositeOrchestrator::Result CompositeOrchestrator::produce(
             // A malformed device is treated as a collection failure; it
             // contributes no Claims-Set and no submod.
         }
+    }
+
+    // A bundle needs at least one detached Claims-Set.
+    if (records.empty())
+    {
+        out.errorMsg = "no valid device evidence";
+        out.status.platformAttesterStatus =
+            std::string{toString(attester.getStatus())};
+        return out;
     }
 
     // 2. Ask the Lead Attester to build the composite EAT.

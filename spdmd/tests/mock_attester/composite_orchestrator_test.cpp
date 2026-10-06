@@ -22,6 +22,7 @@
 
 #include "../composite/cbor_test_util.hpp"
 #include "composite/bundle_assembler.hpp"
+#include "composite/claims_set_builder.hpp"
 #include "composite/composite_orchestrator.hpp"
 #include "composite/submodule_digest.hpp"
 #include "mock_attester/mock_attester.hpp"
@@ -89,6 +90,67 @@ TEST(CompositeOrchestrator, ProducesBundleAllSuccess)
     EXPECT_FALSE(res.bundle.empty());
 }
 
+TEST(CompositeOrchestrator, DirectMapProducesBundleAllSuccess)
+{
+    mock_attester::MockAttester att;
+    CompositeOrchestrator orch(att, composite::EvidenceCarriage::DirectMap);
+    std::vector<composite::CollectedEvidence> evs{
+        spdmDev("env.gpu.0", 13, 0x10)};
+
+    auto res = orch.produce(nonce(0x15), evs);
+
+    ASSERT_TRUE(res.success) << res.errorMsg;
+    auto bundle = cbortest::decode(res.bundle);
+    auto detached = bundle->tagged->array[1]->atText("env.gpu.0");
+    ASSERT_TRUE(detached && detached->isBytes());
+    auto claimsSet = cbortest::decode(detached->bytes);
+    EXPECT_TRUE(claimsSet->atText("signed_measurements"));
+    EXPECT_TRUE(claimsSet->atText("cert_chain"));
+    EXPECT_EQ(claimsSet->atInt(composite::kCwtClaimCmw), nullptr);
+}
+
+TEST(CompositeOrchestrator, RecordCmwCarriageUsesOnlyClaim299)
+{
+    mock_attester::MockAttester att;
+    CompositeOrchestrator orch(att, composite::EvidenceCarriage::RecordCmw);
+    std::vector<composite::CollectedEvidence> evs{
+        spdmDev("env.gpu.0", 13, 0x10)};
+
+    auto res = orch.produce(nonce(0x11), evs);
+    ASSERT_TRUE(res.success) << res.errorMsg;
+    auto bundle = cbortest::decode(res.bundle);
+    auto detachedMap = bundle->tagged->array[1];
+    auto detached = detachedMap->atText("env.gpu.0");
+    ASSERT_TRUE(detached && detached->isBytes());
+    auto claimsSet = cbortest::decode(detached->bytes);
+    ASSERT_TRUE(claimsSet->isMap());
+    ASSERT_EQ(claimsSet->map.size(), 1u);
+    auto cmw = claimsSet->atInt(composite::kCwtClaimCmw);
+    ASSERT_TRUE(cmw && cmw->isArray());
+    ASSERT_EQ(cmw->array.size(), 3u);
+    EXPECT_EQ(cmw->array[0]->text, composite::kSpdmEvidenceMediaType);
+    EXPECT_TRUE(cmw->array[1]->isBytes());
+    EXPECT_EQ(cmw->array[2]->uarg, composite::kCmwIndicatorEvidence);
+
+    auto spdmEvidence = cbortest::decode(cmw->array[1]->bytes);
+    ASSERT_TRUE(spdmEvidence->isArray());
+    ASSERT_EQ(spdmEvidence->array.size(), 2u);
+    EXPECT_EQ(spdmEvidence->array[0]->bytes, evs[0].signedMeasurements);
+    EXPECT_EQ(spdmEvidence->array[1]->bytes, evs[0].certificateChainDer);
+
+    auto cwt = cbortest::decode(bundle->tagged->array[0]->bytes);
+    auto signedClaims = cbortest::decode(cwt->tagged->tagged->array[2]->bytes);
+    auto submods = signedClaims->atInt(266);
+    ASSERT_TRUE(submods && submods->isMap());
+    auto submod = submods->atText("env.gpu.0");
+    ASSERT_TRUE(submod && submod->isArray());
+    ASSERT_EQ(submod->array.size(), 2u);
+    EXPECT_EQ(submod->array[0]->ival, composite::kCoseAlgSha384);
+    auto digest = composite::sha384(detached->bytes);
+    EXPECT_EQ(submod->array[1]->bytes,
+              (std::vector<std::uint8_t>{digest.begin(), digest.end()}));
+}
+
 TEST(CompositeOrchestrator, PartialSuccessExcludesFailedDevice)
 {
     mock_attester::MockAttester att;
@@ -116,39 +178,99 @@ TEST(CompositeOrchestrator, PartialSuccessExcludesFailedDevice)
     auto csMap = bundle->tagged->array[1];
     EXPECT_TRUE(csMap->atText("env.gpu.0"));
     EXPECT_EQ(csMap->atText("env.nic.0"), nullptr);
+
+    auto cwt = cbortest::decode(bundle->tagged->array[0]->bytes);
+    auto claims = cbortest::decode(cwt->tagged->tagged->array[2]->bytes);
+    auto submods = claims->atInt(266);
+    ASSERT_TRUE(submods && submods->isMap());
+    ASSERT_EQ(submods->map.size(), csMap->map.size());
+    EXPECT_TRUE(submods->atText("env.gpu.0"));
+    EXPECT_EQ(submods->atText("env.nic.0"), nullptr);
 }
 
-TEST(CompositeOrchestrator, AllFailedDevicesStillProduceBundle)
+TEST(CompositeOrchestrator, DuplicateEnvironmentIdsProduceNoBundle)
 {
     mock_attester::MockAttester att;
     CompositeOrchestrator orch(att);
     std::vector<composite::CollectedEvidence> evs{
-        failedDev("env.gpu.0", 13), failedDev("env.nic.0", 64)};
+        spdmDev("env.gpu.0", 13, 0x10),
+        spdmDev("env.gpu.0", 14, 0x20),
+    };
 
-    auto res = orch.produce(nonce(0x03), evs);
+    auto res = orch.produce(nonce(0x12), evs);
 
-    ASSERT_TRUE(res.success) << res.errorMsg;
-    EXPECT_EQ(res.status.devicesSucceeded, 0u);
-    EXPECT_EQ(res.status.devicesFailed, 2u);
-    EXPECT_EQ(res.status.toStatusString(), "PartialSuccess");
-    auto bundle = cbortest::decode(res.bundle);
-    auto csMap = bundle->tagged->array[1];
-    ASSERT_TRUE(csMap->isMap());
-    EXPECT_TRUE(csMap->map.empty());
+    EXPECT_FALSE(res.success);
+    EXPECT_EQ(res.errorMsg, "duplicate environment ID: env.gpu.0");
+    EXPECT_EQ(res.status.toStatusString(), "Error");
+    EXPECT_FALSE(res.status.tokenProduced);
+    EXPECT_TRUE(res.bundle.empty());
+    ASSERT_EQ(res.status.deviceFailures.size(), 1u);
+    EXPECT_EQ(res.status.deviceFailures[0].eid, 14u);
+    EXPECT_EQ(res.status.deviceFailures[0].errorMsg,
+              "duplicate environment ID");
 }
 
-TEST(CompositeOrchestrator, EmptyEvidenceStillProducesBundle)
+TEST(CompositeOrchestrator, FailedDuplicateEnvironmentIdProducesNoBundle)
 {
     mock_attester::MockAttester att;
     CompositeOrchestrator orch(att);
-    std::vector<composite::CollectedEvidence> evs;
+    std::vector<composite::CollectedEvidence> evs{
+        spdmDev("env.gpu.0", 13, 0x10),
+        failedDev("env.gpu.0", 14),
+    };
 
-    auto res = orch.produce(nonce(0x04), evs);
+    auto res = orch.produce(nonce(0x14), evs);
 
-    ASSERT_TRUE(res.success) << res.errorMsg;
-    EXPECT_EQ(res.status.toStatusString(), "Success");
-    auto bundle = cbortest::decode(res.bundle);
-    EXPECT_TRUE(bundle->tagged->array[1]->map.empty());
+    EXPECT_FALSE(res.success);
+    EXPECT_EQ(res.errorMsg, "duplicate environment ID: env.gpu.0");
+    EXPECT_EQ(res.status.toStatusString(), "Error");
+    EXPECT_TRUE(res.bundle.empty());
+    ASSERT_EQ(res.status.deviceFailures.size(), 1u);
+    EXPECT_EQ(res.status.deviceFailures[0].eid, 14u);
+    EXPECT_EQ(res.status.deviceFailures[0].errorMsg,
+              "duplicate environment ID");
+}
+
+TEST(CompositeOrchestrator, AllFailedDevicesProduceNoBundle)
+{
+    for (auto carriage : {composite::EvidenceCarriage::DirectMap,
+                          composite::EvidenceCarriage::RecordCmw})
+    {
+        mock_attester::MockAttester att;
+        CompositeOrchestrator orch(att, carriage);
+        std::vector<composite::CollectedEvidence> evs{
+            failedDev("env.gpu.0", 13), failedDev("env.nic.0", 64)};
+
+        auto res = orch.produce(nonce(0x03), evs);
+
+        EXPECT_FALSE(res.success);
+        EXPECT_EQ(res.errorMsg, "no valid device evidence");
+        EXPECT_EQ(res.status.devicesSucceeded, 0u);
+        EXPECT_EQ(res.status.devicesFailed, 2u);
+        EXPECT_EQ(res.status.deviceFailures.size(), 2u);
+        EXPECT_EQ(res.status.toStatusString(), "Error");
+        EXPECT_FALSE(res.status.tokenProduced);
+        EXPECT_TRUE(res.bundle.empty());
+    }
+}
+
+TEST(CompositeOrchestrator, EmptyEvidenceProducesNoBundle)
+{
+    for (auto carriage : {composite::EvidenceCarriage::DirectMap,
+                          composite::EvidenceCarriage::RecordCmw})
+    {
+        mock_attester::MockAttester att;
+        CompositeOrchestrator orch(att, carriage);
+        std::vector<composite::CollectedEvidence> evs;
+
+        auto res = orch.produce(nonce(0x04), evs);
+
+        EXPECT_FALSE(res.success);
+        EXPECT_EQ(res.errorMsg, "no valid device evidence");
+        EXPECT_EQ(res.status.toStatusString(), "Error");
+        EXPECT_FALSE(res.status.tokenProduced);
+        EXPECT_TRUE(res.bundle.empty());
+    }
 }
 
 TEST(CompositeOrchestrator, MalformedEvidenceReportsFailureReason)
@@ -161,12 +283,14 @@ TEST(CompositeOrchestrator, MalformedEvidenceReportsFailureReason)
 
     auto res = orch.produce(nonce(0x05), evs);
 
-    ASSERT_TRUE(res.success) << res.errorMsg;
+    EXPECT_FALSE(res.success);
+    EXPECT_EQ(res.errorMsg, "no valid device evidence");
     ASSERT_EQ(res.status.deviceFailures.size(), 1u);
     EXPECT_EQ(res.status.deviceFailures[0].environmentId, "env.gpu.0");
     EXPECT_NE(res.status.deviceFailures[0].errorMsg.find(
                   "signed_measurements is empty"),
               std::string::npos);
+    EXPECT_TRUE(res.bundle.empty());
 }
 
 // The core the composite attestation profile step-7 verifier check.
@@ -198,6 +322,7 @@ TEST(CompositeOrchestrator, SubmodDigestsMatchDetachedClaimsSets)
     auto submods = claims->atInt(266);
     ASSERT_TRUE(submods && submods->isMap());
     ASSERT_EQ(submods->map.size(), 3u);
+    ASSERT_EQ(submods->map.size(), csMap->map.size());
 
     // For each submod, recompute the digest over the detached Claims-Set.
     for (const auto& [k, v] : submods->map)

@@ -82,6 +82,16 @@ std::unique_ptr<PlatformAttester> createConfiguredPlatformAttester()
     return nullptr;
 }
 
+constexpr composite::EvidenceCarriage configuredNativeEvidenceCarriage()
+{
+    constexpr std::string_view carriage = NATIVE_EVIDENCE_CARRIAGE;
+    if (carriage == "direct-map")
+    {
+        return composite::EvidenceCarriage::DirectMap;
+    }
+    return composite::EvidenceCarriage::RecordCmw;
+}
+
 } // namespace
 #endif
 
@@ -586,8 +596,8 @@ int main(int argc, char** argv)
         std::unique_ptr<spdmd::DbusImplComposite> compositeDbus;
         if (attester)
         {
-            orchestrator =
-                std::make_unique<spdmd::CompositeOrchestrator>(*attester);
+            orchestrator = std::make_unique<spdmd::CompositeOrchestrator>(
+                *attester, spdmd::configuredNativeEvidenceCarriage());
             compositeObjServer =
                 std::make_unique<sdbusplus::asio::object_server>(
                     spdmApp.getConnPtr());

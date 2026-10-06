@@ -51,11 +51,8 @@ inline constexpr std::size_t kSha384Len = 48;
 /// Size of the verifier nonce in bytes.
 inline constexpr std::size_t kNonceLen = 32;
 
-/// SPDM MeasurementSpecification values used by ALGORITHMS and
-/// measurement blocks. DMTF measurements are bit 0 in published SPDM;
-/// the EAT value is the proposed bit used by the SPDM EAT work item.
+/// SPDM MeasurementSpecification used by published SPDM versions.
 inline constexpr std::uint8_t kSpdmMeasurementSpecDmtf = 1U << 0U;
-inline constexpr std::uint8_t kSpdmMeasurementSpecEat = 1U << 1U;
 
 /// The form of evidence a device produced. The collector picks the
 /// retrieval method; the resulting Claims-Set schema follows from it.
@@ -68,20 +65,12 @@ enum class EvidencePattern
     DeviceEat,
 };
 
-inline bool hasEatMeasurementSpecification(std::uint8_t spec)
+/// Detached Claims-Set encoding selected by deployment configuration.
+enum class EvidenceCarriage
 {
-    return (spec & kSpdmMeasurementSpecEat) != 0;
-}
-
-inline EvidencePattern selectEvidencePattern(std::uint8_t spec,
-                                             bool hasDeviceEatToken)
-{
-    if (hasEatMeasurementSpecification(spec) && hasDeviceEatToken)
-    {
-        return EvidencePattern::DeviceEat;
-    }
-    return EvidencePattern::SpdmMeasurements;
-}
+    DirectMap,
+    RecordCmw,
+};
 
 /// Per-device evidence collected by the BMC, stored verbatim. The
 /// collector never parses measurement-block content.

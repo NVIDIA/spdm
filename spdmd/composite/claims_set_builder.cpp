@@ -27,30 +27,14 @@ namespace spdmd::composite
 namespace
 {
 
-// Claims-Set text keys (stable; recognized by verifiers).
+// Claims-Set text keys for the DirectMap compatibility carriage.
 constexpr const char* kKeySignedMeasurements = "signed_measurements";
 constexpr const char* kKeyCertChain = "cert_chain";
 constexpr const char* kKeyVca = "vca";
 constexpr const char* kKeyTokenFormat = "token_format";
 constexpr const char* kKeyDeviceToken = "device_token";
 
-/// Encode a Pattern A/C byte field either plain or CMW-style typed.
-std::vector<std::uint8_t> byteField(std::span<const std::uint8_t> bytes,
-                                    bool typedValues,
-                                    std::uint64_t contentFormat)
-{
-    if (!typedValues)
-    {
-        return cbor::bytesVal(bytes);
-    }
-    std::vector<std::vector<std::uint8_t>> elems;
-    elems.push_back(cbor::uintVal(contentFormat));
-    elems.push_back(cbor::bytesVal(bytes));
-    return cbor::arrayVal(elems);
-}
-
-std::vector<std::uint8_t> buildSpdmEvidence(const CollectedEvidence& ev,
-                                            bool typedValues)
+void validateSpdmEvidence(const CollectedEvidence& ev)
 {
     if (ev.signedMeasurements.empty())
     {
@@ -65,21 +49,22 @@ std::vector<std::uint8_t> buildSpdmEvidence(const CollectedEvidence& ev,
     {
         throw std::invalid_argument("buildClaimsSet: vca is required");
     }
+}
 
+std::vector<std::uint8_t> buildDirectSpdmEvidence(const CollectedEvidence& ev)
+{
+    validateSpdmEvidence(ev);
     cbor::Map m;
-    m.addText(
-        kKeySignedMeasurements,
-        byteField(ev.signedMeasurements, typedValues, kCfSpdmMeasurements));
-    m.addText(kKeyCertChain, byteField(ev.certificateChainDer, typedValues,
-                                      kCfConcatenatedDerCertificates));
+    m.addText(kKeySignedMeasurements, cbor::bytesVal(ev.signedMeasurements));
+    m.addText(kKeyCertChain, cbor::bytesVal(ev.certificateChainDer));
     if (ev.includeVca)
     {
-        m.addText(kKeyVca, byteField(ev.vca, typedValues, kCfSpdmVca));
+        m.addText(kKeyVca, cbor::bytesVal(ev.vca));
     }
     return m.encode();
 }
 
-std::vector<std::uint8_t> buildDeviceEat(const CollectedEvidence& ev)
+void validateDeviceEat(const CollectedEvidence& ev)
 {
     if (ev.deviceTokenFormat.empty())
     {
@@ -89,26 +74,84 @@ std::vector<std::uint8_t> buildDeviceEat(const CollectedEvidence& ev)
     {
         throw std::invalid_argument("buildClaimsSet: device_token is empty");
     }
+}
 
+std::vector<std::uint8_t> buildDirectDeviceEat(const CollectedEvidence& ev)
+{
+    validateDeviceEat(ev);
     cbor::Map m;
     m.addText(kKeyTokenFormat, cbor::textVal(ev.deviceTokenFormat));
     m.addText(kKeyDeviceToken, cbor::bytesVal(ev.deviceToken));
     return m.encode();
 }
 
-} // namespace
-
-std::vector<std::uint8_t> buildClaimsSet(const CollectedEvidence& ev,
-                                         bool typedValues)
+// CWT claim 299 carries one RFC 9999 Record CMW.
+std::vector<std::uint8_t> buildRecordCmw(const CollectedEvidence& ev)
 {
+    std::vector<std::vector<std::uint8_t>> cmw;
     switch (ev.pattern)
     {
         case EvidencePattern::SpdmMeasurements:
-            return buildSpdmEvidence(ev, typedValues);
+        {
+            validateSpdmEvidence(ev);
+            std::vector<std::vector<std::uint8_t>> spdmEvidence{
+                cbor::bytesVal(ev.signedMeasurements),
+                cbor::bytesVal(ev.certificateChainDer)};
+            if (ev.includeVca)
+            {
+                spdmEvidence.push_back(cbor::bytesVal(ev.vca));
+            }
+            cmw = {cbor::textVal(kSpdmEvidenceMediaType),
+                   cbor::bytesVal(cbor::arrayVal(spdmEvidence)),
+                   cbor::uintVal(kCmwIndicatorEvidence)};
+            break;
+        }
         case EvidencePattern::DeviceEat:
-            return buildDeviceEat(ev);
+        {
+            validateDeviceEat(ev);
+            if (ev.deviceTokenFormat != kEatCwtMediaType)
+            {
+                throw std::invalid_argument(
+                    "buildClaimsSet: unsupported device token format");
+            }
+            cmw = {cbor::textVal(kEatCwtMediaType),
+                   cbor::bytesVal(ev.deviceToken),
+                   cbor::uintVal(kCmwIndicatorEvidence)};
+            break;
+        }
     }
-    throw std::invalid_argument("buildClaimsSet: unknown pattern");
+
+    if (cmw.empty())
+    {
+        throw std::invalid_argument("buildClaimsSet: unknown evidence pattern");
+    }
+
+    cbor::Map claims;
+    claims.addInt(kCwtClaimCmw, cbor::arrayVal(cmw));
+    return claims.encode();
+}
+
+} // namespace
+
+std::vector<std::uint8_t> buildClaimsSet(const CollectedEvidence& ev,
+                                         EvidenceCarriage carriage)
+{
+    switch (carriage)
+    {
+        case EvidenceCarriage::RecordCmw:
+            return buildRecordCmw(ev);
+        case EvidenceCarriage::DirectMap:
+            switch (ev.pattern)
+            {
+                case EvidencePattern::SpdmMeasurements:
+                    return buildDirectSpdmEvidence(ev);
+                case EvidencePattern::DeviceEat:
+                    return buildDirectDeviceEat(ev);
+            }
+            throw std::invalid_argument(
+                "buildClaimsSet: unknown evidence pattern");
+    }
+    throw std::invalid_argument("buildClaimsSet: unknown evidence carriage");
 }
 
 } // namespace spdmd::composite

@@ -22,43 +22,47 @@
 // SPDM transcripts, device EATs, or Concise Evidence into platform-
 // authored claims.
 //
-//   Pattern A / C  -> spdm-evidence-claims-set
-//                       { "signed_measurements", "cert_chain", ?"vca" }
-//                     cert_chain is concatenated DER certificates.
-//   Pattern B      -> device-eat-claims-set
-//                       { "token_format", "device_token" }
+// Record CMW carriage (default; RFC 9999):
+//   Claims-Set = { 299 => [ media-type, evidence-bstr, 4 ] }
+//   SPDM:       [ "application/spdm-evidence+cbor",
+//                 bstr .cbor [ signed-measurements, cert-chain, ? vca ], 4 ]
+//   Device EAT: [ "application/eat+cwt", device-token, 4 ]
 //
-// The optional CMW-style typed-value form wraps each byte field as
-// [content-format, value]; it does not change the evidence semantics.
-// The digest (SubmoduleDigest) is computed over the bytes returned here,
-// before any bstr wrapping in the tag-602 bundle.
+// DirectMap compatibility carriage:
+//   Pattern A / C  -> { "signed_measurements", "cert_chain", ?"vca" }
+//   Pattern B      -> { "token_format", "device_token" }
+//
+// cert-chain is concatenated DER certificates. The digest (SubmoduleDigest)
+// is computed over the bytes returned here, before any bstr wrapping in the
+// tag-602 bundle.
 
 #pragma once
 
 #include "types.hpp"
 
 #include <cstdint>
+#include <string_view>
 #include <vector>
 
 namespace spdmd::composite
 {
 
-/// CoAP Content-Formats used by the optional typed-value wrapping. These
-/// are profile-local placeholders pending registration.
-inline constexpr std::uint64_t kCfSpdmMeasurements = 65000;
-inline constexpr std::uint64_t kCfConcatenatedDerCertificates = 65001;
-inline constexpr std::uint64_t kCfSpdmVca = 65002;
+inline constexpr std::int64_t kCwtClaimCmw = 299;
+inline constexpr std::uint64_t kCmwIndicatorEvidence = 4;
+inline constexpr std::string_view kSpdmEvidenceMediaType =
+    "application/spdm-evidence+cbor";
+inline constexpr std::string_view kEatCwtMediaType = "application/eat+cwt";
 
 /// Build the deterministic CBOR detached Claims-Set for one successfully
 /// collected device.
 ///
-/// @param ev          Collected evidence (must have success == true).
-/// @param typedValues When true, wrap SPDM byte fields as CMW-style
-///                    [content-format, value] pairs (Pattern A/C only).
+/// @param ev        Collected evidence (must have success == true).
+/// @param carriage  Detached Claims-Set encoding.
 /// @return Encoded Claims-Set bytes (unwrapped — feed to SubmoduleDigest
 ///         and to BundleAssembler's bstr wrapper).
 /// @throws std::invalid_argument on empty required fields.
-std::vector<std::uint8_t> buildClaimsSet(const CollectedEvidence& ev,
-                                         bool typedValues = false);
+std::vector<std::uint8_t>
+    buildClaimsSet(const CollectedEvidence& ev,
+                   EvidenceCarriage carriage = EvidenceCarriage::RecordCmw);
 
 } // namespace spdmd::composite
