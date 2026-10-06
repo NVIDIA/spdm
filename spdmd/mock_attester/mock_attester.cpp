@@ -274,11 +274,12 @@ struct MockAttester::Impl
 
         // RoT-authored measurements (claim 273). One mock entry standing
         // in for platform RoT/BMC firmware measurements.
-        std::vector<composite::LeadAttesterMeasurement> measurements;
+        std::vector<eat::LeadAttesterConciseEvidence> measurements;
         {
-            composite::LeadAttesterMeasurement m;
-            m.contentFormat = 42; // application/octet-stream
-            m.value.assign(bmcMeasurement.begin(), bmcMeasurement.end());
+            eat::LeadAttesterConciseEvidence m;
+            constexpr std::string_view classId = "mock-bmc";
+            m.classId.assign(classId.begin(), classId.end());
+            m.digest = bmcMeasurement;
             measurements.push_back(std::move(m));
         }
 

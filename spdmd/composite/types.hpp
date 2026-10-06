@@ -115,14 +115,6 @@ struct SubmoduleRecord
     std::array<std::uint8_t, kSha384Len> digest{};
 };
 
-/// A Lead-Attester (RoT/BMC) measurement entry carried in EAT claim 273.
-/// Authored entirely by the Lead Attester; the mock backend fills it.
-struct LeadAttesterMeasurement
-{
-    std::optional<std::uint64_t> contentFormat; // CoAP Content-Format
-    std::vector<std::uint8_t> value;            // opaque payload bytes
-};
-
 /// Request handed to the Lead Attester. Note: no eat_profile — the RoT
 /// owns and inserts the composite EAT profile, ueid, and measurements.
 struct CompositeEatRequest

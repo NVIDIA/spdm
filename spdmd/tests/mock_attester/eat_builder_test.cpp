@@ -22,6 +22,7 @@
 
 #include "../composite/cbor_test_util.hpp"
 #include "mock_attester/eat_builder.hpp"
+#include "mock_attester/mock_attester.hpp"
 
 #include <array>
 #include <optional>
@@ -35,7 +36,6 @@ namespace spdmd::mock_attester::eat
 namespace
 {
 
-using composite::LeadAttesterMeasurement;
 using composite::SubmoduleRecord;
 
 std::array<std::uint8_t, 32> nonceFill(std::uint8_t v)
@@ -67,10 +67,10 @@ std::vector<std::uint8_t> buildSample(bool withCorim,
 {
     auto nonce = nonceFill(0xAB);
     std::vector<std::uint8_t> ueid{0x01, 0x02, 0x03, 0x04};
-    std::vector<LeadAttesterMeasurement> meas;
-    LeadAttesterMeasurement m;
-    m.contentFormat = 42;
-    m.value = {0xDE, 0xAD, 0xBE, 0xEF};
+    std::vector<LeadAttesterConciseEvidence> meas;
+    LeadAttesterConciseEvidence m;
+    m.classId = {'m', 'o', 'c', 'k', '-', 'b', 'm', 'c'};
+    m.digest.fill(0x38);
     meas.push_back(m);
 
     std::optional<std::string> corim;
@@ -78,10 +78,9 @@ std::vector<std::uint8_t> buildSample(bool withCorim,
     {
         corim = "tag:example.com,2026:platform-corim:v7";
     }
-    return buildCompositeClaims(
-        std::span<const std::uint8_t, 32>{nonce}, ueid,
-        "tag:example,2026:platform-composite-attestation-v1", recs, meas,
-        corim);
+    return buildCompositeClaims(std::span<const std::uint8_t, 32>{nonce}, ueid,
+                                kCompositeEatDraftProfileUri, recs, meas,
+                                corim);
 }
 
 TEST(EatBuilder, ClaimsTopLevelKeys)
@@ -102,8 +101,7 @@ TEST(EatBuilder, ClaimsTopLevelKeys)
 
     auto profile = root->atInt(kProfile);
     ASSERT_TRUE(profile && profile->isText());
-    EXPECT_EQ(profile->text,
-              "tag:example,2026:platform-composite-attestation-v1");
+    EXPECT_EQ(profile->text, kCompositeEatDraftProfileUri);
 
     ASSERT_TRUE(root->atInt(kSubmods));
     ASSERT_TRUE(root->atInt(kMeasurements));
@@ -131,7 +129,7 @@ TEST(EatBuilder, SubmodsAreDetachedDigests)
     EXPECT_EQ(gpu->array[1]->bytes[0], 0x11);
 }
 
-TEST(EatBuilder, MeasurementsArrayShape)
+TEST(EatBuilder, MeasurementsAreTcgConciseEvidence)
 {
     std::vector<SubmoduleRecord> recs{recordFor("env.rot", 0x33)};
     auto claims = buildSample(false, recs);
@@ -140,25 +138,125 @@ TEST(EatBuilder, MeasurementsArrayShape)
     ASSERT_TRUE(meas && meas->isArray());
     ASSERT_EQ(meas->array.size(), 1u);
     auto entry = meas->array[0];
-    ASSERT_TRUE(entry->isMap());
-    auto cf = entry->atText("content-format");
-    ASSERT_TRUE(cf && cf->isUint());
-    EXPECT_EQ(cf->uarg, 42u);
-    auto val = entry->atText("value");
-    ASSERT_TRUE(val && val->isBytes());
-    EXPECT_EQ(val->bytes, (std::vector<std::uint8_t>{0xDE, 0xAD, 0xBE, 0xEF}));
+    ASSERT_TRUE(entry->isArray());
+    ASSERT_EQ(entry->array.size(), 2u);
+    EXPECT_EQ(entry->array[0]->uarg, kTcgConciseEvidenceContentFormat);
+    ASSERT_TRUE(entry->array[1]->isBytes());
+
+    auto document = cbortest::decode(entry->array[1]->bytes);
+    auto evidenceTriples = document->atInt(0);
+    ASSERT_TRUE(evidenceTriples && evidenceTriples->isMap());
+    auto triples = evidenceTriples->atInt(0);
+    ASSERT_TRUE(triples && triples->isArray());
+    ASSERT_EQ(triples->array.size(), 1u);
+    auto triple = triples->array[0];
+    ASSERT_TRUE(triple->isArray());
+    ASSERT_EQ(triple->array.size(), 2u);
+
+    auto classInfo = triple->array[0]->atInt(0);
+    ASSERT_TRUE(classInfo && classInfo->isMap());
+    auto classId = classInfo->atInt(0);
+    ASSERT_TRUE(classId && classId->isTag());
+    EXPECT_EQ(classId->tag, 560u);
+    EXPECT_EQ(
+        classId->tagged->bytes,
+        (std::vector<std::uint8_t>{'m', 'o', 'c', 'k', '-', 'b', 'm', 'c'}));
+
+    auto measurements = triple->array[1];
+    ASSERT_TRUE(measurements->isArray());
+    ASSERT_EQ(measurements->array.size(), 1u);
+    auto measurement = measurements->array[0];
+    EXPECT_EQ(measurement->atInt(0)->uarg, 0u);
+    auto values = measurement->atInt(1);
+    ASSERT_TRUE(values && values->isMap());
+    auto digests = values->atInt(2);
+    ASSERT_TRUE(digests && digests->isArray());
+    ASSERT_EQ(digests->array.size(), 1u);
+    auto digest = digests->array[0];
+    ASSERT_TRUE(digest->isArray());
+    ASSERT_EQ(digest->array.size(), 2u);
+    EXPECT_EQ(digest->array[0]->text, "sha-384");
+    EXPECT_EQ(digest->array[1]->bytes, (std::vector<std::uint8_t>(48, 0x38)));
 }
 
-TEST(EatBuilder, MeasurementRequiresContentFormat)
+TEST(EatBuilder, ConciseEvidenceEncodingIsDeterministic)
+{
+    auto claimsA = buildSample(false, {});
+    auto claimsB = buildSample(false, {});
+    EXPECT_EQ(claimsA, claimsB);
+
+    auto root = cbortest::decode(claimsA);
+    auto evidence = root->atInt(kMeasurements)->array[0]->array[1]->bytes;
+    const std::vector<std::uint8_t> expectedPrefix{
+        0xA1, 0x00, 0xA1, 0x00, 0x81, 0x82, 0xA1, 0x00, 0xA1, 0x00, 0xD9,
+        0x02, 0x30, 0x48, 'm',  'o',  'c',  'k',  '-',  'b',  'm',  'c',
+        0x81, 0xA2, 0x00, 0x00, 0x01, 0xA1, 0x02, 0x81, 0x82, 0x67, 's',
+        'h',  'a',  '-',  '3',  '8',  '4',  0x58, 0x30};
+    ASSERT_GE(evidence.size(), expectedPrefix.size());
+    EXPECT_TRUE(std::equal(expectedPrefix.begin(), expectedPrefix.end(),
+                           evidence.begin()));
+    EXPECT_EQ(std::vector<std::uint8_t>(
+                  evidence.begin() + expectedPrefix.size(), evidence.end()),
+              (std::vector<std::uint8_t>(48, 0x38)));
+}
+
+TEST(EatBuilder, EveryMeasurementUsesConciseEvidence)
 {
     auto nonce = nonceFill(0xAB);
     std::vector<std::uint8_t> ueid{0x01};
-    std::vector<LeadAttesterMeasurement> meas(1);
-    meas[0].value = {0xDE};
+    std::vector<LeadAttesterConciseEvidence> evidence(2);
+    evidence[0].classId = {'r', 'o', 't'};
+    evidence[0].measurementKey = 7;
+    evidence[0].digest.fill(0x11);
+    evidence[1].classId = {'b', 'm', 'c'};
+    evidence[1].measurementKey = 9;
+    evidence[1].digest.fill(0x22);
 
-    EXPECT_THROW(buildCompositeClaims(
-                     std::span<const std::uint8_t, 32>{nonce}, ueid,
-                     "tag:example,2026:profile", {}, meas, std::nullopt),
+    auto claims = buildCompositeClaims(std::span<const std::uint8_t, 32>{nonce},
+                                       ueid, kCompositeEatDraftProfileUri, {},
+                                       evidence, std::nullopt);
+    auto measurements = cbortest::decode(claims)->atInt(kMeasurements);
+    ASSERT_TRUE(measurements && measurements->isArray());
+    ASSERT_EQ(measurements->array.size(), evidence.size());
+
+    for (std::size_t index = 0; index < evidence.size(); ++index)
+    {
+        auto entry = measurements->array[index];
+        ASSERT_TRUE(entry->isArray());
+        ASSERT_EQ(entry->array.size(), 2u);
+        EXPECT_EQ(entry->array[0]->uarg, kTcgConciseEvidenceContentFormat);
+        auto document = cbortest::decode(entry->array[1]->bytes);
+        auto triples = document->atInt(0)->atInt(0);
+        auto measurement = triples->array[0]->array[1]->array[0];
+        EXPECT_EQ(measurement->atInt(0)->uarg, evidence[index].measurementKey);
+        auto digest = measurement->atInt(1)->atInt(2)->array[0];
+        EXPECT_EQ(digest->array[0]->text, "sha-384");
+        EXPECT_EQ(digest->array[1]->bytes,
+                  (std::vector<std::uint8_t>{evidence[index].digest.begin(),
+                                             evidence[index].digest.end()}));
+    }
+}
+
+TEST(EatBuilder, ConciseEvidenceRequiresClassId)
+{
+    auto nonce = nonceFill(0xAB);
+    std::vector<std::uint8_t> ueid{0x01};
+    std::vector<LeadAttesterConciseEvidence> meas(1);
+
+    EXPECT_THROW(buildCompositeClaims(std::span<const std::uint8_t, 32>{nonce},
+                                      ueid, kCompositeEatDraftProfileUri, {},
+                                      meas, std::nullopt),
+                 std::invalid_argument);
+}
+
+TEST(EatBuilder, MeasurementsAreRequired)
+{
+    auto nonce = nonceFill(0xAB);
+    std::vector<std::uint8_t> ueid{0x01};
+
+    EXPECT_THROW(buildCompositeClaims(std::span<const std::uint8_t, 32>{nonce},
+                                      ueid, kCompositeEatDraftProfileUri, {},
+                                      {}, std::nullopt),
                  std::invalid_argument);
 }
 

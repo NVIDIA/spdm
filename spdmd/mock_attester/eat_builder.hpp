@@ -34,6 +34,7 @@
 
 #include "composite/types.hpp"
 
+#include <array>
 #include <cstdint>
 #include <optional>
 #include <span>
@@ -50,6 +51,16 @@ constexpr int kAlgEs384 = -35;
 /// Content type declared in the COSE protected header.
 constexpr const char* kContentTypeEatCwt = "application/eat+cwt";
 
+/// IANA CoAP Content-Format for application/ce+cbor.
+constexpr std::uint64_t kTcgConciseEvidenceContentFormat = 10571;
+
+struct LeadAttesterConciseEvidence
+{
+    std::vector<std::uint8_t> classId;
+    std::uint64_t measurementKey = 0;
+    std::array<std::uint8_t, composite::kSha384Len> digest{};
+};
+
 /// Build the deterministic CBOR composite-eat-claims map .
 ///
 /// @param nonce       32-byte verifier nonce -> eat_nonce (10).
@@ -63,7 +74,7 @@ std::vector<std::uint8_t> buildCompositeClaims(
     std::span<const std::uint8_t, composite::kNonceLen> nonce,
     std::span<const std::uint8_t> ueid, std::string_view profileUri,
     std::span<const composite::SubmoduleRecord> submods,
-    std::span<const composite::LeadAttesterMeasurement> measurements,
+    std::span<const LeadAttesterConciseEvidence> measurements,
     const std::optional<std::string>& platformCorimLocator);
 
 /// Build CBOR-encoded COSE protected header: {1: alg, 3: content-type}.

@@ -176,14 +176,46 @@ TEST(MockAttester, ClaimsCarryNonceUeidAndSubmods)
     EXPECT_EQ(ueid->bytes,
               std::vector<std::uint8_t>(attUeid.begin(), attUeid.end()));
 
+    auto profile = claims->atInt(265);
+    ASSERT_TRUE(profile && profile->isText());
+    EXPECT_EQ(profile->text, kCompositeEatDraftProfileUri);
+
     // submods (266) carries both env keys.
     auto submods = claims->atInt(266);
     ASSERT_TRUE(submods && submods->isMap());
     EXPECT_TRUE(submods->atText("env.gpu.0"));
     EXPECT_TRUE(submods->atText("env.nic.0"));
 
-    // measurements (273) present.
-    ASSERT_TRUE(claims->atInt(273));
+    auto measurements = claims->atInt(273);
+    ASSERT_TRUE(measurements && measurements->isArray());
+    ASSERT_FALSE(measurements->array.empty());
+    for (const auto& entry : measurements->array)
+    {
+        ASSERT_TRUE(entry->isArray());
+        ASSERT_EQ(entry->array.size(), 2u);
+        EXPECT_EQ(entry->array[0]->uarg, eat::kTcgConciseEvidenceContentFormat);
+        ASSERT_TRUE(entry->array[1]->isBytes());
+        auto document = cbortest::decode(entry->array[1]->bytes);
+        auto evidenceTriples = document->atInt(0);
+        ASSERT_TRUE(evidenceTriples && evidenceTriples->isMap());
+        auto triples = evidenceTriples->atInt(0);
+        ASSERT_TRUE(triples && triples->isArray());
+        ASSERT_EQ(triples->array.size(), 1u);
+        auto triple = triples->array[0];
+        ASSERT_TRUE(triple->isArray());
+        ASSERT_EQ(triple->array.size(), 2u);
+        auto classId = triple->array[0]->atInt(0)->atInt(0);
+        ASSERT_TRUE(classId && classId->isTag());
+        EXPECT_EQ(classId->tag, 560u);
+        EXPECT_EQ(classId->tagged->bytes,
+                  (std::vector<std::uint8_t>{'m', 'o', 'c', 'k', '-', 'b', 'm',
+                                             'c'}));
+        auto measurement = triple->array[1]->array[0];
+        EXPECT_EQ(measurement->atInt(0)->uarg, 0u);
+        auto digest = measurement->atInt(1)->atInt(2)->array[0];
+        EXPECT_EQ(digest->array[0]->text, "sha-384");
+        EXPECT_EQ(digest->array[1]->bytes.size(), composite::kSha384Len);
+    }
 }
 
 TEST(MockAttester, CorimLocatorPlumbedThrough)

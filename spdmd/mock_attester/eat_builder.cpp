@@ -52,9 +52,13 @@ constexpr std::int64_t kEatClaimPlatformCorimId = -75000;
 constexpr std::uint64_t kCborTagCwt = 61;
 constexpr std::uint64_t kCborTagCoseSign1 = 18;
 
-// Measurement entry keys.
-constexpr const char* kMeasContentFormat = "content-format";
-constexpr const char* kMeasValue = "value";
+constexpr std::uint64_t kTaggedBytes = 560;
+constexpr std::int64_t kEvidenceTriples = 0;
+constexpr std::int64_t kEnvironmentClass = 0;
+constexpr std::int64_t kClassId = 0;
+constexpr std::int64_t kMeasurementKey = 0;
+constexpr std::int64_t kMeasurementValue = 1;
+constexpr std::int64_t kDigests = 2;
 
 /// Encode one detached-submodule-digest: [hash-alg, digest].
 std::vector<std::uint8_t>
@@ -66,19 +70,57 @@ std::vector<std::uint8_t>
     return cbor::arrayVal(elems);
 }
 
-/// Encode one Lead Attester measurement: {"content-format", "value"}.
-std::vector<std::uint8_t>
-    encodeMeasurement(const composite::LeadAttesterMeasurement& m)
+std::vector<std::uint8_t> taggedBytes(std::span<const std::uint8_t> bytes)
 {
-    if (!m.contentFormat)
+    std::vector<std::uint8_t> out;
+    cbor::putTag(out, kTaggedBytes);
+    cbor::putBytes(out, bytes);
+    return out;
+}
+
+std::vector<std::uint8_t>
+    encodeConciseEvidence(const LeadAttesterConciseEvidence& evidence)
+{
+    if (evidence.classId.empty())
     {
         throw std::invalid_argument(
-            "Lead Attester measurement content-format is required");
+            "Lead Attester Concise Evidence class ID is required");
     }
-    cbor::Map em;
-    em.addText(kMeasContentFormat, cbor::uintVal(*m.contentFormat));
-    em.addText(kMeasValue, cbor::bytesVal(m.value));
-    return em.encode();
+
+    cbor::Map classInfo;
+    classInfo.addInt(kClassId, taggedBytes(evidence.classId));
+    cbor::Map environment;
+    environment.addInt(kEnvironmentClass, classInfo.encode());
+
+    std::vector<std::vector<std::uint8_t>> digest{
+        cbor::textVal("sha-384"), cbor::bytesVal(evidence.digest)};
+    std::vector<std::vector<std::uint8_t>> digests{cbor::arrayVal(digest)};
+    cbor::Map values;
+    values.addInt(kDigests, cbor::arrayVal(digests));
+
+    cbor::Map measurement;
+    measurement.addInt(kMeasurementKey, cbor::uintVal(evidence.measurementKey));
+    measurement.addInt(kMeasurementValue, values.encode());
+    std::vector<std::vector<std::uint8_t>> measurements{measurement.encode()};
+    std::vector<std::vector<std::uint8_t>> triple{environment.encode(),
+                                                  cbor::arrayVal(measurements)};
+    std::vector<std::vector<std::uint8_t>> triples{cbor::arrayVal(triple)};
+
+    cbor::Map evidenceTriples;
+    evidenceTriples.addInt(kEvidenceTriples, cbor::arrayVal(triples));
+    cbor::Map document;
+    document.addInt(kEvidenceTriples, evidenceTriples.encode());
+    return document.encode();
+}
+
+std::vector<std::uint8_t>
+    encodeMeasurement(const LeadAttesterConciseEvidence& evidence)
+{
+    auto encoded = encodeConciseEvidence(evidence);
+    std::vector<std::vector<std::uint8_t>> entry{
+        cbor::uintVal(kTcgConciseEvidenceContentFormat),
+        cbor::bytesVal(encoded)};
+    return cbor::arrayVal(entry);
 }
 
 } // namespace
@@ -87,9 +129,15 @@ std::vector<std::uint8_t> buildCompositeClaims(
     std::span<const std::uint8_t, composite::kNonceLen> nonce,
     std::span<const std::uint8_t> ueid, std::string_view profileUri,
     std::span<const composite::SubmoduleRecord> submods,
-    std::span<const composite::LeadAttesterMeasurement> measurements,
+    std::span<const LeadAttesterConciseEvidence> measurements,
     const std::optional<std::string>& platformCorimLocator)
 {
+    if (measurements.empty())
+    {
+        throw std::invalid_argument(
+            "Lead Attester Concise Evidence is required");
+    }
+
     cbor::Map claims;
 
     // eat_nonce (10)
@@ -111,7 +159,7 @@ std::vector<std::uint8_t> buildCompositeClaims(
         claims.addInt(kEatClaimSubmods, submodMap.encode());
     }
 
-    // measurements (273): [ {content-format, value}, ... ]
+    // measurements (273): [ [10571, bstr .cbor concise-evidence-map], ... ]
     {
         std::vector<std::vector<std::uint8_t>> arr;
         arr.reserve(measurements.size());

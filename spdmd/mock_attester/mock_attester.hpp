@@ -33,16 +33,19 @@
 #include <memory>
 #include <span>
 #include <string>
+#include <string_view>
 
 namespace spdmd::mock_attester
 {
+
+inline constexpr std::string_view kCompositeEatDraftProfileUri =
+    "https://datatracker.ietf.org/doc/draft-sun-rats-composite-eat/";
 
 struct MockAttesterConfig
 {
     /// Composite EAT profile URI the mock RoT writes into eat_profile
     /// (265). The Lead Attester owns this — the BMC never supplies it.
-    std::string profileUri =
-        "tag:example,2026:platform-composite-attestation-v1";
+    std::string profileUri = std::string{kCompositeEatDraftProfileUri};
 
     /// Common Name placed in the self-signed mock leaf certificate.
     std::string leafCn = "PlatformAttesterMock";
