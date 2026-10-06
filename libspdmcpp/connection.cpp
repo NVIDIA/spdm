@@ -766,7 +766,26 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
     static constexpr auto numCertRetries = 3U;
     PacketCertificateResponseVar resp;
     auto rs = interpretResponse(resp);
-    SPDMCPP_CONNECTION_RS_ERROR_RETURN_WITH_VERSION(rs);
+    if (isError(rs))
+    {
+        if (rs == RetStat::ERROR_BUFFER_TOO_SMALL &&
+            retryCertCount < numCertRetries)
+        {
+            ++retryCertCount;
+            if (Log.logLevel >= LogClass::Level::Error)
+            {
+                Log.print("Try retry certificate (truncated response) ");
+                Log.print(retryCertCount);
+                Log.print("/");
+                Log.print(numCertRetries);
+                Log.println("...");
+            }
+            rs = tryGetCertificate(CertificateSlotIdx);
+            SPDMCPP_CONNECTION_RS_ERROR_RETURN(rs);
+            return rs;
+        }
+        SPDMCPP_CONNECTION_RS_ERROR_RETURN_WITH_VERSION(rs);
+    }
 
     appendRecvToBuf(BufEnum::B);
 
