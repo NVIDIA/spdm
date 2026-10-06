@@ -35,12 +35,10 @@ struct EvidenceBuilderInput
     std::string errorMsg;
 
     std::uint8_t spdmVersion = 0;
-    std::uint8_t measurementSpecification = kSpdmMeasurementSpecDmtf;
 
     std::vector<std::uint8_t> signedMeasurements;
     std::vector<std::uint8_t> certificateChainDer;
     std::vector<std::uint8_t> vcaTranscript;
-    std::vector<std::uint8_t> deviceEatToken;
 };
 
 CollectedEvidence makeFailedEvidence(std::uint8_t eid,

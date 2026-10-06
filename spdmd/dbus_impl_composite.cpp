@@ -218,17 +218,12 @@ composite::CollectedEvidence
     }
 
     input.spdmVersion = resp.version();
-    input.measurementSpecification = resp.measurementSpecification();
-
     auto sm = resp.signedMeasurements();
     input.signedMeasurements.assign(sm.begin(), sm.end());
     (void)resp.certificateChainDer(input.certificateChainDer, resp.slot());
 
     const auto& vca = resp.vcaTranscript();
     input.vcaTranscript.assign(vca.begin(), vca.end());
-
-    const auto& deviceEatToken = resp.deviceEatToken();
-    input.deviceEatToken.assign(deviceEatToken.begin(), deviceEatToken.end());
 
     return composite::buildCollectedEvidence(input);
 }
@@ -246,8 +241,7 @@ void DbusImplComposite::onDeviceComplete(std::uint8_t eid, bool success)
     done[eid] = true;
     if (auto& t = perDevTimers[eid])
     {
-        boost::system::error_code ec;
-        t->cancel(ec);
+        t->cancel();
     }
     for (auto& r : active)
     {
@@ -263,8 +257,7 @@ void DbusImplComposite::onDeviceComplete(std::uint8_t eid, bool success)
     }
     if (pending == 0)
     {
-        boost::system::error_code ec;
-        overallTimer.cancel(ec);
+        overallTimer.cancel();
         finalize();
     }
 }
@@ -276,9 +269,8 @@ void DbusImplComposite::finalize()
                                     config.plan.platformCorimLocator());
     for (const auto& failure : res.status.deviceFailures)
     {
-        std::cerr << "composite collection failed for "
-                  << failure.environmentId << " (EID "
-                  << static_cast<unsigned>(failure.eid)
+        std::cerr << "composite collection failed for " << failure.environmentId
+                  << " (EID " << static_cast<unsigned>(failure.eid)
                   << "): " << failure.errorMsg << '\n';
     }
     if (res.success)

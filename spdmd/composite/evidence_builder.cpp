@@ -64,14 +64,7 @@ CollectedEvidence buildCollectedEvidence(const EvidenceBuilderInput& input)
     ev.environmentId = input.environmentId;
     ev.success = true;
 
-    ev.pattern = selectEvidencePattern(input.measurementSpecification,
-                                       !input.deviceEatToken.empty());
-    if (ev.pattern == EvidencePattern::DeviceEat)
-    {
-        ev.deviceTokenFormat = "application/eat+cwt";
-        ev.deviceToken = input.deviceEatToken;
-        return ev;
-    }
+    ev.pattern = EvidencePattern::SpdmMeasurements;
 
     ev.signedMeasurements = input.signedMeasurements;
     if (ev.signedMeasurements.empty())

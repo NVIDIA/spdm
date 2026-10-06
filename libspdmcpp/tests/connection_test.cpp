@@ -127,11 +127,9 @@ class ConnectionFixture
     ContextClass Context;
     ConnectionClass Connection;
 
-    explicit ConnectionFixture(
-        uint8_t measurementSpecifications =
-            ConnectionClass::measurementSpecificationDmtf) :
+    ConnectionFixture() :
         logg(std::cout), IO(std::make_shared<FixtureIOClass>()),
-        Connection(Context, logg, 0, "pcie", measurementSpecifications)
+        Connection(Context, logg, 0, "pcie")
     {
 #ifndef MCTP_IN_KERNEL
         Context.registerIo(IO, "pcie");
@@ -311,7 +309,7 @@ void testConnectionFlow(BaseAsymAlgoFlags asymAlgo, BaseHashAlgoFlags hashAlgo)
         auto rs = fix.interpret(req, MessageHashEnum::M);
         ASSERT_EQ(rs, RetStat::OK);
         EXPECT_EQ(req.Min.MeasurementSpecification,
-              ConnectionClass::measurementSpecificationDmtf);
+                  ConnectionClass::measurementSpecificationDmtf);
         EXPECT_FLAG_SET(req.Min.BaseAsymAlgo,
                         BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P256);
         EXPECT_FLAG_SET(req.Min.BaseHashAlgo,
@@ -545,14 +543,12 @@ enum class Spdm12MeasurementsFault : uint8_t
 void testConnectionFlow_SPDM12(
     BaseAsymAlgoFlags asymAlgo, BaseHashAlgoFlags hashAlgo,
     Spdm12MeasurementsFault fault = Spdm12MeasurementsFault::None,
-    uint8_t requesterMeasurementSpecifications =
-        ConnectionClass::measurementSpecificationDmtf,
     uint8_t selectedMeasurementSpecification =
         ConnectionClass::measurementSpecificationDmtf,
     uint8_t blockMeasurementSpecification = 0,
     RetStat expectedAlgorithmsResult = RetStat::OK)
 {
-    ConnectionFixture fix(requesterMeasurementSpecifications);
+    ConnectionFixture fix;
 
     fix.Connection.refreshMeasurements(0);
 
@@ -610,7 +606,7 @@ void testConnectionFlow_SPDM12(
         auto rs = fix.interpret(req, MessageHashEnum::M);
         ASSERT_EQ(rs, RetStat::OK);
         EXPECT_EQ(req.Min.MeasurementSpecification,
-                  requesterMeasurementSpecifications);
+                  ConnectionClass::measurementSpecificationDmtf);
     }
 
     PacketDecodeInfo info;
@@ -776,22 +772,14 @@ void testConnectionFlow_SPDM12(
                 blockMeasurementSpecification == 0
                     ? selectedMeasurementSpecification
                     : blockMeasurementSpecification;
-            if (block.Min.MeasurementSpecification ==
-                ConnectionClass::measurementSpecificationEat)
-            {
-                block.MeasurementVector = {0xD8, 0x3D, 0x84, 0x40};
-            }
-            else
-            {
-                PacketMeasurementFieldVar field;
-                field.Min.Type = 0x80;
-                field.ValueVector.resize(127);
-                fillPseudoRandom(field.ValueVector);
+            PacketMeasurementFieldVar field;
+            field.Min.Type = 0x80;
+            field.ValueVector.resize(127);
+            fillPseudoRandom(field.ValueVector);
 
-                ASSERT_EQ(field.finalize(), RetStat::OK);
-                ASSERT_EQ(packetEncode(field, block.MeasurementVector),
-                          RetStat::OK);
-            }
+            ASSERT_EQ(field.finalize(), RetStat::OK);
+            ASSERT_EQ(packetEncode(field, block.MeasurementVector),
+                      RetStat::OK);
             ASSERT_EQ(block.finalize(), RetStat::OK);
             resp.MeasurementBlockVector.emplace_back(block);
         }
@@ -868,14 +856,6 @@ void testConnectionFlow_SPDM12(
             << "Malformed measurements / attestation (SPDM 1.2) must not mark "
                "MEASUREMENTS";
     }
-    else if (selectedMeasurementSpecification ==
-             ConnectionClass::measurementSpecificationEat)
-    {
-        EXPECT_EQ(fix.Connection.getDeviceEatToken(),
-                  (std::vector<uint8_t>{0xD8, 0x3D, 0x84, 0x40}));
-        EXPECT_TRUE(fix.Connection.getDMTFMeasurements().empty());
-    }
-
     mbedtls_x509_crt_free(&caCert);
     mbedtls_pk_free(&pkctx);
 }
@@ -892,57 +872,86 @@ TEST(Connection, FullFlow_SPDM12_ECDSA_256_SHA_384)
                               BaseHashAlgoFlags::TPM_ALG_SHA_384);
 }
 
-TEST(Connection, FullFlow_SPDM12_AdvertisesEatMeasurementSpecification)
+TEST(Connection, PublishedVersionsRequestOnlyDmtfMeasurements)
 {
-    constexpr uint8_t supported =
-        ConnectionClass::measurementSpecificationDmtf |
-        ConnectionClass::measurementSpecificationEat;
-    testConnectionFlow_SPDM12(
-        BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P256,
-        BaseHashAlgoFlags::TPM_ALG_SHA_384, Spdm12MeasurementsFault::None,
-        supported, ConnectionClass::measurementSpecificationEat);
+    for (auto version :
+         {MessageVersionEnum::SPDM_1_0, MessageVersionEnum::SPDM_1_1,
+          MessageVersionEnum::SPDM_1_2})
+    {
+        ConnectionFixture fix;
+        ASSERT_EQ(fix.Connection.refreshMeasurements(0), RetStat::OK);
+
+        PacketGetVersionRequest versionReq;
+        ASSERT_EQ(fix.interpret(versionReq, MessageHashEnum::M), RetStat::OK);
+
+        PacketVersionResponseVar versionResp;
+        versionResp.Min.Header.MessageVersion = MessageVersionEnum::SPDM_1_0;
+        PacketVersionNumber advertised;
+        advertised.setMajor(1);
+        advertised.setMinor(static_cast<std::uint8_t>(version) & 0x0FU);
+        versionResp.VersionNumberEntries.push_back(advertised);
+        ASSERT_EQ(fix.push(versionResp, MessageHashEnum::M), RetStat::OK);
+        ASSERT_EQ(fix.handleRecv(), RetStat::OK);
+
+        if (version == MessageVersionEnum::SPDM_1_0)
+        {
+            PacketGetCapabilities10Request capabilitiesReq;
+            ASSERT_EQ(fix.interpret(capabilitiesReq, MessageHashEnum::M),
+                      RetStat::OK);
+        }
+        else
+        {
+            PacketGetCapabilitiesRequest capabilitiesReq;
+            ASSERT_EQ(fix.interpret(capabilitiesReq, MessageHashEnum::M),
+                      RetStat::OK);
+        }
+
+        PacketCapabilitiesResponse capabilitiesResp;
+        capabilitiesResp.Header.MessageVersion = version;
+        capabilitiesResp.Flags = ResponderCapabilitiesFlags::CERT_CAP |
+                                 ResponderCapabilitiesFlags::MEAS_CAP_10;
+        ASSERT_EQ(fix.push(capabilitiesResp, MessageHashEnum::M), RetStat::OK);
+        ASSERT_EQ(fix.handleRecv(), RetStat::OK);
+
+        PacketNegotiateAlgorithmsRequestVar algorithmsReq;
+        ASSERT_EQ(fix.interpret(algorithmsReq, MessageHashEnum::M),
+                  RetStat::OK);
+        EXPECT_EQ(algorithmsReq.Min.MeasurementSpecification,
+                  ConnectionClass::measurementSpecificationDmtf);
+    }
 }
 
 TEST(Connection, SPDM12RejectsZeroMeasurementSpecificationSelection)
 {
-    testConnectionFlow_SPDM12(
-        BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P256,
-        BaseHashAlgoFlags::TPM_ALG_SHA_384, Spdm12MeasurementsFault::None,
-        ConnectionClass::measurementSpecificationDmtf, 0, 0,
-        RetStat::ERROR_WRONG_ALGO_BITS);
+    testConnectionFlow_SPDM12(BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P256,
+                              BaseHashAlgoFlags::TPM_ALG_SHA_384,
+                              Spdm12MeasurementsFault::None, 0, 0,
+                              RetStat::ERROR_WRONG_ALGO_BITS);
 }
 
 TEST(Connection, SPDM12RejectsUnadvertisedMeasurementSpecification)
 {
-    testConnectionFlow_SPDM12(
-        BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P256,
-        BaseHashAlgoFlags::TPM_ALG_SHA_384, Spdm12MeasurementsFault::None,
-        ConnectionClass::measurementSpecificationDmtf,
-        ConnectionClass::measurementSpecificationEat, 0,
-        RetStat::ERROR_WRONG_ALGO_BITS);
+    testConnectionFlow_SPDM12(BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P256,
+                              BaseHashAlgoFlags::TPM_ALG_SHA_384,
+                              Spdm12MeasurementsFault::None, 1U << 1U, 0,
+                              RetStat::ERROR_WRONG_ALGO_BITS);
 }
 
 TEST(Connection, SPDM12RejectsMultipleMeasurementSpecificationSelection)
 {
-    constexpr uint8_t supported =
-        ConnectionClass::measurementSpecificationDmtf |
-        ConnectionClass::measurementSpecificationEat;
     testConnectionFlow_SPDM12(
         BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P256,
         BaseHashAlgoFlags::TPM_ALG_SHA_384, Spdm12MeasurementsFault::None,
-        supported, supported, 0, RetStat::ERROR_WRONG_ALGO_BITS);
+        ConnectionClass::measurementSpecificationDmtf | (1U << 1U), 0,
+        RetStat::ERROR_WRONG_ALGO_BITS);
 }
 
 TEST(Connection, SPDM12RejectsMeasurementBlockSpecificationMismatch)
 {
-    constexpr uint8_t supported =
-        ConnectionClass::measurementSpecificationDmtf |
-        ConnectionClass::measurementSpecificationEat;
     testConnectionFlow_SPDM12(
         BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P256,
         BaseHashAlgoFlags::TPM_ALG_SHA_384, Spdm12MeasurementsFault::None,
-        supported, ConnectionClass::measurementSpecificationEat,
-        ConnectionClass::measurementSpecificationDmtf);
+        ConnectionClass::measurementSpecificationDmtf, 1U << 1U);
 }
 
 TEST(Connection, FullFlow_SPDM12_InvalidMeasurementSignature)

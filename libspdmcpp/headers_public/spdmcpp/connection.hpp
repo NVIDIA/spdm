@@ -155,7 +155,6 @@ class ConnectionClass : public NonCopyable
     static constexpr SlotIdx slotNum = 8;
 
     static constexpr uint8_t measurementSpecificationDmtf = 1U << 0U;
-    static constexpr uint8_t measurementSpecificationEat = 1U << 1U;
 
     /** @brief Main constructor
      *  @param[in] context - Context containing various common configuration and
@@ -165,12 +164,7 @@ class ConnectionClass : public NonCopyable
     explicit ConnectionClass(const ContextClass& context, LogClass& log,
                              uint8_t eid, std::string sockPath);
 
-    /** @brief Constructor with explicit requester measurement specifications.
-     */
-    ConnectionClass(const ContextClass& context, LogClass& log, uint8_t eid,
-                    std::string sockPath, uint8_t measurementSpecifications);
-
-    ~ConnectionClass();
+    ~ConnectionClass() = default;
 
     /** @brief get send timeout during the connection
      *
@@ -450,11 +444,6 @@ class ConnectionClass : public NonCopyable
     const std::vector<uint8_t>& getMeasurementsSignature() const
     {
         return MeasurementsSignature;
-    }
-    /** @brief Reassembled EAT token bytes from EAT measurement blocks. */
-    const std::vector<uint8_t>& getDeviceEatToken() const
-    {
-        return DeviceEatToken;
     }
     const nonce_array_32& getMeasurementNonce() const
     {
@@ -803,9 +792,6 @@ class ConnectionClass : public NonCopyable
     /** @brief Storage for the received and decoded measurements
      */
     DMTFMeasurementsContainer DMTFMeasurements;
-
-    /** @brief Storage for reassembled EAT measurement-block payloads. */
-    std::vector<uint8_t> DeviceEatToken;
 
     /** @brief Storage for the final L1/L2 hash
      */

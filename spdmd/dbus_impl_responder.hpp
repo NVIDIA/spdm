@@ -171,11 +171,6 @@ class Responder :
         return connection.getMeasurementSpecification();
     }
 
-    const std::vector<uint8_t>& deviceEatToken() const
-    {
-        return connection.getDeviceEatToken();
-    }
-
     const std::vector<uint8_t>& vcaTranscript() const
     {
         return connection.getVcaTranscript();

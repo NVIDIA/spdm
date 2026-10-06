@@ -33,7 +33,6 @@ EvidenceBuilderInput baseSpdmInput()
     input.eid = 13;
     input.success = true;
     input.spdmVersion = 0x12;
-    input.measurementSpecification = kSpdmMeasurementSpecDmtf;
     input.signedMeasurements = {0x01, 0x02, 0x03};
     input.certificateChainDer = {0x30, 0x82, 0x01, 0x02};
     return input;
@@ -64,6 +63,18 @@ TEST(EvidenceBuilder, SpdmEvidenceUsesDerCertificateChain)
     EXPECT_EQ(ev.certificateChainDer,
               (std::vector<std::uint8_t>{0x30, 0x82, 0x01, 0x02}));
     EXPECT_FALSE(ev.includeVca);
+}
+
+TEST(EvidenceBuilder, SignedMeasurementBlocksArePreservedByteForByte)
+{
+    auto input = baseSpdmInput();
+    input.signedMeasurements = {0x01, 0x02, 0xD8, 0x3D, 0x84,
+                                0x40, 0xAA, 0xBB, 0xCC};
+
+    auto ev = buildCollectedEvidence(input);
+    ASSERT_TRUE(ev.success) << ev.errorMsg;
+    EXPECT_EQ(ev.pattern, EvidencePattern::SpdmMeasurements);
+    EXPECT_EQ(ev.signedMeasurements, input.signedMeasurements);
 }
 
 TEST(EvidenceBuilder, Spdm10RequiresVcaTranscript)
@@ -106,21 +117,6 @@ TEST(EvidenceBuilder, MissingDerCertificateChainFails)
     auto ev = buildCollectedEvidence(input);
     EXPECT_FALSE(ev.success);
     EXPECT_EQ(ev.errorMsg, "missing DER certificate chain");
-}
-
-TEST(EvidenceBuilder, EatMeasurementSpecWithTokenBuildsDeviceEatEvidence)
-{
-    auto input = baseSpdmInput();
-    input.measurementSpecification = kSpdmMeasurementSpecEat;
-    input.deviceEatToken = {0xD8, 0x3D, 0x84};
-
-    auto ev = buildCollectedEvidence(input);
-    ASSERT_TRUE(ev.success) << ev.errorMsg;
-    EXPECT_EQ(ev.pattern, EvidencePattern::DeviceEat);
-    EXPECT_EQ(ev.deviceTokenFormat, "application/eat+cwt");
-    EXPECT_EQ(ev.deviceToken, (std::vector<std::uint8_t>{0xD8, 0x3D, 0x84}));
-    EXPECT_TRUE(ev.signedMeasurements.empty());
-    EXPECT_TRUE(ev.certificateChainDer.empty());
 }
 
 TEST(EvidenceBuilder, UnknownEnvironmentDetection)
