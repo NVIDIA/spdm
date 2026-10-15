@@ -389,19 +389,20 @@ void Responder::refresh(uint8_t slotIndex, std::vector<uint8_t> nonc,
 {
     if (connection.isWaitingForResponse())
     {
-        // if we're busy processing ignore the refresh call
+        // if we're busy processing reject the refresh call, so the caller
+        // does not wait for a Status that belongs to the earlier request
         // TODO arguably it'd be better to either cancel the current and perform
         // the new refresh or to queue the request for processing after the
         // current one is done
         auto& lg = getLog();
-        lg.iprint("WARNING - refresh ignored because previous req: ");
+        lg.iprint("WARNING - refresh rejected because previous req: ");
         lg.iprint(connection.getWaitingForResponse());
         lg.iprint(" on eid: ");
         lg.iprint(eid);
         lg.iprint(" name: ");
         lg.iprint(inventoryPath.filename());
         lg.iprintln(" is still processing!");
-        return;
+        throw Unavailable();
     }
 
     status(SPDMStatus::GettingVersion);

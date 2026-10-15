@@ -21,6 +21,7 @@
 #include "spdmcpp/common.hpp"
 #include "spdmd_app.hpp"
 #include "spdmd_version.hpp"
+#include "xyz/openbmc_project/Common/error.hpp"
 
 #include <CLI/CLI.hpp>
 
@@ -503,8 +504,18 @@ bool SpdmdApp::autoMeasure(uint8_t eid) const
     {
         return false;
     }
-    responders[eid]->refresh(0, std::vector<uint8_t>(), std::vector<uint8_t>(),
-                             0);
+    try
+    {
+        responders[eid]->refresh(0, std::vector<uint8_t>(),
+                                 std::vector<uint8_t>(), 0);
+    }
+    catch (const sdbusplus::xyz::openbmc_project::Common::Error::Unavailable&)
+    {
+        auto& lg = responders[eid]->getLog();
+        lg.iprint("WARNING - auto measurement skipped, busy on eid: ");
+        lg.iprintln(eid);
+        return false;
+    }
     return true;
 }
 
