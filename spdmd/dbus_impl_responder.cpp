@@ -169,6 +169,7 @@ void Responder::updateCertificatesInfo()
 {
     CertificatesContainerType certs;
     std::string certToUse;
+    const uint8_t currentSlot = slot();
 
     for (ConnectionClass::SlotIdx idx = 0; idx < ConnectionClass::slotNum;
          ++idx)
@@ -178,7 +179,10 @@ void Responder::updateCertificatesInfo()
             std::string cert;
             if (connection.getCertificatesPEM(cert, idx))
             {
-                certToUse = cert;
+                if (idx == currentSlot)
+                {
+                    certToUse = cert;
+                }
                 certs.emplace_back(idx, std::move(cert));
             }
         }
@@ -269,6 +273,7 @@ void Responder::handleError(spdmcpp::RetStat rs)
 {
     connection.clearWaitingForResponse();
     updateLastUpdateTime();
+    updateCertificatesInfo();
     const std::string dbgIdName = "eid: " + std::to_string(connection.m_eid) +
                                   " name: " + inventoryPath.filename();
     switch (rs)
