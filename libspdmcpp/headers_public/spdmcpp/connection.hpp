@@ -805,6 +805,11 @@ class ConnectionClass : public NonCopyable
      */
     std::bitset<256> MeasurementIndices;
 
+    /** @brief The error that ended the current refresh, returned when the
+     * final VERSION response arrives
+     */
+    RetStat RefreshError = RetStat::OK;
+
     /** @brief The certificate slot index that was passed to refreshMeasurements
      * and is used during communication
      */

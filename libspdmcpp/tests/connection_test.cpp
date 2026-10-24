@@ -534,6 +534,7 @@ enum class Spdm12MeasurementsFault : uint8_t
     CorruptSignature,
     WrongSignatureSize,
     CorruptMeasurementPayload,
+    TruncatedResponse,
 };
 
 void testConnectionFlow_SPDM12(
@@ -796,6 +797,8 @@ void testConnectionFlow_SPDM12(
                     mv[mv.size() / 3] ^= 0x3CU;
                     break;
                 }
+                case Spdm12MeasurementsFault::TruncatedResponse:
+                    break;
             }
         }
 
@@ -803,11 +806,37 @@ void testConnectionFlow_SPDM12(
 
         rs = fix.push(resp);
         ASSERT_EQ(rs, RetStat::OK);
+        if (fault == Spdm12MeasurementsFault::TruncatedResponse)
+        {
+            // the transport delivered only part of the response
+            auto& buf = fix.IO->ReadQueue.back();
+            buf.resize(buf.size() / 2);
+        }
         rs = fix.handleRecv();
         if (fault == Spdm12MeasurementsFault::None)
         {
             ASSERT_EQ(rs, RetStat::OK);
         }
+    }
+
+    if (fault == Spdm12MeasurementsFault::TruncatedResponse)
+    {
+        // the flow ends with GET_VERSION, its response must report the
+        // decode error instead of success
+        PacketGetVersionRequest req;
+        auto rs = fix.interpret(req);
+        ASSERT_EQ(rs, RetStat::OK);
+
+        PacketVersionResponseVar resp;
+        resp.Min.Header.MessageVersion = MessageVersionEnum::SPDM_1_0;
+        PacketVersionNumber ver;
+        ver.setMajor(1);
+        ver.setMinor(2);
+        resp.VersionNumberEntries.push_back(ver);
+        rs = fix.push(resp);
+        ASSERT_EQ(rs, RetStat::OK);
+        rs = fix.handleRecv();
+        EXPECT_EQ(rs, RetStat::ERROR_BUFFER_TOO_SMALL);
     }
 
     if (fault != Spdm12MeasurementsFault::None)
@@ -853,6 +882,13 @@ TEST(Connection, FullFlow_SPDM12_CorruptMeasurementPayload)
         BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P256,
         BaseHashAlgoFlags::TPM_ALG_SHA_256,
         Spdm12MeasurementsFault::CorruptMeasurementPayload);
+}
+
+TEST(Connection, FullFlow_SPDM12_TruncatedMeasurementsResponse)
+{
+    testConnectionFlow_SPDM12(BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P256,
+                              BaseHashAlgoFlags::TPM_ALG_SHA_256,
+                              Spdm12MeasurementsFault::TruncatedResponse);
 }
 
 // Test getCertificatesDER - Exercise certificate extraction function
