@@ -161,6 +161,7 @@ RetStat ConnectionClass::refreshMeasurementsInternal()
             return RetStat::ERROR_INDICES_INVALID_SIZE;
         }
     }
+    RefreshError = RetStat::OK;
     stateEnabled = true;
     retryPktCount = 0;
     retryGetVersionCount = 0;
@@ -193,6 +194,7 @@ void ConnectionClass::resetConnection()
     MeasurementNonce.fill(0);
     MeasurementIndices.reset();
     CombinedMeasurementTranscript.clear();
+    RefreshError = RetStat::OK;
 
     for (auto& s : Slots)
     {
@@ -383,6 +385,11 @@ RetStat ConnectionClass::handleRecv<PacketVersionResponseVar>()
 {
     if (!stateEnabled)
     {
+        // the flow was ended by an error, report it instead of Success
+        if (isError(RefreshError))
+        {
+            return RefreshError;
+        }
         if (retryGetVersionCount > maxGetVersionRetries)
         {
             return RetStat::ERROR_RESPONSE;
@@ -1000,6 +1007,10 @@ RetStat ConnectionClass::handleRecv<PacketMeasurementsResponseVar>()
     SPDMCPP_LOG_TRACE_FUNC(Log);
     PacketMeasurementsResponseVar resp;
     auto rs = interpretResponse(resp, packetDecodeInfo);
+    if (isError(rs))
+    {
+        RefreshError = rs;
+    }
     SPDMCPP_CONNECTION_RS_ERROR_RETURN_WITH_VERSION(rs);
 
     // parse and store DMTF Measurements
@@ -1021,6 +1032,10 @@ RetStat ConnectionClass::handleRecv<PacketMeasurementsResponseVar>()
                 rs =
                     packetDecodeInternal(Log, DMTFMeasurements[block.Min.Index],
                                          block.MeasurementVector, off);
+                if (isError(rs))
+                {
+                    RefreshError = rs;
+                }
                 SPDMCPP_CONNECTION_RS_ERROR_RETURN_WITH_VERSION(rs);
                 if (off != block.MeasurementVector.size())
                 {
@@ -1339,6 +1354,11 @@ RetStat ConnectionClass::handleRecv(EventReceiveClass& event)
         // version response is what sets the MessageVersion, so it has to be
         // handled separately from the packets below
         rs = handleRecv<PacketVersionResponseVar>();
+        if (!stateEnabled)
+        {
+            // the flow has ended, the result of the refresh is not retried
+            return rs;
+        }
         if (checkErrorCodeForRetry(rs))
         {
             return retryTimeout(rs);
