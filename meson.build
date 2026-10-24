@@ -9,6 +9,23 @@ project(
 
 fs = import('fs')
 
+composite_attestation = get_option('composite-attestation')
+attester_backend = get_option('attester-backend')
+native_evidence_carriage = get_option('native-evidence-carriage')
+
+if composite_attestation.enabled()
+    if native_evidence_carriage == 'none'
+        native_evidence_carriage = 'record-cmw'
+    endif
+else
+    if attester_backend != 'none'
+        error('attester-backend requires composite-attestation=enabled')
+    endif
+    if native_evidence_carriage != 'none'
+        error('native-evidence-carriage requires composite-attestation=enabled')
+    endif
+endif
+
 if get_option('tests').enabled()
     gtest = dependency('gtest', main: true, disabler: true, required: false)
     gmock = dependency('gmock', disabler: true, required: false)
@@ -39,6 +56,14 @@ conf_data.set(
     get_option('discovery_only_from_mctp_control').enabled(),
 )
 conf_data.set('SPDM_JSON_CONF_FILE_NAME', get_option('conf_file_name'))
+conf_data.set_quoted(
+    'COMPOSITE_ATTESTER_BACKEND',
+    attester_backend,
+)
+conf_data.set_quoted(
+    'NATIVE_EVIDENCE_CARRIAGE',
+    native_evidence_carriage,
+)
 conf_data.set('USE_DEFAULT_DBUS', get_option('use_default_dbus').enabled())
 conf_data.set('MCTP_IN_KERNEL', get_option('enable-in-kernel-mctp').enabled())
 
@@ -99,6 +124,18 @@ else
         'nlohmann_json',
         fallback: ['nlohmann_json', 'nlohmann_json_dep'],
     )
+endif
+
+if get_option('composite-attestation').enabled()
+    # Composite attestation builds all CBOR through tinycbor (deterministic
+    # subset, with map-key ordering added by composite/cbor_det). Required by
+    # the producer core and the mock attester.
+    tinycbor_dep = dependency(
+        'tinycbor',
+        fallback: ['tinycbor', 'tinycbor_dep'],
+    )
+else
+    tinycbor_dep = dependency('', required: false, disabler: true)
 endif
 
 subdir('libspdmcpp')

@@ -260,6 +260,8 @@ void testConnectionFlow(BaseAsymAlgoFlags asymAlgo, BaseHashAlgoFlags hashAlgo)
 
     algoResp.Min.BaseAsymAlgo = asymAlgo;
     algoResp.Min.BaseHashAlgo = hashAlgo;
+    algoResp.Min.MeasurementSpecification =
+        ConnectionClass::measurementSpecificationDmtf;
     algoResp.Min.MeasurementHashAlgo =
         MeasurementHashAlgoFlags::TPM_ALG_SHA_512;
 
@@ -306,6 +308,8 @@ void testConnectionFlow(BaseAsymAlgoFlags asymAlgo, BaseHashAlgoFlags hashAlgo)
         PacketNegotiateAlgorithmsRequestVar req;
         auto rs = fix.interpret(req, MessageHashEnum::M);
         ASSERT_EQ(rs, RetStat::OK);
+        EXPECT_EQ(req.Min.MeasurementSpecification,
+                  ConnectionClass::measurementSpecificationDmtf);
         EXPECT_FLAG_SET(req.Min.BaseAsymAlgo,
                         BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P256);
         EXPECT_FLAG_SET(req.Min.BaseHashAlgo,
@@ -538,7 +542,11 @@ enum class Spdm12MeasurementsFault : uint8_t
 
 void testConnectionFlow_SPDM12(
     BaseAsymAlgoFlags asymAlgo, BaseHashAlgoFlags hashAlgo,
-    Spdm12MeasurementsFault fault = Spdm12MeasurementsFault::None)
+    Spdm12MeasurementsFault fault = Spdm12MeasurementsFault::None,
+    uint8_t selectedMeasurementSpecification =
+        ConnectionClass::measurementSpecificationDmtf,
+    uint8_t blockMeasurementSpecification = 0,
+    RetStat expectedAlgorithmsResult = RetStat::OK)
 {
     ConnectionFixture fix;
 
@@ -550,6 +558,7 @@ void testConnectionFlow_SPDM12(
 
     algoResp.Min.BaseAsymAlgo = asymAlgo;
     algoResp.Min.BaseHashAlgo = hashAlgo;
+    algoResp.Min.MeasurementSpecification = selectedMeasurementSpecification;
     algoResp.Min.MeasurementHashAlgo =
         MeasurementHashAlgoFlags::TPM_ALG_SHA_512;
 
@@ -596,6 +605,8 @@ void testConnectionFlow_SPDM12(
         PacketNegotiateAlgorithmsRequestVar req;
         auto rs = fix.interpret(req, MessageHashEnum::M);
         ASSERT_EQ(rs, RetStat::OK);
+        EXPECT_EQ(req.Min.MeasurementSpecification,
+                  ConnectionClass::measurementSpecificationDmtf);
     }
 
     PacketDecodeInfo info;
@@ -656,7 +667,18 @@ void testConnectionFlow_SPDM12(
         auto rs = fix.push(algoResp, MessageHashEnum::M);
         ASSERT_EQ(rs, RetStat::OK);
         rs = fix.handleRecv();
-        ASSERT_EQ(rs, RetStat::OK);
+        if (isError(expectedAlgorithmsResult))
+        {
+            EXPECT_EQ(rs, RetStat::OK);
+            EXPECT_FALSE(
+                fix.Connection.hasInfo(ConnectionInfoEnum::ALGORITHMS));
+            mbedtls_x509_crt_free(&caCert);
+            mbedtls_pk_free(&pkctx);
+            return;
+        }
+        ASSERT_EQ(rs, expectedAlgorithmsResult);
+        EXPECT_EQ(fix.Connection.getMeasurementSpecification(),
+                  selectedMeasurementSpecification);
     }
 
     {
@@ -669,6 +691,7 @@ void testConnectionFlow_SPDM12(
     digestResp.Min.Header.MessageVersion = MessageVersionEnum::SPDM_1_2;
     PacketCertificateResponseVar certResp;
     certResp.Min.Header.MessageVersion = MessageVersionEnum::SPDM_1_2;
+    std::vector<uint8_t> expectedCertificateChainDer;
 
     {
         std::vector<uint8_t>& certBuf = certResp.CertificateVector;
@@ -678,6 +701,7 @@ void testConnectionFlow_SPDM12(
         // NOLINTNEXTLINE cppcoreguidelines-pro-bounds-pointer-arithmetic
         std::copy(caCert.raw.p, caCert.raw.p + caCert.raw.len,
                   rootCert.begin());
+        expectedCertificateChainDer = rootCert;
 
         std::vector<uint8_t> rootCertHash;
         HashClass::compute(rootCertHash, toHash(algoResp.Min.BaseHashAlgo),
@@ -720,6 +744,12 @@ void testConnectionFlow_SPDM12(
         ASSERT_EQ(rs, RetStat::OK);
         rs = fix.handleRecv();
         ASSERT_EQ(rs, RetStat::OK);
+
+        std::vector<uint8_t> certificateChainDer;
+        ASSERT_TRUE(fix.Connection.getCertificatesDER(certificateChainDer, 0));
+        EXPECT_EQ(certificateChainDer, expectedCertificateChainDer);
+        ASSERT_FALSE(certificateChainDer.empty());
+        EXPECT_EQ(certificateChainDer.front(), 0x30);
     }
 
     {
@@ -738,17 +768,18 @@ void testConnectionFlow_SPDM12(
         {
             PacketMeasurementBlockVar block;
             block.Min.Index = 1;
-            block.Min.MeasurementSpecification = 1;
-            {
-                PacketMeasurementFieldVar field;
-                field.Min.Type = 0x80;
-                field.ValueVector.resize(127);
-                fillPseudoRandom(field.ValueVector);
+            block.Min.MeasurementSpecification =
+                blockMeasurementSpecification == 0
+                    ? selectedMeasurementSpecification
+                    : blockMeasurementSpecification;
+            PacketMeasurementFieldVar field;
+            field.Min.Type = 0x80;
+            field.ValueVector.resize(127);
+            fillPseudoRandom(field.ValueVector);
 
-                ASSERT_EQ(field.finalize(), RetStat::OK);
-                ASSERT_EQ(packetEncode(field, block.MeasurementVector),
-                          RetStat::OK);
-            }
+            ASSERT_EQ(field.finalize(), RetStat::OK);
+            ASSERT_EQ(packetEncode(field, block.MeasurementVector),
+                      RetStat::OK);
             ASSERT_EQ(block.finalize(), RetStat::OK);
             resp.MeasurementBlockVector.emplace_back(block);
         }
@@ -804,19 +835,27 @@ void testConnectionFlow_SPDM12(
         rs = fix.push(resp);
         ASSERT_EQ(rs, RetStat::OK);
         rs = fix.handleRecv();
-        if (fault == Spdm12MeasurementsFault::None)
+        const bool specificationMismatch =
+            blockMeasurementSpecification != 0 &&
+            blockMeasurementSpecification != selectedMeasurementSpecification;
+        if (fault == Spdm12MeasurementsFault::None && !specificationMismatch)
         {
             ASSERT_EQ(rs, RetStat::OK);
         }
+        else if (specificationMismatch)
+        {
+            EXPECT_EQ(rs, RetStat::OK);
+        }
     }
 
-    if (fault != Spdm12MeasurementsFault::None)
+    if (fault != Spdm12MeasurementsFault::None ||
+        (blockMeasurementSpecification != 0 &&
+         blockMeasurementSpecification != selectedMeasurementSpecification))
     {
         EXPECT_FALSE(fix.Connection.hasInfo(ConnectionInfoEnum::MEASUREMENTS))
             << "Malformed measurements / attestation (SPDM 1.2) must not mark "
                "MEASUREMENTS";
     }
-
     mbedtls_x509_crt_free(&caCert);
     mbedtls_pk_free(&pkctx);
 }
@@ -831,6 +870,88 @@ TEST(Connection, FullFlow_SPDM12_ECDSA_256_SHA_384)
 {
     testConnectionFlow_SPDM12(BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P256,
                               BaseHashAlgoFlags::TPM_ALG_SHA_384);
+}
+
+TEST(Connection, PublishedVersionsRequestOnlyDmtfMeasurements)
+{
+    for (auto version :
+         {MessageVersionEnum::SPDM_1_0, MessageVersionEnum::SPDM_1_1,
+          MessageVersionEnum::SPDM_1_2})
+    {
+        ConnectionFixture fix;
+        ASSERT_EQ(fix.Connection.refreshMeasurements(0), RetStat::OK);
+
+        PacketGetVersionRequest versionReq;
+        ASSERT_EQ(fix.interpret(versionReq, MessageHashEnum::M), RetStat::OK);
+
+        PacketVersionResponseVar versionResp;
+        versionResp.Min.Header.MessageVersion = MessageVersionEnum::SPDM_1_0;
+        PacketVersionNumber advertised;
+        advertised.setMajor(1);
+        advertised.setMinor(static_cast<std::uint8_t>(version) & 0x0FU);
+        versionResp.VersionNumberEntries.push_back(advertised);
+        ASSERT_EQ(fix.push(versionResp, MessageHashEnum::M), RetStat::OK);
+        ASSERT_EQ(fix.handleRecv(), RetStat::OK);
+
+        if (version == MessageVersionEnum::SPDM_1_0)
+        {
+            PacketGetCapabilities10Request capabilitiesReq;
+            ASSERT_EQ(fix.interpret(capabilitiesReq, MessageHashEnum::M),
+                      RetStat::OK);
+        }
+        else
+        {
+            PacketGetCapabilitiesRequest capabilitiesReq;
+            ASSERT_EQ(fix.interpret(capabilitiesReq, MessageHashEnum::M),
+                      RetStat::OK);
+        }
+
+        PacketCapabilitiesResponse capabilitiesResp;
+        capabilitiesResp.Header.MessageVersion = version;
+        capabilitiesResp.Flags = ResponderCapabilitiesFlags::CERT_CAP |
+                                 ResponderCapabilitiesFlags::MEAS_CAP_10;
+        ASSERT_EQ(fix.push(capabilitiesResp, MessageHashEnum::M), RetStat::OK);
+        ASSERT_EQ(fix.handleRecv(), RetStat::OK);
+
+        PacketNegotiateAlgorithmsRequestVar algorithmsReq;
+        ASSERT_EQ(fix.interpret(algorithmsReq, MessageHashEnum::M),
+                  RetStat::OK);
+        EXPECT_EQ(algorithmsReq.Min.MeasurementSpecification,
+                  ConnectionClass::measurementSpecificationDmtf);
+    }
+}
+
+TEST(Connection, SPDM12RejectsZeroMeasurementSpecificationSelection)
+{
+    testConnectionFlow_SPDM12(BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P256,
+                              BaseHashAlgoFlags::TPM_ALG_SHA_384,
+                              Spdm12MeasurementsFault::None, 0, 0,
+                              RetStat::ERROR_WRONG_ALGO_BITS);
+}
+
+TEST(Connection, SPDM12RejectsUnadvertisedMeasurementSpecification)
+{
+    testConnectionFlow_SPDM12(BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P256,
+                              BaseHashAlgoFlags::TPM_ALG_SHA_384,
+                              Spdm12MeasurementsFault::None, 1U << 1U, 0,
+                              RetStat::ERROR_WRONG_ALGO_BITS);
+}
+
+TEST(Connection, SPDM12RejectsMultipleMeasurementSpecificationSelection)
+{
+    testConnectionFlow_SPDM12(
+        BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P256,
+        BaseHashAlgoFlags::TPM_ALG_SHA_384, Spdm12MeasurementsFault::None,
+        ConnectionClass::measurementSpecificationDmtf | (1U << 1U), 0,
+        RetStat::ERROR_WRONG_ALGO_BITS);
+}
+
+TEST(Connection, SPDM12RejectsMeasurementBlockSpecificationMismatch)
+{
+    testConnectionFlow_SPDM12(
+        BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P256,
+        BaseHashAlgoFlags::TPM_ALG_SHA_384, Spdm12MeasurementsFault::None,
+        ConnectionClass::measurementSpecificationDmtf, 1U << 1U);
 }
 
 TEST(Connection, FullFlow_SPDM12_InvalidMeasurementSignature)
