@@ -228,6 +228,13 @@ bool SpdmdApp::needRecreateResponder(const std::string& currMedium,
                                      const std::string& currBinding,
                                      const std::string& newBinding)
 {
+    // Inventory metadata can arrive after the MCTP endpoint. Refresh an
+    // unchanged transport even when its medium or binding has no priority.
+    if (currMedium == newMedium && currBinding == newBinding)
+    {
+        return true;
+    }
+
     auto currMediumPriority = mediumPriority.find(currMedium);
     auto newMediumPriority = mediumPriority.find(newMedium);
 
