@@ -162,6 +162,7 @@ RetStat ConnectionClass::refreshMeasurementsInternal()
         }
     }
     RefreshError = RetStat::OK;
+    RequestedMeasurementIndices = MeasurementIndices;
     stateEnabled = true;
     retryPktCount = 0;
     retryGetVersionCount = 0;
@@ -193,6 +194,7 @@ void ConnectionClass::resetConnection()
     MeasurementsSignature.clear();
     MeasurementNonce.fill(0);
     MeasurementIndices.reset();
+    RequestedMeasurementIndices.reset();
     CombinedMeasurementTranscript.clear();
     RefreshError = RetStat::OK;
 
@@ -1007,6 +1009,20 @@ RetStat ConnectionClass::handleRecv<PacketMeasurementsResponseVar>()
     SPDMCPP_LOG_TRACE_FUNC(Log);
     PacketMeasurementsResponseVar resp;
     auto rs = interpretResponse(resp, packetDecodeInfo);
+    if (rs == RetStat::ERROR_BUFFER_TOO_SMALL &&
+        ++retryGetVersionCount <= maxGetVersionRetries)
+    {
+        // Truncated response (MCTP fragment loss): restart from GET_VERSION
+        Log.println("Truncated measurements response. Restarting with "
+                    "getVersion. RetryCount=" +
+                    std::to_string(retryGetVersionCount) +
+                    " EID=" + std::to_string(m_eid));
+        SPDMCPP_LOG_TRACE(Log, rs);
+        SPDMCPP_CONNECTION_RS_ERROR_LOG(true);
+        MeasurementIndices = RequestedMeasurementIndices;
+        retryPktCount = 0;
+        return tryGetVersion();
+    }
     if (isError(rs))
     {
         RefreshError = rs;
@@ -1287,6 +1303,7 @@ RetStat ConnectionClass::handleRecv(EventReceiveClass& event)
                 Log.print(retryGetVersionCount);
                 Log.print(" EID=");
                 Log.println(m_eid);
+                MeasurementIndices = RequestedMeasurementIndices;
                 retryPktCount = 0;
                 stateEnabled = true;
                 WaitingForResponse = RequestResponseEnum::INVALID;

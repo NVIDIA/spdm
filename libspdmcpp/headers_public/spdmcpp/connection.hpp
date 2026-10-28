@@ -810,6 +810,9 @@ class ConnectionClass : public NonCopyable
      */
     RetStat RefreshError = RetStat::OK;
 
+    /** @brief MeasurementIndices as requested, restored on a restart */
+    std::bitset<256> RequestedMeasurementIndices;
+
     /** @brief The certificate slot index that was passed to refreshMeasurements
      * and is used during communication
      */
