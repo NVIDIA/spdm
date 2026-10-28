@@ -821,8 +821,8 @@ void testConnectionFlow_SPDM12(
 
     if (fault == Spdm12MeasurementsFault::TruncatedResponse)
     {
-        // the flow ends with GET_VERSION, its response must report the
-        // decode error instead of success
+        // the refresh restarts from GET_VERSION, after the VERSION response
+        // the flow goes on with GET_CAPABILITIES
         PacketGetVersionRequest req;
         auto rs = fix.interpret(req);
         ASSERT_EQ(rs, RetStat::OK);
@@ -836,7 +836,11 @@ void testConnectionFlow_SPDM12(
         rs = fix.push(resp);
         ASSERT_EQ(rs, RetStat::OK);
         rs = fix.handleRecv();
-        EXPECT_EQ(rs, RetStat::ERROR_BUFFER_TOO_SMALL);
+        EXPECT_EQ(rs, RetStat::OK);
+
+        PacketGetCapabilitiesRequest capReq;
+        rs = fix.interpret(capReq);
+        EXPECT_EQ(rs, RetStat::OK);
     }
 
     if (fault != Spdm12MeasurementsFault::None)
