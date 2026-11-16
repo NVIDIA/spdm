@@ -248,7 +248,8 @@ class ConnectionFixture
     std::array<HashClass, static_cast<size_t>(MessageHashEnum::NUM)> Hashes;
 };
 
-void testConnectionFlow(BaseAsymAlgoFlags asymAlgo, BaseHashAlgoFlags hashAlgo)
+void testConnectionFlow(BaseAsymAlgoFlags asymAlgo, BaseHashAlgoFlags hashAlgo,
+                        unsigned certDuplicates = 0)
 {
     ConnectionFixture fix;
 
@@ -426,10 +427,66 @@ void testConnectionFlow(BaseAsymAlgoFlags asymAlgo, BaseHashAlgoFlags hashAlgo)
         auto rs = fix.interpret(req, MessageHashEnum::M);
         ASSERT_EQ(rs, RetStat::OK);
     }
+    if (certDuplicates == 0)
     {
         certResp.finalize();
 
         auto rs = fix.push(certResp, MessageHashEnum::M);
+        ASSERT_EQ(rs, RetStat::OK);
+        rs = fix.handleRecv();
+        ASSERT_EQ(rs, RetStat::OK);
+    }
+    else
+    {
+        // chain in two chunks, the first one delivered again in between
+        const std::vector<uint8_t> chain = certResp.CertificateVector;
+        const size_t half = chain.size() / 2;
+        PacketCertificateResponseVar first = certResp;
+        first.CertificateVector.assign(chain.begin(),
+                                       std::next(chain.begin(), half));
+        first.Min.RemainderLength = chain.size() - half;
+        first.finalize();
+        PacketCertificateResponseVar second = certResp;
+        second.CertificateVector.assign(std::next(chain.begin(), half),
+                                        chain.end());
+        second.finalize();
+
+        auto rs = fix.push(first, MessageHashEnum::M);
+        ASSERT_EQ(rs, RetStat::OK);
+        rs = fix.handleRecv();
+        ASSERT_EQ(rs, RetStat::OK);
+        {
+            PacketGetCertificateRequest req;
+            rs = fix.interpret(req, MessageHashEnum::M);
+            ASSERT_EQ(rs, RetStat::OK);
+            EXPECT_EQ(req.Offset, half);
+        }
+        for (unsigned i = 1; i <= certDuplicates; ++i)
+        {
+            rs = fix.push(first);
+            ASSERT_EQ(rs, RetStat::OK);
+            rs = fix.handleRecv();
+            if (i >= 3) // retry budget of ConnectionClass::retryTimeout()
+            {
+                EXPECT_EQ(rs, RetStat::ERROR_WRONG_REQUEST_RESPONSE_CODE);
+                mbedtls_x509_crt_free(&caCert);
+                mbedtls_pk_free(&pkctx);
+                return;
+            }
+            ASSERT_EQ(rs, RetStat::OK);
+            EXPECT_TRUE(fix.Connection.isWaitingForResponse());
+            EXPECT_TRUE(fix.IO->WriteQueue.empty());
+
+            // the retry timer expires: the pending request is sent again
+            EventTimeoutClass timeout("pcie");
+            rs = fix.Connection.handleEvent(timeout);
+            ASSERT_EQ(rs, RetStat::OK);
+            PacketGetCertificateRequest again;
+            rs = fix.interpret(again);
+            ASSERT_EQ(rs, RetStat::OK);
+            EXPECT_EQ(again.Offset, half);
+        }
+        rs = fix.push(second, MessageHashEnum::M);
         ASSERT_EQ(rs, RetStat::OK);
         rs = fix.handleRecv();
         ASSERT_EQ(rs, RetStat::OK);
@@ -1402,5 +1459,17 @@ TEST(Connection, NormalResponseAfterNotReadyClearsToken)
     PacketGetCapabilitiesRequest capRetryReq;
     rs = fix.interpret(capRetryReq, MessageHashEnum::NUM);
     EXPECT_EQ(rs, RetStat::OK);
+}
+
+TEST(Connection, DuplicateCertificateChunkIgnored)
+{
+    testConnectionFlow(BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P384,
+                       BaseHashAlgoFlags::TPM_ALG_SHA_384, 1);
+}
+
+TEST(Connection, DuplicateCertificateChunkRetryLimit)
+{
+    testConnectionFlow(BaseAsymAlgoFlags::TPM_ALG_ECDSA_ECC_NIST_P384,
+                       BaseHashAlgoFlags::TPM_ALG_SHA_384, 3);
 }
 #endif

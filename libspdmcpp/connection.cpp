@@ -796,11 +796,21 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
         SPDMCPP_CONNECTION_RS_ERROR_RETURN_WITH_VERSION(rs);
     }
 
-    appendRecvToBuf(BufEnum::B);
-
     SlotIdx idx = CertificateSlotIdx;
     SlotClass& slot = Slots[idx];
     std::vector<uint8_t>& cert = slot.Certificates;
+    auto off = cert.end() - cert.begin();
+    if ((off > 0) && ((static_cast<size_t>(off) + resp.Min.PortionLength +
+                       resp.Min.RemainderLength) != cert.capacity()))
+    {
+        Log.print("Unexpected response for Certificate Request Chunk."
+                  " Ignoring the response: ");
+        Log.println(resp.CertificateVector);
+        return RetStat::ERROR_WRONG_REQUEST_RESPONSE_CODE;
+    }
+
+    appendRecvToBuf(BufEnum::B);
+
     const size_t headerOff =
         ResponseBufferSPDMOffset + sizeof(PacketCertificateResponseMin);
     // Reject a chunk that doesn't fit the received data, or that carries no
@@ -848,16 +858,6 @@ RetStat ConnectionClass::handleRecv<PacketCertificateResponseVar>()
         cert.reserve(resp.Min.PortionLength + resp.Min.RemainderLength);
     }
     { // store chunk data
-        auto off = cert.end() - cert.begin();
-        size_t certBufSize = cert.capacity();
-        if (off > 0 && (static_cast<size_t>(off) + resp.Min.PortionLength +
-                        resp.Min.RemainderLength) != certBufSize)
-        {
-            Log.print("Unexpected response for Certificate Request Chunk."
-                      " Ignoring the response: ");
-            Log.println(resp.CertificateVector);
-            return RetStat::OK;
-        }
         cert.resize(off + resp.Min.PortionLength);
         std::copy(resp.CertificateVector.begin(), resp.CertificateVector.end(),
                   std::next(cert.begin(), off));
